@@ -19,8 +19,9 @@ export async function onRequest(context) {
 
   try {
     await DB.prepare(
-      `INSERT INTO users (nickname, referral_code) VALUES (?, ?)`
-    ).bind(nickname, referral).run();
+    "INSERT INTO users (username, nickname, referral_code) VALUES (?, ?, ?)"
+    ).bind(nickname, nickname, referral).run();
+
   } catch (e) {
   return new Response(
     JSON.stringify({
