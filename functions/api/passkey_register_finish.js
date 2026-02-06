@@ -14,7 +14,9 @@ export async function onRequest(context) {
 
   if (!nickname || !attResp) return json({ error: "missing_fields" }, 400);
 
-  const user = await DB.prepare(`SELECT id FROM users WHERE nickname = ?`).bind(nickname).first();
+  const user = await DB.prepare(
+    `SELECT id FROM users WHERE username = ? OR nickname = ? LIMIT 1`
+  ).bind(nickname, nickname).first();
   if (!user) return json({ error: "user_not_found" }, 404);
 
   // recupera ultima challenge reg per user
