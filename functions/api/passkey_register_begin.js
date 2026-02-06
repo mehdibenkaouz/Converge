@@ -1,6 +1,4 @@
-import {
-  generateRegistrationOptions,
-} from "@simplewebauthn/server";
+import { generateRegistrationOptions } from "@simplewebauthn/server";
 
 export async function onRequest(context) {
   if (context.request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
@@ -14,31 +12,58 @@ export async function onRequest(context) {
 
   if (!nickname || nickname.length < 3) return json({ error: "nickname_too_short" }, 400);
 
-  // 1) crea user (o errore se nickname già preso)
-  const referral = randomCode(10);
+  // 1) Se esiste già un utente con questo nickname/username, gestisci i retry
+  let user = await DB.prepare(
+    `SELECT id, referral_code FROM users
+     WHERE username = ? OR nickname = ?
+     LIMIT 1`
+  ).bind(nickname, nickname).first();
 
-  try {
-    await DB.prepare(
-    "INSERT INTO users (username, nickname, referral_code) VALUES (?, ?, ?)"
-    ).bind(nickname, nickname, referral).run();
+  if (user) {
+    // Se ha già una credenziale registrata -> nickname già “occupato”
+    const hasCred = await DB.prepare(
+      `SELECT 1 FROM webauthn_credentials WHERE user_id = ? LIMIT 1`
+    ).bind(user.id).first();
 
-  } catch (e) {
-  return new Response(
-    JSON.stringify({
-      error: "db_error",
-      detail: String(e.message || e)
-    }),
-    { status: 500 }
-  );
-}
+    if (hasCred) return json({ error: "nickname_taken" }, 409);
+    // else: utente “pending” (creato da un tentativo precedente) -> ok, lo riusiamo
+  } else {
+    // 2) Crea un nuovo utente con referral_code realmente unico (retry su collisioni rare)
+    let created = false;
 
-  const user = await DB.prepare(
-    `SELECT id, referral_code FROM users WHERE nickname = ?`
-  ).bind(nickname).first();
+    for (let i = 0; i < 8; i++) {
+      const referral = randomCode(10);
+      try {
+        await DB.prepare(
+          "INSERT INTO users (username, nickname, referral_code) VALUES (?, ?, ?)"
+        ).bind(nickname, nickname, referral).run();
+        created = true;
+        break;
+      } catch (e) {
+        const msg = String(e?.message || e);
 
-  if (!user) return json({ error: "db_error" }, 500);
+        // collisione referral_code -> riprova
+        if (msg.includes("users.referral_code")) continue;
 
-  // 2) referral (opzionale): lega invitee -> inviter e accredita wallet +10
+        // race condition: qualcuno ha creato lo stesso nickname mentre eri qui
+        if (msg.includes("users.username") || msg.includes("users.nickname")) {
+          return json({ error: "nickname_taken" }, 409);
+        }
+
+        return json({ error: "db_error", detail: msg }, 500);
+      }
+    }
+
+    if (!created) return json({ error: "db_error", detail: "referral_collision" }, 500);
+
+    user = await DB.prepare(
+      `SELECT id, referral_code FROM users WHERE username = ? LIMIT 1`
+    ).bind(nickname).first();
+
+    if (!user) return json({ error: "db_error" }, 500);
+  }
+
+  // 3) referral (opzionale): lega invitee -> inviter e accredita wallet +10
   if (referralCode) {
     const inviter = await DB.prepare(`SELECT id FROM users WHERE referral_code = ?`)
       .bind(referralCode).first();
@@ -55,7 +80,7 @@ export async function onRequest(context) {
     }
   }
 
-  // 3) prepara WebAuthn options
+  // 4) prepara WebAuthn options
   const options = await generateRegistrationOptions({
     rpName: context.env.RP_NAME || "Puzzle Swipe Breaker",
     rpID: context.env.RP_ID,
@@ -69,7 +94,7 @@ export async function onRequest(context) {
     timeout: 60000,
   });
 
-  // 4) salva challenge
+  // 5) salva challenge
   await DB.prepare(
     `INSERT INTO webauthn_challenges (kind, challenge, user_id) VALUES ('reg', ?, ?)`
   ).bind(options.challenge, user.id).run();
