@@ -76,13 +76,13 @@ export async function onRequest(context) {
 
     // 3) WebAuthn options
     const options = await generateRegistrationOptions({
-      rpName: context.env.RP_NAME || "Puzzle Swipe Breaker",
-      rpID: RP_ID,
-      userID: String(user.id),
-      userName: nickname,
-      attestationType: "none",
-      authenticatorSelection: { residentKey: "preferred", userVerification: "preferred" },
-      timeout: 60000,
+        rpName: context.env.RP_NAME || "Puzzle Swipe Breaker",
+        rpID: RP_ID,
+        userID: intToUint8Array(user.id),
+        userName: nickname,
+        attestationType: "none",
+        authenticatorSelection: { residentKey: "preferred", userVerification: "preferred" },
+        timeout: 60000,
     });
 
     // 4) salva challenge (se tabella manca, ora lo vedrai come JSON error)
@@ -95,6 +95,17 @@ export async function onRequest(context) {
     return json({ error: "exception", detail: String(e?.stack || e) }, 500);
   }
 }
+
+function intToUint8Array(n) {
+  const v = Number(n) >>> 0;
+  return new Uint8Array([
+    (v >>> 24) & 0xff,
+    (v >>> 16) & 0xff,
+    (v >>> 8) & 0xff,
+    v & 0xff,
+  ]);
+}
+
 
 
 function json(obj, status = 200) {
