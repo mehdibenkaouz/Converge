@@ -1,0 +1,2563 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Puzzle Swipe Breaker</title>
+  <style>
+    :root{
+      /* --- Brand / theme --- */
+      --bg-0: #0b2d13;
+      --bg-1: #0f4b22;
+      --bg-2: #1a7a38;
+      --bg-3: #63d46f;
+
+      --card: rgba(255,252,249,.88);
+      --card-2: rgba(255,252,249,.70);
+
+      --text: #1f2226;
+      --muted: rgba(31,34,38,.62);
+
+      --shadow: 0 18px 40px rgba(0,0,0,.14);
+      --shadow-soft: 0 10px 24px rgba(0,0,0,.10);
+
+      --board-shadow-in: inset 0 18px 40px rgba(0,0,0,.10);
+      --board-border: rgba(255,255,255,.22);
+
+      --tile-shadow: 0 14px 28px rgba(0,0,0,.22);
+      --tile-shadow-soft: 0 10px 18px rgba(0,0,0,.16);
+
+      --tile-round: 20px;
+      --gap: 12px;
+      --board-pad: 16px;
+
+      --anim-move: 240ms;
+      --anim-prebreak: 420ms;
+      --anim-fade: 260ms;
+
+      /* Palette */
+      --accent-1: #ffc8ba;
+      --accent-2: #f5d4b8;
+      --accent-3: #d4f0d4;
+      --accent-4: #c8e6f5;
+      --accent-5: #dcc8f5;
+      --accent-6: #f5c8e6;
+      --accent-7: #e6f5c8;
+
+      --glass: rgba(255,255,255,.14);
+      --glass-border: rgba(255,255,255,.18);
+    }
+
+    *{ box-sizing:border-box; }
+    html, body{ width:100%; height:100%; }
+
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--text);
+      min-height: 100dvh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 16px;
+      overscroll-behavior:none;
+      touch-action:none;
+
+      /* Deep forest + aurora */
+      background:
+        radial-gradient(1200px 720px at 20% 10%, rgba(151,255,193,.18), transparent 55%),
+        radial-gradient(900px 600px at 80% 18%, rgba(117,213,255,.16), transparent 52%),
+        radial-gradient(1000px 700px at 55% 110%, rgba(255,169,209,.10), transparent 55%),
+        linear-gradient(140deg, var(--bg-0) 0%, var(--bg-1) 35%, var(--bg-2) 68%, var(--bg-3) 140%);
+    }
+
+    /* Noise + vignette overlays */
+    body::before{
+      content:"";
+      position: fixed;
+      inset: 0;
+      pointer-events:none;
+      background:
+        repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 1px, transparent 1px 3px),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 1px, transparent 1px 4px),
+        radial-gradient(800px 520px at 50% 0%, rgba(255,255,255,.10), transparent 58%);
+      mix-blend-mode: overlay;
+      opacity: .25;
+      filter: blur(.15px);
+    }
+    body::after{
+      content:"";
+      position: fixed;
+      inset: 0;
+      pointer-events:none;
+      background:
+        radial-gradient(900px 680px at 50% 45%, transparent 45%, rgba(0,0,0,.22) 100%);
+      opacity:.9;
+    }
+
+    .app{
+      width: min(760px, 100%);
+      display: grid;
+      gap: 14px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding: 14px 16px;
+      border-radius: 18px;
+
+      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      overflow:hidden;
+      position:relative;
+    }
+    .topbar::before{
+      content:"";
+      position:absolute;
+      inset:-80px -120px auto -120px;
+      height: 160px;
+      background: radial-gradient(closest-side, rgba(255,255,255,.22), transparent 70%);
+      transform: rotate(8deg);
+      pointer-events:none;
+    }
+
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap: 3px;
+      min-width: 160px;
+    }
+    .title h1{
+      margin:0;
+      font-size: 18px;
+      letter-spacing: -0.35px;
+      font-weight: 800;
+      background: linear-gradient(90deg, rgba(255,255,255,.92), rgba(255,255,255,.62));
+      -webkit-background-clip:text;
+      background-clip:text;
+      -webkit-text-fill-color: transparent;
+    }
+    .title .sub{
+      font-size: 12px;
+      color: rgba(255,255,255,.70);
+      font-weight: 600;
+      text-shadow: 0 1px 10px rgba(0,0,0,.18);
+    }
+
+    .stats{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 10px;
+      justify-content:flex-end;
+      align-items:center;
+    }
+    .pill{
+      display:flex;
+      gap:6px;
+      align-items:center;
+      padding: 8px 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow: 0 6px 16px rgba(0,0,0,.14);
+      font-size: 13px;
+      color: rgba(255,255,255,.86);
+      font-weight: 650;
+      user-select:none;
+    }
+    .pill strong{
+      color: rgba(255,255,255,.98);
+      font-weight: 850;
+      letter-spacing: -0.2px;
+    }
+
+    .btns{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 8px;
+      justify-content:flex-end;
+    }
+
+        /* Badge per hint */
+    .hint-badge{
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: #ff6b6b;
+      color: white;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 900;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+      z-index: 10;
+    }
+
+    
+    button{
+      appearance:none;
+      border:none;
+      border-radius: 14px;
+      padding: 9px 14px;
+      font-weight: 760;
+      font-size: 13px;
+      cursor:pointer;
+
+      color: rgba(16,20,24,.90);
+      background:
+        radial-gradient(110px 60px at 30% 15%, rgba(255,255,255,.72), transparent 60%),
+        linear-gradient(135deg, rgba(255,255,255,.78), rgba(255,255,255,.34));
+      border: 1px solid rgba(255,255,255,.25);
+      box-shadow: 0 12px 26px rgba(0,0,0,.18);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+
+      transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+    }
+    button:hover:not(:disabled){
+      transform: translateY(-2px);
+      box-shadow: 0 16px 34px rgba(0,0,0,.22);
+      filter: brightness(1.02);
+    }
+    button:active:not(:disabled){
+      transform: translateY(0);
+    }
+    button:disabled{
+      opacity: .45;
+      cursor:not-allowed;
+      filter: grayscale(.1);
+    }
+
+    button{
+      position: relative;
+    }
+
+    
+    /* Login Modal */
+    .login-overlay{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+
+    .login-overlay.hidden{
+      display: none;
+    }
+
+    .login-modal{
+      background: var(--card);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: var(--shadow);
+      max-width: 340px;
+      width: 100%;
+    }
+
+    .login-modal h2{
+      margin: 0 0 24px;
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--text);
+    }
+
+    .login-modal input{
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(0,0,0,.1);
+      border-radius: 12px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .login-modal input:focus{
+      outline: none;
+      border-color: var(--bg-2);
+      box-shadow: 0 0 0 3px rgba(26,122,56,.2);
+    }
+
+    .login-modal button{
+      width: 100%;
+      padding: 12px;
+      background: var(--bg-2);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+
+    .login-modal button:hover{
+      background: var(--bg-3);
+    }
+
+    .board-wrap{
+      position:relative;
+      border-radius: 26px;
+      padding: 18px;
+
+      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.08));
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      overflow:hidden;
+    }
+    .board-wrap::before{
+      content:"";
+      position:absolute;
+      inset: 0;
+      pointer-events:none;
+      background:
+        radial-gradient(900px 460px at 30% 0%, rgba(255,255,255,.14), transparent 55%),
+        radial-gradient(900px 520px at 80% 25%, rgba(151,255,193,.10), transparent 55%);
+      opacity: .9;
+    }
+
+    .board{
+      position:relative;
+      margin:auto;
+      width: min(560px, 92vw);
+      aspect-ratio: 1/1;
+      border-radius: 26px;
+      padding: var(--board-pad);
+
+      background:
+        radial-gradient(520px 320px at 20% 12%, rgba(255,255,255,.20), transparent 55%),
+        radial-gradient(520px 320px at 80% 24%, rgba(255,255,255,.10), transparent 60%),
+        linear-gradient(145deg, rgba(255,255,255,.26), rgba(255,255,255,.10));
+      box-shadow: var(--board-shadow-in);
+      border: 1px solid var(--board-border);
+      overflow:hidden;
+      touch-action:none;
+      user-select:none;
+    }
+
+    .grid{
+      position:absolute;
+      inset: var(--board-pad);
+      display:grid;
+      gap: var(--gap);
+    }
+    .cell{
+      border-radius: 16px;
+      background:
+        radial-gradient(80px 60px at 30% 25%, rgba(255,255,255,.16), transparent 65%),
+        linear-gradient(180deg, rgba(0,0,0,.06), rgba(255,255,255,.06));
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: inset 0 2px 8px rgba(0,0,0,.10);
+    }
+
+    .tiles-layer{
+      position:absolute;
+      inset: var(--board-pad);
+      pointer-events:none;
+      transform: translateZ(0);
+    }
+
+    .tile{
+      position:absolute;
+      border-radius: var(--tile-round);
+      border: 1px solid rgba(255,255,255,.18);
+
+      /* Base color comes from JS: --tileColor */
+      background: var(--tileColor, rgba(255,255,255,.6));
+
+      /* The "weight" */
+      box-shadow:
+        0 10px 20px rgba(0,0,0,.22),
+        0 18px 34px rgba(0,0,0,.14);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+
+      width: var(--w);
+      height: var(--h);
+      transform: translate(var(--x), var(--y)) scale(var(--s, 1));
+
+      transition:
+        transform var(--anim-move) cubic-bezier(.15,.85,.20,1),
+        filter var(--anim-prebreak) ease,
+        box-shadow var(--anim-prebreak) ease,
+        opacity var(--anim-fade) ease;
+      will-change: transform, opacity, filter;
+      overflow:hidden;
+      backface-visibility: hidden;
+    }
+
+    /* Bevel + texture */
+    .tile::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius: var(--tile-round);
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.32), rgba(0,0,0,.16)),
+        radial-gradient(140px 100px at 30% 20%, rgba(255,255,255,.30), transparent 60%),
+        radial-gradient(160px 110px at 75% 85%, rgba(0,0,0,.18), transparent 60%),
+        repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 1px, transparent 1px 3px);
+      mix-blend-mode: overlay;
+      opacity: .92;
+      pointer-events:none;
+    }
+    .tile::after{
+      content:"";
+      position:absolute;
+      inset:-60% -60%;
+      border-radius: 999px;
+      background: radial-gradient(closest-side, rgba(255,255,255,.22), transparent 65%);
+      transform: translate(18%, -18%);
+      opacity:.85;
+      pointer-events:none;
+    }
+
+    .glyph{
+      position:relative;
+      width: 68%;
+      height: 68%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      filter:
+        drop-shadow(0 2px 6px rgba(0,0,0,.22))
+        drop-shadow(0 1px 0 rgba(255,255,255,.24));
+    }
+    .glyph svg{
+      width: 100%;
+      height: 100%;
+      stroke: rgba(255,255,255,.92);
+      fill: rgba(255,255,255,.92);
+      stroke-width: 10;
+      vector-effect: non-scaling-stroke;
+      paint-order: stroke;
+    }
+
+    .tile.prebreak{
+      --s: 1.07;
+      filter: brightness(1.10) saturate(1.10);
+      box-shadow:
+        0 0 0 6px rgba(255,255,255,.16),
+        0 14px 26px rgba(0,0,0,.26),
+        0 22px 44px rgba(0,0,0,.18);
+      animation: prebreakPulse var(--anim-prebreak) ease-in-out 1;
+    }
+    @keyframes prebreakPulse{
+      0%{ filter: brightness(1.00) saturate(1.00); }
+      45%{ filter: brightness(1.14) saturate(1.14); }
+      100%{ filter: brightness(1.08) saturate(1.08); }
+    }
+
+    .tile.fadeout{
+      opacity:0;
+    }
+
+    /* Particle burst ring */
+    .ring{
+      position:absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      border: 2px solid rgba(255,255,255,.9);
+      opacity: 0;
+      transform: translate(-50%,-50%) scale(.55);
+      animation: ringPop 420ms ease-out forwards;
+      pointer-events:none;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,.18));
+    }
+    @keyframes ringPop{
+      0%{opacity:0; transform: translate(-50%,-50%) scale(.55);}
+      15%{opacity:1;}
+      100%{opacity:0; transform: translate(-50%,-50%) scale(4.2);}
+    }
+
+    .stars{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      opacity:0;
+    }
+    .stars.play{
+      animation: starsFade 380ms ease forwards;
+    }
+    @keyframes starsFade{
+      0%{opacity:0}
+      18%{opacity:1}
+      100%{opacity:0}
+    }
+    .star{
+      position:absolute;
+      width: 12px;
+      height: 12px;
+      transform: rotate(0deg) scale(.5);
+      opacity:.9;
+      animation: starPop 380ms ease-out forwards;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,.18));
+    }
+    @keyframes starPop{
+      0%{transform: translate(0,0) rotate(0deg) scale(.5); opacity:0}
+      18%{opacity:1}
+      100%{transform: translate(var(--dx), var(--dy)) rotate(160deg) scale(1.2); opacity:0}
+    }
+
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:18px;
+      transform:translateX(-50%);
+      padding: 11px 15px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.92);
+      color: rgba(16,20,24,.92);
+      box-shadow: 0 18px 40px rgba(0,0,0,.20);
+      border: 1px solid rgba(255,255,255,.22);
+      max-width: min(560px, 92vw);
+      font-weight: 760;
+      font-size: 14px;
+      opacity:0;
+      pointer-events:none;
+      transition: opacity 180ms ease, transform 180ms ease;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .toast.show{ opacity:1; transform:translateX(-50%) translateY(-8px); }
+
+    .modal-overlay{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.40);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:50;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    .modal-overlay.show{display:flex;}
+    .modal{
+      width: min(760px, 96vw);
+      border-radius: 22px;
+      background: rgba(255,255,255,.92);
+      box-shadow: 0 26px 70px rgba(0,0,0,.28);
+      border: 1px solid rgba(255,255,255,.20);
+      overflow:hidden;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .modal header{
+      padding:14px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom: 1px solid rgba(0,0,0,.08);
+      background: linear-gradient(180deg, rgba(0,0,0,.03), transparent);
+    }
+    .modal header h2{
+      margin:0;
+      font-size: 15px;
+      letter-spacing: -0.2px;
+      color: rgba(16,20,24,.92);
+      font-weight: 850;
+    }
+    .modal .content{ padding:16px; }
+
+    .hint-board{
+      width: min(520px, 92vw);
+      aspect-ratio: 1/1;
+      border-radius: 18px;
+      background:
+        radial-gradient(520px 320px at 20% 12%, rgba(255,255,255,.18), transparent 60%),
+        linear-gradient(145deg, rgba(0,0,0,.04), rgba(255,255,255,.06));
+      box-shadow: inset 0 10px 24px rgba(0,0,0,.10);
+      border: 1px solid rgba(0,0,0,.08);
+      display:grid;
+      place-items:center;
+      margin:auto;
+      overflow:hidden;
+    }
+
+    .hint-text{
+      margin: 12px 0 0;
+      color: rgba(16,20,24,.86);
+      font-size: 14px;
+      line-height: 1.5;
+      font-weight: 650;
+    }
+    .small{
+      font-size: 12px;
+      color: rgba(16,20,24,.60);
+      font-weight: 750;
+      position:relative;
+      z-index:2;
+    }
+
+    @media (max-width:520px){
+      .topbar{gap:10px; flex-direction:column; align-items:flex-start}
+      .stats{justify-content:flex-start}
+      .btns{justify-content:flex-start}
+      button{padding:10px 12px; font-size: 12px;}
+      .title h1{font-size: 16px;}
+      .pill{padding: 7px 10px; font-size: 12px;}
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ animation: none !important; transition: none !important; }
+      body{ background-attachment: fixed; }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="title">
+        <h1>Puzzle Swipe Breaker</h1>
+        <div class="sub">Swipe per muovere • Rompi quando un colore è tutto connesso</div>
+      </div>
+      <div class="stats">
+        <div class="pill">Livello: <strong id="level">1</strong></div>
+        <div class="pill">Griglia: <strong id="size">3×3</strong></div>
+        <div class="pill">Mosse: <strong id="moves">3</strong></div>
+        <div class="pill">Score: <strong id="score">0</strong></div>
+      </div>
+      <div class="btns">
+        <button id="btnUndo" title="Annulla ultima mossa (1 per livello)">Undo</button>
+        <button id="btnHint" title="Mostra una mossa consigliata (1 ogni 3 livelli)">Hint</button>
+        <button id="btnNew" title="Nuova partita">Nuova</button>
+      </div>
+    </div>
+
+    <div class="board-wrap">
+      <div class="board" id="board">
+        <div class="grid" id="grid"></div>
+        <div class="tiles-layer" id="tiles"></div>
+      </div>
+      <div class="small" style="margin-top:10px; opacity:.9;">
+        Suggerimento: tocca e trascina sul board (touch) o trascina col mouse. Una mossa consuma sempre 1.
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  
+  <div class="modal-overlay" id="hintOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <header>
+        <h2>Hint — mossa suggerita</h2>
+        <button id="btnCloseHint">Chiudi</button>
+      </header>
+      <div class="content">
+        <div class="hint-board" id="hintCanvasWrap">
+          <!-- mini-board generated -->
+        </div>
+        <p class="hint-text" id="hintText"></p>
+        <div class="small">L’hint si ricarica ogni 3 livelli.</div>
+      </div>
+    </div>
+  </div>
+
+    <div class="login-overlay" id="loginOverlay">
+    <div class="login-modal">
+      <h2>Accedi al gioco</h2>
+
+      <input type="text" id="loginNickname" placeholder="Nickname (min 3 caratteri)" />
+
+      <button id="btnPasskeyLogin">Accedi con impronta / Face ID</button>
+      <button id="btnPasskeyRegister" style="background: var(--bg-1); margin-top: 8px;">Crea passkey (senza password)</button>
+
+      <button id="btnGuestPlay" style="background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); margin-top: 8px; color: var(--text);">
+        Gioca senza account
+      </button>
+
+      <div class="small" style="margin-top:10px; color: rgba(16,20,24,.6); font-weight:700;">
+        Nota: su alcuni dispositivi il nickname può essere opzionale per il login (discoverable passkeys).
+      </div>
+    </div>
+
+
+<script>
+(() => {
+  "use strict";
+
+  // ==========
+  // Constants
+  // ==========
+  const SIZES = [3,5,7,10];
+  const COLORS = [
+    "#ffc8ba", // peach soft
+    "#f5d4b8", // warm sand
+    "#d4f0d4", // mint soft
+    "#c8e6f5", // sky soft
+    "#dcc8f5", // lavender soft
+    "#f5c8e6", // rose soft
+    "#e6f5c8", // pistachio soft
+  ];
+
+  // 7 glyphs for color-blind friendly: X, inner square, circle, triangle, equals, 5-point star, paw print
+  // SVG strings are used for crisp scale.
+  const GLYPHS = {
+    0: svgX(),
+    1: svgInnerSquare(),
+    2: svgCircle(),
+    3: svgTriangle(),
+    4: svgEquals(),
+    5: svgStar5(),
+    6: svgPaw(),
+  };
+
+  const STORAGE_KEY = "psb_save_v1";
+
+
+// ==========
+// Auth + API (Cloudflare Pages Functions)
+// ==========
+const AUTH_TOKEN_KEY = "psb_auth_token_v1";
+
+function getToken(){ return localStorage.getItem(AUTH_TOKEN_KEY) || ""; }
+function setToken(t){ localStorage.setItem(AUTH_TOKEN_KEY, t); }
+function clearToken(){ localStorage.removeItem(AUTH_TOKEN_KEY); }
+
+async function apiPost(path, body){
+  const headers = { "Content-Type": "application/json" };
+  const t = getToken();
+  if (t) headers["Authorization"] = "Bearer " + t;
+
+  const r = await fetch(path, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body || {})
+  });
+
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || ("HTTP_"+r.status));
+  return data;
+}
+
+async function doLogin(username, password){
+  const { token } = await apiPost("/api/login", { username, password });
+  setToken(token);
+  await syncBonuses();
+}
+
+async function doRegister(username, password, referralCode){
+  const { token } = await apiPost("/api/register", { username, password, referralCode });
+  setToken(token);
+  await syncBonuses();
+}
+
+async function syncBonuses(){
+  // 1) bonus 20 hint una volta
+  const c = await apiPost("/api/claim_initial", {});
+  if (c.granted === 20 && state && state.hintCharges < 20) {
+    state.hintCharges = 20;
+    state.hintCooldown = 0;
+    saveNow();
+    toastMsg("Bonus: 20 hint!");
+  }
+
+  // 2) referral wallet -> converte in hint
+  const w = await apiPost("/api/withdraw", {});
+  if (w.withdrawn > 0 && state) {
+    state.hintCharges += w.withdrawn;
+    saveNow();
+    toastMsg(`Bonus invitati: +${w.withdrawn} hint!`);
+  }
+}
+
+
+
+  // ==========
+  // State
+  // ==========
+  /**
+   * board[y][x] = null | tileId
+   * tilesById[tileId] = { id, colorId, x, y }
+   */
+  let state = null;
+  let isAnimating = false;
+  let lastToastAt = 0;
+
+  // ==========
+  // DOM
+  // ==========
+  const elGrid = document.getElementById("grid");
+  const elTiles = document.getElementById("tiles");
+  const elBoard = document.getElementById("board");
+
+  const elLevel = document.getElementById("level");
+  const elSize = document.getElementById("size");
+  const elMoves = document.getElementById("moves");
+  const elScore = document.getElementById("score");
+
+  const btnUndo = document.getElementById("btnUndo");
+  const btnHint = document.getElementById("btnHint");
+  const btnNew  = document.getElementById("btnNew");
+
+  const toast = document.getElementById("toast");
+  
+  
+  const loginOverlay = document.getElementById("loginOverlay");
+  const btnPasskeyLogin = document.getElementById("btnPasskeyLogin");
+  const btnPasskeyRegister = document.getElementById("btnPasskeyRegister");
+  const loginNickname = document.getElementById("loginNickname");
+
+  const btnGuestPlay = document.getElementById("btnGuestPlay");
+
+
+  const hintOverlay = document.getElementById("hintOverlay");
+  const btnCloseHint = document.getElementById("btnCloseHint");
+  const hintCanvasWrap = document.getElementById("hintCanvasWrap");
+  const hintText = document.getElementById("hintText");
+
+  // ==========
+  // Boot
+  // ==========
+  init();
+
+  function init(){
+    attachLoginButtons();
+
+    // se ho un token salvato, provo a sincronizzare bonus e partire
+    if (getToken()){
+      startGame();
+      // sync bonus in background (non blocca l'avvio)
+      syncBonuses().catch(() => {});
+      return;
+    }
+
+    // altrimenti mostra login
+    loginOverlay.classList.remove("hidden");
+  }
+
+
+  function startGame(){
+    // Hide login overlay
+    loginOverlay.classList.add("hidden");
+
+    // Try load save
+    const loaded = loadSave();
+    if (loaded) {
+      state = loaded;
+      toastMsg("Partita caricata");
+    } else {
+      state = newGameState();
+    }
+
+    attachInput();
+    attachButtons();
+    renderAll(true);
+    saveNow();
+  }
+
+  async function passkeyRegister(nickname, referralCode){
+    const r1 = await apiPost("/api/passkey_register_begin", { nickname, referralCode });
+    const cred = await navigator.credentials.create({ publicKey: r1.options });
+    const r2 = await apiPost("/api/passkey_register_finish", { nickname, credential: credToJSON(cred) });
+    setToken(r2.token);
+    await syncBonuses();
+  }
+
+  async function passkeyLogin(nicknameOptional){
+    const r1 = await apiPost("/api/passkey_login_begin", { nickname: nicknameOptional || "" });
+    const cred = await navigator.credentials.get({ publicKey: r1.options });
+    const r2 = await apiPost("/api/passkey_login_finish", { nickname: nicknameOptional || "", credential: credToJSON(cred) });
+    setToken(r2.token);
+    await syncBonuses();
+  }
+
+
+
+  function attachLoginButtons(){
+    btnGuestPlay.addEventListener("click", () => {
+      startGame();
+    });
+
+    btnPasskeyRegister.addEventListener("click", async () => {
+      const nickname = loginNickname.value.trim();
+      if (!nickname || nickname.length < 3) {
+        alert("Inserisci un nickname (min 3 caratteri)");
+        return;
+      }
+
+      try{
+        // referralCode per ora null (poi lo aggiungiamo se vuoi)
+        const referralCode = null;
+        await passkeyRegister(nickname, referralCode);
+        startGame();
+      } catch (e){
+        alert("Registrazione passkey fallita: " + (e?.message || e));
+      }
+    });
+
+    btnPasskeyLogin.addEventListener("click", async () => {
+      const nickname = loginNickname.value.trim(); // può anche essere vuoto
+
+      try{
+        await passkeyLogin(nickname);
+        startGame();
+      } catch (e){
+        alert("Login passkey fallito: " + (e?.message || e));
+      }
+    });
+  }
+
+
+  async function submitHighScoreIfLoggedIn(score){
+    if (!getToken()) return; // guest/offline: non manda nulla
+    try{
+      await apiPost("/api/score_submit", { score });
+    }catch(_){
+      // ignora: rete assente ecc.
+    }
+  }
+
+  function credToJSON(cred){
+    if (!cred) return null;
+    const obj = {
+      id: cred.id,
+      rawId: bufToB64u(cred.rawId),
+      type: cred.type,
+      clientExtensionResults: cred.getClientExtensionResults?.() || {},
+      response: {}
+    };
+    const r = cred.response;
+    if (r.attestationObject) obj.response.attestationObject = bufToB64u(r.attestationObject);
+    if (r.authenticatorData) obj.response.authenticatorData = bufToB64u(r.authenticatorData);
+    if (r.clientDataJSON) obj.response.clientDataJSON = bufToB64u(r.clientDataJSON);
+    if (r.signature) obj.response.signature = bufToB64u(r.signature);
+    if (r.userHandle) obj.response.userHandle = bufToB64u(r.userHandle);
+    return obj;
+  }
+
+  function bufToB64u(buf){
+    const bytes = new Uint8Array(buf);
+    let bin = "";
+    bytes.forEach(b => bin += String.fromCharCode(b));
+    return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");
+  }
+
+
+  // ==========
+  // Game state
+  // ==========
+  function newGameState(){
+    return {
+      level: 1,
+      sizeIndex: 0,
+      N: SIZES[0],
+      score: 0,
+      moves: 3,
+      undoAvailable: true,
+      hintCharges: 1, // 1 per 3 livelli (we track cooldown)
+      hintCooldown: 0, // levels until recharge (0 means available if charges>0)
+      impossible: false, // solver proved no solution from current state (=> suggest Undo)
+
+      // generation seed-ish
+      rngSeed: Math.floor(Math.random()*1e9) >>> 0,
+      // board data
+      board: [],
+      tilesById: {},
+      nextTileId: 1,
+      // snapshot for undo
+      undoSnapshot: null,
+      // solver path for the current level (optional; we store a precomputed best direction)
+      levelPlan: {
+        // We keep it minimal: a list of recommended directions; for demo we compute first move by solver.
+        bestFirstDir: null,
+      }
+    };
+  }
+
+  function weightedPickGrid(){
+  // Puoi cambiare i pesi. Qui evito 10x10 troppo spesso.
+  const bag = [3,3,3, 5,5,5,5, 7,7, 10]; // 3:30% 5:40% 7:20% 10:10%
+  return bag[Math.floor(Math.random() * bag.length)];
+  }
+
+  function pickGridSizeForLevel(level){
+    if (level < 5) {
+      // lascia la tua progressione attuale (o come preferisci)
+      // esempio: 1-3 => 3, 4 => 5
+      return (level <= 3) ? 3 : 5;
+    }
+    return weightedPickGrid();
+  }
+
+
+  function startLevel(nextLevel){
+    state.level = nextLevel;
+
+    // size cycles / varies with level (simple mapping; you can change later)
+    // We'll use: 1-3 -> 3x3, 4-7 -> 5x5, 8-12 -> 7x7, 13+ -> 10x10
+    state.N = pickGridSizeForLevel(nextLevel);
+
+    // Le mosse NON si resettano: si accumulano tra i livelli.
+    // Garantiamo solo un minimo per evitare soft-lock a 0.
+    state.moves = Math.max(state.moves, 3);
+
+    state.undoAvailable = true;
+    state.undoSnapshot = null;
+    state.impossible = false;
+
+    // hint recharge every 3 levels
+    if (state.hintCooldown > 0) state.hintCooldown -= 1;
+    if (state.hintCooldown === 0 && state.hintCharges === 0) {
+      state.hintCharges = 1;
+    }
+
+    // regen board with at least 1 empty, each color >=2
+    generateLevelBoardGated();
+
+
+    // compute best first dir as a "plan" (demo-level).
+    state.levelPlan.bestFirstDir = computeHintDirectionForCurrentState({maxDepth: 6, timeBudgetMs: 25});
+
+    saveNow();
+    renderAll(true);
+    toastMsg(`Livello ${state.level}`);
+  }
+
+  function levelToSizeIndex(level){
+    if (level <= 3) return 0; // 3
+    if (level <= 7) return 1; // 5
+    if (level <= 12) return 2; // 7
+    return 3; // 10
+  }
+
+  // ==========
+  // Generation (minimal but consistent)
+  // ==========
+  // NOTE: Full "always solvable" generation requires a stronger solver and generate+verify.
+  // For this prototype we generate reasonable boards and verify at least 1 immediate break is possible.
+  // You can tighten it later with deeper verification.
+
+  function generateLevelBoard(){
+    const N = state.N;
+    state.board = Array.from({length:N}, () => Array.from({length:N}, () => null));
+    state.tilesById = {};
+    state.nextTileId = 1;
+
+    // Determine empties: always at least 1.
+    // Rule: about 15% empties, clamped.
+    const total = N*N;
+    const empties = clamp(Math.floor(total * (N === 3 ? 1/9 : 0.15)), 1, Math.max(1, total - 8));
+    const filled = total - empties;
+
+    // Choose number of colors: between 2 and 7, but limited by filled cells and min 2 each.
+    const maxColors = Math.min(7, Math.floor(filled/2));
+    const minColors = Math.min(2, maxColors);
+    const colorCount = randInt(minColors, maxColors);
+
+    // Assign counts: each >=2, sum to filled
+    const counts = Array.from({length: colorCount}, () => 2);
+    let remaining = filled - (2*colorCount);
+    while (remaining > 0){
+      counts[randInt(0, colorCount-1)] += 1;
+      remaining -= 1;
+    }
+
+    // Place tiles randomly, then enforce at least one immediate break possible.
+    // We'll try multiple attempts.
+    const MAX_ATTEMPTS = 120;
+    for (let attempt=0; attempt<MAX_ATTEMPTS; attempt++){
+      clearBoardOnly(N);
+
+      // Create list of positions
+      const positions = [];
+      for (let y=0; y<N; y++) for (let x=0; x<N; x++) positions.push([x,y]);
+      shuffle(positions);
+
+      // Reserve empties (first E positions)
+      const emptySet = new Set();
+      for (let i=0; i<empties; i++){
+        const [x,y] = positions[i];
+        emptySet.add(key(x,y));
+      }
+
+      // Create a flat list of colorIds according to counts
+      const colorIds = [];
+      for (let i=0; i<colorCount; i++){
+        for (let c=0; c<counts[i]; c++) colorIds.push(i);
+      }
+      shuffle(colorIds);
+
+      // Fill remaining cells
+      let idx = 0;
+      for (let i=empties; i<positions.length; i++){
+        const [x,y] = positions[i];
+        const colorId = colorIds[idx++];
+        const id = state.nextTileId++;
+        state.tilesById[id] = {id, colorId, x, y};
+        state.board[y][x] = id;
+      }
+
+      // Verify: at least one move leads to at least one color break.
+      const dirs = ["up","down","left","right"];
+      let ok = false;
+      for (const d of dirs){
+        const sim = simulateMove(state, d);
+        if (sim.brokenCount > 0){ ok = true; break; }
+      }
+      if (!ok) continue;
+      // Reject boards that already contain an immediate break at spawn
+      const immediate = computeBreaks();
+      if (immediate.idsToRemove.length > 0) continue;
+      // Solvability gate:
+      // - If the solver can PROVE it's impossible, reject.
+      // - For small boards (<=5), require the solver to actually find a full solution.
+      const solv0 = analyzeSolvabilityForSnapshot(snapshotFromState(state), {
+        timeBudgetMs: (N <= 3 ? 140 : (N <= 5 ? 220 : 35)),
+        nodeLimit: (N <= 3 ? 80000 : (N <= 5 ? 140000 : 6000)),
+      });
+      if (solv0.status === "exhausted") continue;
+      if (N <= 5 && solv0.status !== "solved") continue;
+
+
+      // Also avoid trivial immediate win for small boards too often
+      // but allow it sometimes.
+      break;
+    }
+
+    function clearBoardOnly(N){
+      state.board = Array.from({length:N}, () => Array.from({length:N}, () => null));
+      state.tilesById = {};
+      state.nextTileId = 1;
+    }
+  }
+
+  function generateLevelBoardGated(){
+    // tenta: se non passa i gate “forti”, cambia N e riprova
+    const MAX_RETRIES = 18;
+
+    for (let k=0; k<MAX_RETRIES; k++){
+      // scegli N (liv >=5 random, altrimenti come regola tua)
+      state.N = pickGridSizeForLevel(state.level);
+
+      // genera una board (questa già fa i suoi MAX_ATTEMPTS interni)
+      generateLevelBoard();
+
+      // Gate extra: per N>=7 non pretendiamo "solved" (troppo caro),
+      // ma pretendiamo almeno che NON sia provatamente impossibile.
+      const snap = snapshotFromState(state);
+
+      const opts = (state.N <= 3)
+        ? { timeBudgetMs: 160, nodeLimit: 90000 }
+        : (state.N <= 5)
+          ? { timeBudgetMs: 240, nodeLimit: 160000 }
+          : (state.N <= 7)
+            ? { timeBudgetMs: 70, nodeLimit: 18000 }
+            : { timeBudgetMs: 55, nodeLimit: 14000 }; // 10x10: non esplodere
+
+      const solv = analyzeSolvabilityForSnapshot(snap, opts);
+
+      if (state.N <= 5){
+        // su piccolo: vogliamo una soluzione vera
+        if (solv.status === "solved") return true;
+        continue;
+      } else {
+        // su grande: basta che non sia “exhausted”
+        // (unknown va bene: non abbiamo provato che è impossibile)
+        if (solv.status !== "exhausted") return true;
+        continue;
+      }
+    }
+
+    // fallback: se proprio sfiga, forziamo 5x5 e rigeneriamo
+    state.N = 5;
+    generateLevelBoard();
+    return true;
+  }
+
+
+  // ==========
+  // Rendering
+  // ==========
+  function renderAll(forceGrid){
+    updateHUD();
+    if (forceGrid) renderGridBase();
+    renderTiles();
+    updateButtons();
+  }
+
+  function updateHUD(){
+    elLevel.textContent = String(state.level);
+    elSize.textContent  = `${state.N}×${state.N}`;
+    elMoves.textContent = String(state.moves);
+    elScore.textContent = String(state.score);
+  }
+
+  function renderGridBase(){
+    const N = state.N;
+    elGrid.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+    elGrid.style.gridTemplateRows = `repeat(${N}, 1fr)`;
+    elGrid.innerHTML = "";
+    for (let i=0; i<N*N; i++){
+      const div = document.createElement("div");
+      div.className = "cell";
+      elGrid.appendChild(div);
+    }
+  }
+
+  function renderTiles(){
+    const N = state.N;
+
+    // compute cell size and positions based on current board size
+    const rect = elBoard.getBoundingClientRect();
+    const innerPad = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--board-pad')) || 14;
+    const gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 10;
+    const innerW = rect.width - innerPad*2;
+    const innerH = rect.height - innerPad*2;
+    const cellW = (innerW - gap*(N-1)) / N;
+    const cellH = (innerH - gap*(N-1)) / N;
+
+    // Ensure DOM nodes exist for tiles
+    const existing = new Map();
+    Array.from(elTiles.children).forEach(node => {
+      if (node.dataset && node.dataset.id) existing.set(Number(node.dataset.id), node);
+    });
+
+    // Create/update
+    for (const idStr of Object.keys(state.tilesById)){
+      const id = Number(idStr);
+      const t = state.tilesById[id];
+      let node = existing.get(id);
+      if (!node){
+        node = document.createElement("div");
+        node.className = "tile";
+        node.dataset.id = String(id);
+
+        const glyph = document.createElement("div");
+        glyph.className = "glyph";
+        glyph.innerHTML = GLYPHS[t.colorId] || GLYPHS[0];
+        node.appendChild(glyph);
+
+        elTiles.appendChild(node);
+      }
+
+      const xpx = t.x * (cellW + gap);
+      const ypx = t.y * (cellH + gap);
+
+      node.style.setProperty("--x", `${xpx}px`);
+      node.style.setProperty("--y", `${ypx}px`);
+      node.style.setProperty("--w", `${cellW}px`);
+      node.style.setProperty("--h", `${cellH}px`);
+      node.style.background = COLORS[t.colorId % COLORS.length];
+
+      // ensure glyph stays correct if palette reused
+      const glyph = node.querySelector('.glyph');
+      if (glyph && glyph.dataset.cid !== String(t.colorId)){
+        glyph.dataset.cid = String(t.colorId);
+        glyph.innerHTML = GLYPHS[t.colorId] || GLYPHS[0];
+      }
+
+      existing.delete(id);
+    }
+
+    // Remove nodes not in state
+    for (const [id, node] of existing){
+      node.remove();
+    }
+  }
+
+  function updateButtons(){
+    btnUndo.disabled = isAnimating || !state.undoAvailable || !state.undoSnapshot;
+    btnHint.disabled = isAnimating || state.hintCharges <= 0 || state.impossible;
+
+  }
+
+  // ==========
+  // Input
+  // ==========
+  function attachInput(){
+    let startX=0, startY=0;
+    let active = false;
+
+    const THRESH = 18;
+
+    const onStart = (clientX, clientY) => {
+      if (isAnimating) return;
+      active = true;
+      startX = clientX;
+      startY = clientY;
+    };
+
+    const onEnd = (clientX, clientY) => {
+      if (!active || isAnimating) return;
+      active = false;
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+      if (Math.hypot(dx,dy) < THRESH) return;
+      const dir = Math.abs(dx) > Math.abs(dy)
+        ? (dx>0 ? "right" : "left")
+        : (dy>0 ? "down" : "up");
+      doMove(dir);
+    };
+
+    // Touch
+    elBoard.addEventListener("touchstart", (e) => {
+      if (!e.touches || !e.touches[0]) return;
+      e.preventDefault();
+      onStart(e.touches[0].clientX, e.touches[0].clientY);
+    }, {passive:false});
+
+    elBoard.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+      if (!t) return;
+      onEnd(t.clientX, t.clientY);
+    }, {passive:false});
+
+    // Mouse
+    elBoard.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      onStart(e.clientX, e.clientY);
+    });
+    window.addEventListener("mouseup", (e) => {
+      if (!active) return;
+      onEnd(e.clientX, e.clientY);
+    });
+
+    // Keyboard
+    window.addEventListener("keydown", (e) => {
+      if (isAnimating) return;
+      const k = e.key;
+      if (k === "ArrowUp") doMove("up");
+      else if (k === "ArrowDown") doMove("down");
+      else if (k === "ArrowLeft") doMove("left");
+      else if (k === "ArrowRight") doMove("right");
+    });
+  }
+
+  function attachButtons(){
+    btnUndo.addEventListener("click", () => {
+      if (isAnimating) return;
+      if (!state.undoAvailable || !state.undoSnapshot) return;
+      restoreSnapshot(state.undoSnapshot);
+      state.undoAvailable = false;
+      state.undoSnapshot = null;
+      saveNow();
+      renderAll(true);
+      toastMsg("Undo usato");
+    });
+
+    btnHint.addEventListener("click", () => {
+      if (isAnimating) return;
+      if (state.hintCharges <= 0) return;
+      showHint();
+    });
+
+    btnNew.addEventListener("click", () => {
+      if (isAnimating) return;
+      if (!confirm("Vuoi iniziare una nuova partita? Il salvataggio attuale verrà sovrascritto.")) return;
+      state = newGameState();
+      generateLevelBoard();
+      state.levelPlan.bestFirstDir = computeHintDirectionForCurrentState({maxDepth: 6, timeBudgetMs: 25});
+      saveNow();
+      renderAll(true);
+      toastMsg("Nuova partita");
+    });
+
+    btnCloseHint.addEventListener("click", () => {
+      hideHint();
+    });
+
+    hintOverlay.addEventListener("click", (e) => {
+      if (e.target === hintOverlay) hideHint();
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && hintOverlay.classList.contains("show")) hideHint();
+    });
+  }
+
+  // ==========
+  // Move logic
+  // ==========
+  async function doMove(dir){
+    if (isAnimating) return;
+
+    if (state.moves <= 0) {
+      toastMsg("Mosse finite");
+      return;
+    }
+
+    const before = snapshotState();
+
+    // Apply movement
+    const moved = applyMovement(dir);
+
+    // Save undo snapshot SOLO se la mossa ha davvero mosso qualcosa
+    if (moved && state.undoAvailable && !state.undoSnapshot){
+      state.undoSnapshot = before;
+    }
+
+
+    // Se non si muove nulla, NON consumare mosse (e non fare undo snapshot)
+    if (!moved){
+      // annulla eventuale snapshot appena creato per questa “mossa”
+      // (lo gestiamo nello step 2)
+      toastMsg("Nessuno spostamento");
+      saveNow();
+      renderAll(false);
+      isAnimating = false;
+      updateButtons();
+      return;
+    }
+
+    // Consuma una mossa SOLO se c'è stato movimento
+    state.moves -= 1;
+
+
+    // Break check after movement (one-shot, simultaneous)
+    let broken = null;
+
+    // Animate movement
+    isAnimating = true;
+    updateButtons();
+
+    // 0) aggiorna SUBITO il DOM: così parte lo "scivolamento" (CSS transition)
+    renderAll(false);
+    await nextFrame();
+
+    // 1) aspetta la fine dell'animazione di movimento
+    const MOVE_MS = parseInt(getCssVar('--anim-move'),10) || 520;
+    await sleep(MOVE_MS);
+
+    // 2) ora (a movimento finito) calcoliamo cosa si rompe
+    broken = computeBreaks();
+    const PREBREAK_MS = parseInt(getCssVar('--anim-prebreak'),10) || 420;
+
+
+    let brokeCount = 0;
+    if (broken.breakColorIds.length > 0){
+      const idsToRemove = new Set(broken.idsToRemove);
+      brokeCount = idsToRemove.size;
+      // 1) enfasi visibile prima della rottura
+      markPreBreak(idsToRemove);
+      await sleep(PREBREAK_MS);
+
+      // 2) rottura vera e propria (fade + stelle)
+      playBreakAnimation(idsToRemove);
+
+      // Remove after short delay to allow fade
+      await sleep(60);
+
+      // Apply removal
+      for (const id of idsToRemove){
+        const t = state.tilesById[id];
+        if (!t) continue;
+        state.board[t.y][t.x] = null;
+        delete state.tilesById[id];
+      }
+
+      // Points are global
+      const gained = Math.floor(brokeCount / 2);
+      state.score += gained;
+      state.moves += gained;
+
+      // Check for new local best score and submit if logged in
+      try {
+        const prevBest = parseInt(localStorage.getItem('psb_best_score') || '0', 10) || 0;
+        if (state.score > prevBest) {
+          localStorage.setItem('psb_best_score', String(state.score));
+          submitHighScoreIfLoggedIn(state.score);
+        }
+      } catch (e) { /* ignore storage errors */ }
+
+      // Allow fade
+      await sleep(parseInt(getCssVar('--anim-fade'),10) || 220);
+
+      toastMsg(`Rotti ${brokeCount} • +${gained} mosse`);
+    }
+
+    // Render after changes
+    renderAll(false);
+
+    // End of move
+    isAnimating = false;
+    updateButtons();
+
+    // Win/lose checks
+    if (Object.keys(state.tilesById).length === 0){
+      // Level complete
+      await sleep(80);
+      startLevel(state.level + 1);
+      return;
+    }
+
+    // Dead-end / moves ended
+    if (state.moves <= 0){
+      gameOver("Mosse finite");
+      return;
+    }
+
+    // If we're in a position that the solver can PROVE is impossible (state-space exhausted),
+    // disable Hint and tell the user to Undo (English message as requested).
+    if (Object.keys(state.tilesById).length > 0 && state.undoSnapshot){
+      const quick = anyBreakPossibleSoon(4);
+      if (!quick){
+        const solv = analyzeSolvabilityCurrentState({
+          timeBudgetMs: (state.N <= 5 ? 70 : 28),
+          nodeLimit: (state.N <= 5 ? 18000 : 4500),
+        });
+
+        if (solv.status === "exhausted"){
+          state.impossible = true;
+          toastMsg("Impossible situation. Use Undo.");
+        } else {
+          state.impossible = false;
+        }
+
+        updateButtons();
+      } else {
+        state.impossible = false;
+      }
+    } else {
+      state.impossible = false;
+    }
+
+    saveNow();
+
+    if (brokeCount === 0){
+      toastMsg("Nessuna rottura");
+    }
+
+    // Keep snapshot for debugging if needed
+    void(before);
+  }
+
+  function applyMovement(dir){
+    const N = state.N;
+    let movedAny = false;
+
+    // We'll create new board with same tiles, but moved.
+    // For determinism and correctness we compress each line.
+
+    const boardNew = Array.from({length:N}, () => Array.from({length:N}, () => null));
+
+    const updateTile = (id, nx, ny) => {
+      const t = state.tilesById[id];
+      if (t.x !== nx || t.y !== ny) movedAny = true;
+      t.x = nx; t.y = ny;
+      boardNew[ny][nx] = id;
+    };
+
+    if (dir === "left" || dir === "right"){
+      for (let y=0; y<N; y++){
+        const line = [];
+        for (let x=0; x<N; x++){
+          const id = state.board[y][x];
+          if (id != null) line.push(id);
+        }
+        if (dir === "right") line.reverse();
+
+        // place starting at 0 (in direction), preserving order
+        for (let i=0; i<line.length; i++){
+          const id = line[i];
+          const x = (dir === "left") ? i : (N-1-i);
+          updateTile(id, x, y);
+        }
+      }
+    } else {
+      for (let x=0; x<N; x++){
+        const line = [];
+        for (let y=0; y<N; y++){
+          const id = state.board[y][x];
+          if (id != null) line.push(id);
+        }
+        if (dir === "down") line.reverse();
+
+        for (let i=0; i<line.length; i++){
+          const id = line[i];
+          const y = (dir === "up") ? i : (N-1-i);
+          updateTile(id, x, y);
+        }
+      }
+    }
+
+    state.board = boardNew;
+    return movedAny;
+  }
+
+  function computeBreaks(){
+    // Determine for each colorId if all its tiles are connected (4-dir). If yes, break all of them.
+    const tiles = Object.values(state.tilesById);
+    if (tiles.length === 0) return {breakColorIds:[], idsToRemove:[]};
+
+    // group by color
+    const byColor = new Map();
+    for (const t of tiles){
+      if (!byColor.has(t.colorId)) byColor.set(t.colorId, []);
+      byColor.get(t.colorId).push(t);
+    }
+
+    const idsToRemove = [];
+    const breakColorIds = [];
+
+    for (const [colorId, list] of byColor.entries()){
+      if (list.length < 2) continue; // rule: at least 2 by design
+      // BFS from first tile
+      const target = new Set(list.map(t => key(t.x,t.y)));
+      const visited = new Set();
+      const q = [list[0]];
+      visited.add(key(list[0].x, list[0].y));
+
+      while (q.length){
+        const cur = q.shift();
+        const neigh = neighbors4(cur.x, cur.y, state.N);
+        for (const [nx,ny] of neigh){
+          const k = key(nx,ny);
+          if (visited.has(k)) continue;
+          // only traverse cells that contain that color
+          const id = state.board[ny][nx];
+          if (id == null) continue;
+          const t = state.tilesById[id];
+          if (!t || t.colorId !== colorId) continue;
+          visited.add(k);
+          q.push(t);
+        }
+      }
+
+      // Connected if visited covers all positions
+      let allConnected = true;
+      for (const pos of target){
+        if (!visited.has(pos)) {allConnected=false; break;}
+      }
+
+      if (allConnected){
+        breakColorIds.push(colorId);
+        for (const t of list) idsToRemove.push(t.id);
+      }
+    }
+
+    return {breakColorIds, idsToRemove};
+  }
+
+  // shallow check: can any move create a break within k plies (simple; not exhaustive)
+  function anyBreakPossibleSoon(depth){
+    const dirs = ["up","down","left","right"];
+    const base = snapshotState();
+
+    const dfs = (d) => {
+      if (d === 0) return false;
+      for (const dir of dirs){
+        const sim = simulateMoveFromSnapshot(base, dir);
+        if (sim.brokenCount > 0) return true;
+      }
+      return false;
+    };
+    return dfs(depth);
+  }
+
+  // ==========
+  // Hint + Solver (lightweight demo)
+  // ==========
+  function showHint(){
+    if (isAnimating) return;
+    if (state.hintCharges <= 0) return;
+
+    // If already proven impossible, do not consume hint charges
+    if (state.impossible){
+      toastMsg("Impossible situation. Use Undo.");
+      return;
+    }
+
+    // Try to PROVE impossibility on small state spaces
+    const solv = analyzeSolvabilityCurrentState({
+      timeBudgetMs: (state.N <= 5 ? 70 : 28),
+      nodeLimit: (state.N <= 5 ? 18000 : 4500),
+    });
+
+    if (solv.status === "exhausted"){
+      state.impossible = true;
+      saveNow();
+      updateButtons();
+      toastMsg("Impossible situation. Use Undo.");
+      return;
+    }
+
+    // Consume a charge (only if not impossible)
+    state.hintCharges -= 1;
+    if (state.hintCharges === 0) state.hintCooldown = 3;
+    saveNow();
+    updateButtons();
+
+    // If we found an actual solution, use its first move.
+    let dir = (solv.status === "solved") ? solv.firstDir : null;
+
+    // Otherwise fallback to heuristic (fast)
+    if (!dir) dir = state.levelPlan.bestFirstDir;
+    if (!dir) dir = computeHintDirectionForCurrentState({maxDepth: 8, timeBudgetMs: 50});
+    if (!dir){
+      hintText.textContent = "No solution found. Use Undo or keep experimenting.";
+      hintOverlay.classList.add("show");
+      requestAnimationFrame(() => requestAnimationFrame(() => renderHintDemo(dir)));
+
+      return;
+    }
+
+    const arrow = dirToArrow(dir);
+
+    hintText.textContent = `Recommended direction: ${dirToArrow(dir)}. (Simulation: 1 move)`;
+    hintOverlay.classList.add("show");
+    requestAnimationFrame(() => requestAnimationFrame(() => renderHintDemo(dir)));
+
+
+  }
+
+  function hideHint(){
+    if (window.__hintDemoStop) { window.__hintDemoStop();
+    window.__hintDemoStop = null; }
+    hintOverlay.classList.remove("show");
+    hintCanvasWrap.innerHTML = "";
+  }
+
+  function computeHintDirectionForCurrentState({maxDepth, timeBudgetMs}){
+    // Very small DFS with time budget.
+    const start = performance.now();
+    const dirs = ["up","down","left","right"];
+
+    const rootSnap = snapshotState();
+
+    // Evaluate a move by: brokenCount immediate, then prefer more empties + fewer colors left.
+    function scoreSnap(snap){
+      const tileCount = Object.keys(snap.tilesById).length;
+      const total = snap.N * snap.N;
+      const empties = total - tileCount;
+      const colorsLeft = new Set(Object.values(snap.tilesById).map(t=>t.colorId)).size;
+      return empties * 1.4 - colorsLeft * 0.9;
+    }
+
+    // Try immediate moves first
+    let bestDir = null;
+    let bestScore = -Infinity;
+
+    for (const dir of dirs){
+      const sim = simulateMoveFromSnapshot(rootSnap, dir);
+      if (sim.moved === false && sim.brokenCount === 0) {
+        // still allowed, but weak
+      }
+      const immediate = sim.brokenCount;
+      const baseScore = immediate * 8 + scoreSnap(sim.snapshot);
+      if (baseScore > bestScore){
+        bestScore = baseScore;
+        bestDir = dir;
+      }
+    }
+
+    // Depth search: only if time allows.
+    // We search for a sequence that yields breaks and doesn't dead-end too fast.
+    let bestSeqDir = bestDir;
+    let bestSeqScore = bestScore;
+
+    const dfs = (snap, depth, accScore, firstDir) => {
+      if (performance.now() - start > timeBudgetMs) return;
+      if (depth === 0) {
+        if (accScore > bestSeqScore){
+          bestSeqScore = accScore;
+          bestSeqDir = firstDir;
+        }
+        return;
+      }
+      // Early exit if already won
+      if (Object.keys(snap.tilesById).length === 0){
+        if (accScore + 1000 > bestSeqScore){
+          bestSeqScore = accScore + 1000;
+          bestSeqDir = firstDir;
+        }
+        return;
+      }
+      for (const dir of dirs){
+        const sim = simulateMoveFromSnapshot(snap, dir);
+        const sc = sim.brokenCount * 9 + scoreSnap(sim.snapshot);
+        dfs(sim.snapshot, depth-1, accScore + sc, firstDir);
+      }
+    };
+
+    for (const dir of dirs){
+      if (performance.now() - start > timeBudgetMs) break;
+      const sim = simulateMoveFromSnapshot(rootSnap, dir);
+      const sc = sim.brokenCount * 9 + scoreSnap(sim.snapshot);
+      dfs(sim.snapshot, maxDepth-1, sc, dir);
+    }
+
+    // If best is extremely weak and no break visible soon, can return null
+    // We'll return best anyway.
+    return bestSeqDir;
+  }
+
+
+  function renderHintDemo(dir){
+  // stop previous loops/timeouts (important if you open hint multiple times)
+  if (window.__hintDemoStop) { window.__hintDemoStop(); window.__hintDemoStop = null; }
+
+  hintCanvasWrap.innerHTML = "";
+
+  const N = state.N;
+  const baseSnap = snapshotState();
+
+  // timing (slow enough to be readable)
+  const MOVE_MS = 520;
+  const PRE_MS  = 220;
+  const FADE_MS = 260;
+  const LOOP_MS = MOVE_MS + PRE_MS + FADE_MS + 650;
+
+  const PAD = 6;
+  const GAP = 6;
+
+  const wrap = document.createElement("div");
+  wrap.style.width = "min(72vw, 260px)";
+  wrap.style.aspectRatio = "1 / 1";
+  wrap.style.position = "relative";
+  wrap.style.margin = "10px auto 0";
+  wrap.style.borderRadius = "16px";
+  hintCanvasWrap.appendChild(wrap);
+
+  const bg = document.createElement("div");
+  bg.style.position = "absolute";
+  bg.style.inset = "0";
+  bg.style.display = "grid";
+  bg.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+  bg.style.gridTemplateRows = `repeat(${N}, 1fr)`;
+  bg.style.gap = `${GAP}px`;
+  bg.style.padding = `${PAD}px`;
+  bg.style.background = "rgba(255,255,255,.06)";
+  bg.style.border = "1px solid rgba(255,255,255,.12)";
+  bg.style.borderRadius = "16px";
+  wrap.appendChild(bg);
+
+  for (let i=0;i<N*N;i++){
+    const cell = document.createElement("div");
+    cell.style.borderRadius = "12px";
+    cell.style.background = "rgba(255,255,255,.05)";
+    cell.style.border = "1px solid rgba(255,255,255,.06)";
+    bg.appendChild(cell);
+  }
+
+  const tilesLayer = document.createElement("div");
+  tilesLayer.style.position = "absolute";
+  tilesLayer.style.inset = "0";
+  wrap.appendChild(tilesLayer);
+
+  const tileNodes = {};
+  for (const t of Object.values(baseSnap.tilesById)){
+    const node = document.createElement("div");
+    node.style.position = "absolute";
+    node.style.borderRadius = "12px";
+    node.style.boxShadow = "0 10px 22px rgba(0,0,0,.28)";
+    node.style.background = COLORS[t.colorId] || "#888";
+    node.style.willChange = "transform, opacity, filter";
+    node.style.opacity = "1";
+    tilesLayer.appendChild(node);
+    tileNodes[t.id] = node;
+  }
+
+  function measure(){
+    const rect = wrap.getBoundingClientRect();
+    const inner = rect.width - PAD*2 - GAP*(N-1);
+    const cell = inner / N;
+    return {rect, cell};
+  }
+
+  function place(snap){
+    const {rect, cell} = measure();
+    if (rect.width < 10) return; // not ready yet
+
+    for (const idStr of Object.keys(baseSnap.tilesById)){
+      const id = Number(idStr);
+      const node = tileNodes[id];
+      if (!node) continue;
+
+      const t = snap.tilesById[idStr] || snap.tilesById[id]; // tolerate number/string keys
+      if (!t){
+        node.style.opacity = "0";
+        continue;
+      }
+
+      const x = PAD + (cell + GAP) * t.x;
+      const y = PAD + (cell + GAP) * t.y;
+
+      node.style.width = `${cell}px`;
+      node.style.height = `${cell}px`;
+
+      const tr = `translate(${x}px, ${y}px)`;
+      node.dataset.tr = tr;
+      node.style.transform = tr;
+    }
+  }
+
+  function setAnim(on){
+    const tr = on
+      ? `transform ${MOVE_MS}ms cubic-bezier(.2,.8,.2,1), opacity ${FADE_MS}ms ease, filter ${FADE_MS}ms ease`
+      : "none";
+    for (const n of Object.values(tileNodes)){
+      n.style.transition = tr;
+    }
+  }
+
+  function resetVisual(){
+    for (const n of Object.values(tileNodes)){
+      n.style.opacity = "1";
+      n.style.filter = "";
+      n.style.zIndex = "";
+      if (n.dataset.tr) n.style.transform = n.dataset.tr;
+    }
+  }
+
+  function preBreak(ids){
+    for (const id of ids){
+      const n = tileNodes[id];
+      if (!n) continue;
+      n.style.zIndex = "5";
+      n.style.filter = "brightness(1.18)";
+      const baseTr = n.dataset.tr || n.style.transform;
+      n.style.transform = baseTr + " scale(1.07)";
+    }
+  }
+
+  function fadeOut(ids){
+    for (const id of ids){
+      const n = tileNodes[id];
+      if (!n) continue;
+      n.style.opacity = "0";
+    }
+  }
+
+  const timeouts = [];
+  const later = (fn, ms) => {
+    const id = setTimeout(fn, ms);
+    timeouts.push(id);
+    return id;
+  };
+  let intervalId = null;
+
+  window.__hintDemoStop = () => {
+    timeouts.forEach(clearTimeout);
+    if (intervalId) clearInterval(intervalId);
+    intervalId = null;
+  };
+
+  function runOnce(){
+    if (!dir){
+      setAnim(false);
+      place(baseSnap);
+      resetVisual();
+      return;
+    }
+
+    const sim = simulateMovePreviewFromSnapshot(cloneHintSnapshot(baseSnap), dir);
+    const movedSnap = sim.snapshot;
+    const removed = sim.removedIds;
+
+    setAnim(false);
+    place(baseSnap);
+    resetVisual();
+    // force reflow
+    void tilesLayer.offsetWidth;
+
+    requestAnimationFrame(() => {
+      setAnim(true);
+      place(movedSnap);                // ✅ scorrimento di TUTTI i blocchi
+
+      later(() => preBreak(removed), Math.max(0, MOVE_MS - 90));        // pre-break quasi a fine corsa
+      later(() => fadeOut(removed), MOVE_MS + PRE_MS);                  // poi scomparsa
+      later(() => {
+        setAnim(false);
+        resetVisual();
+        place(baseSnap);                                                   // reset per loop
+      }, MOVE_MS + PRE_MS + FADE_MS + 450);
+    });
+  }
+
+  // Wait until modal has real size (prevents top-left collapse)
+  function waitForSize(tries=0){
+    const r = wrap.getBoundingClientRect();
+    if (r.width > 10 || tries > 12){
+      setAnim(false);
+      place(baseSnap);
+      resetVisual();
+
+      runOnce();
+      if (dir) intervalId = setInterval(runOnce, LOOP_MS);
+      return;
+    }
+    requestAnimationFrame(() => waitForSize(tries+1));
+  }
+
+  waitForSize();
+}
+
+  function markPreBreak(idsToRemove){
+    const idSet = new Set(Array.from(idsToRemove).map(Number));
+    const nodes = Array.from(elTiles.children);
+    for (const n of nodes){
+      const id = Number(n.dataset.id);
+      if (idSet.has(id)) n.classList.add("prebreak");
+    }
+  }
+
+
+  // ==========
+  // Break animation
+  // ==========
+  function playBreakAnimation(idsToRemove){
+    // Fade tiles + spawn stars
+    const nodes = Array.from(elTiles.children);
+    const idSet = new Set(Array.from(idsToRemove).map(Number));
+
+    for (const n of nodes){
+      const id = Number(n.dataset.id);
+      if (!idSet.has(id)) continue;
+      n.classList.add("fadeout");
+
+      // create star burst overlay
+      const starLayer = document.createElement("div");
+      starLayer.className = "stars play";
+
+      // 6 stars
+      const rect = n.getBoundingClientRect();
+      const parentRect = elBoard.getBoundingClientRect();
+      const cx = rect.left - parentRect.left + rect.width/2;
+      const cy = rect.top - parentRect.top + rect.height/2;
+
+      starLayer.style.position = "absolute";
+      starLayer.style.left = `${cx}px`;
+      starLayer.style.top  = `${cy}px`;
+      starLayer.style.width = "1px";
+      starLayer.style.height = "1px";
+
+      for (let i=0; i<6; i++){
+        const s = document.createElement("div");
+        s.className = "star";
+        s.style.left = "0px";
+        s.style.top = "0px";
+        s.style.setProperty("--dx", `${randFloat(-26,26)}px`);
+        s.style.setProperty("--dy", `${randFloat(-26,26)}px`);
+        s.innerHTML = starSVG();
+        starLayer.appendChild(s);
+      }
+      elBoard.appendChild(starLayer);
+      setTimeout(() => starLayer.remove(), 420);
+    }
+
+    // Remove fade class from surviving tiles after animation
+    setTimeout(() => {
+      const nodes2 = Array.from(elTiles.children);
+      for (const n of nodes2) n.classList.remove("fadeout","prebreak");
+    }, 260);
+  }
+
+  // ==========
+  // Save / Load
+  // ==========
+  function snapshotState(){
+    // Deep-ish clone minimal fields (avoid DOM)
+    const snap = {
+      level: state.level,
+      sizeIndex: state.sizeIndex,
+      N: state.N,
+      score: state.score,
+      moves: state.moves,
+      undoAvailable: state.undoAvailable,
+      hintCharges: state.hintCharges,
+      hintCooldown: state.hintCooldown,
+      impossible: state.impossible,
+      rngSeed: state.rngSeed,
+      nextTileId: state.nextTileId,
+      board: state.board.map(row => row.slice()),
+      tilesById: JSON.parse(JSON.stringify(state.tilesById)),
+      levelPlan: JSON.parse(JSON.stringify(state.levelPlan)),
+      // undoSnapshot not included to avoid recursion
+      undoSnapshot: null,
+    };
+    return snap;
+  }
+
+  function restoreSnapshot(snap){
+    state.level = snap.level;
+    state.sizeIndex = snap.sizeIndex;
+    state.N = snap.N;
+    state.score = snap.score;
+    state.moves = snap.moves;
+    state.undoAvailable = snap.undoAvailable;
+    state.hintCharges = snap.hintCharges;
+    state.hintCooldown = snap.hintCooldown;
+    state.impossible = (snap.impossible ?? false);
+    state.rngSeed = snap.rngSeed;
+    state.nextTileId = snap.nextTileId;
+    state.board = snap.board.map(r=>r.slice());
+    state.tilesById = JSON.parse(JSON.stringify(snap.tilesById));
+    state.levelPlan = JSON.parse(JSON.stringify(snap.levelPlan));
+  }
+
+  function saveNow(){
+    const payload = snapshotState();
+    // include undo snapshot separately
+    payload.undoSnapshot = state.undoSnapshot;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  }
+
+  function loadSave(){
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    try{
+      const s = JSON.parse(raw);
+      // basic validation
+      if (!s || typeof s.N !== "number" || !Array.isArray(s.board) || !s.tilesById) return null;
+      const st = newGameState();
+      // merge
+      Object.assign(st, s);
+      // reapply nested structures safely
+      st.board = s.board.map(r=>r.slice());
+      st.tilesById = s.tilesById;
+      st.levelPlan = s.levelPlan || {bestFirstDir:null};
+      st.undoSnapshot = s.undoSnapshot || null;
+      st.impossible = !!s.impossible;
+      return st;
+    } catch {
+      return null;
+    }
+  }
+
+  // ==========
+  // Game Over
+  // ==========
+  function gameOver(reason){
+    toastMsg(`Game Over — ${reason}`);
+    // submit final score when game ends
+    try { submitHighScoreIfLoggedIn(state.score); } catch (e) { /* ignore */ }
+    // start new game after short delay
+    setTimeout(() => {
+      if (!confirm(`Game Over: ${reason}. Vuoi ricominciare?`)) return;
+      state = newGameState();
+      generateLevelBoard();
+      state.levelPlan.bestFirstDir = computeHintDirectionForCurrentState({maxDepth: 6, timeBudgetMs: 25});
+      saveNow();
+      renderAll(true);
+    }, 100);
+  }
+
+  // ==========
+  // Simulation helpers
+  // ==========
+  function simulateMove(baseState, dir){
+    const snap = snapshotFromState(baseState);
+    return simulateMoveFromSnapshot(snap, dir);
+  }
+
+  function snapshotFromState(st){
+    return {
+      N: st.N,
+      board: st.board.map(r=>r.slice()),
+      tilesById: JSON.parse(JSON.stringify(st.tilesById)),
+    };
+  }
+
+  function simulateMoveFromSnapshot(snap, dir){
+    const N = snap.N;
+
+    // movement
+    let movedAny = false;
+    const boardNew = Array.from({length:N}, () => Array.from({length:N}, () => null));
+
+    const tilesById = snap.tilesById;
+
+    const updateTile = (id, nx, ny) => {
+      const t = tilesById[id];
+      if (t.x !== nx || t.y !== ny) movedAny = true;
+      t.x = nx; t.y = ny;
+      boardNew[ny][nx] = Number(id);
+    };
+
+    if (dir === "left" || dir === "right"){
+      for (let y=0; y<N; y++){
+        const line = [];
+        for (let x=0; x<N; x++){
+          const id = snap.board[y][x];
+          if (id != null) line.push(id);
+        }
+        if (dir === "right") line.reverse();
+        for (let i=0; i<line.length; i++){
+          const id = line[i];
+          const x = (dir === "left") ? i : (N-1-i);
+          updateTile(id, x, y);
+        }
+      }
+    } else {
+      for (let x=0; x<N; x++){
+        const line = [];
+        for (let y=0; y<N; y++){
+          const id = snap.board[y][x];
+          if (id != null) line.push(id);
+        }
+        if (dir === "down") line.reverse();
+        for (let i=0; i<line.length; i++){
+          const id = line[i];
+          const y = (dir === "up") ? i : (N-1-i);
+          updateTile(id, x, y);
+        }
+      }
+    }
+
+    snap.board = boardNew;
+
+    // breaks
+    const {breakColorIds, idsToRemove} = computeBreaksForSnapshot(snap);
+    const removedIds = [];
+
+    if (idsToRemove.length){
+      const idSet = new Set(idsToRemove.map(Number));
+      for (const id of idSet){
+        const t = snap.tilesById[id];
+        if (!t) continue;
+        snap.board[t.y][t.x] = null;
+        delete snap.tilesById[id];
+        removedIds.push(id);
+      }
+    }
+
+    return {
+      moved: movedAny,
+      brokenCount: removedIds.length,
+      breakColorIds,
+      removedIds,
+      snapshot: snap,
+    };
+  }
+
+  function cloneHintSnapshot(snap){
+    return {
+      N: snap.N,
+      board: snap.board.map(r => r.slice()),
+      tilesById: JSON.parse(JSON.stringify(snap.tilesById)),
+    };
+  }
+
+  // Come simulateMoveFromSnapshot, ma NON elimina i blocchi che “romperebbero”
+  // (così possiamo animare lo scorrimento e poi dissolverli)
+  function simulateMovePreviewFromSnapshot(snap, dir){
+    const N = snap.N;
+
+    let movedAny = false;
+    const boardNew = Array.from({length:N}, () => Array.from({length:N}, () => null));
+    const tilesById = snap.tilesById;
+
+    const updateTile = (id, nx, ny) => {
+      const t = tilesById[id];
+      if (t.x !== nx || t.y !== ny) movedAny = true;
+      t.x = nx; t.y = ny;
+      boardNew[ny][nx] = Number(id);
+    };
+
+    if (dir === "left" || dir === "right"){
+      for (let y=0; y<N; y++){
+        const line = [];
+        for (let x=0; x<N; x++){
+          const id = snap.board[y][x];
+          if (id != null) line.push(id);
+        }
+        if (dir === "right") line.reverse();
+        for (let i=0; i<line.length; i++){
+          const id = line[i];
+          const x = (dir === "left") ? i : (N-1-i);
+          updateTile(id, x, y);
+        }
+      }
+    } else {
+      for (let x=0; x<N; x++){
+        const line = [];
+        for (let y=0; y<N; y++){
+          const id = snap.board[y][x];
+          if (id != null) line.push(id);
+        }
+        if (dir === "down") line.reverse();
+        for (let i=0; i<line.length; i++){
+          const id = line[i];
+          const y = (dir === "up") ? i : (N-1-i);
+          updateTile(id, x, y);
+        }
+      }
+    }
+
+    snap.board = boardNew;
+
+    // calcola cosa si romperebbe, ma NON cancellare
+    const {breakColorIds, idsToRemove} = computeBreaksForSnapshot(snap);
+    const removedIds = Array.from(new Set(idsToRemove.map(Number)));
+
+    return {
+      moved: movedAny,
+      brokenCount: removedIds.length,
+      length,
+      breakColorIds,
+      removedIds,
+      snapshot: snap,
+    };
+  }
+
+  function computeBreaksForSnapshot(snap){
+    const tiles = Object.values(snap.tilesById);
+    if (!tiles.length) return {breakColorIds:[], idsToRemove:[]};
+    const byColor = new Map();
+    for (const t of tiles){
+      if (!byColor.has(t.colorId)) byColor.set(t.colorId, []);
+      byColor.get(t.colorId).push(t);
+    }
+    const idsToRemove = [];
+    const breakColorIds = [];
+    for (const [colorId, list] of byColor.entries()){
+      if (list.length < 2) continue;
+      const target = new Set(list.map(t => key(t.x,t.y)));
+      const visited = new Set();
+      const q = [list[0]];
+      visited.add(key(list[0].x, list[0].y));
+      while (q.length){
+        const cur = q.shift();
+        for (const [nx,ny] of neighbors4(cur.x, cur.y, snap.N)){
+          const k = key(nx,ny);
+          if (visited.has(k)) continue;
+          const id = snap.board[ny][nx];
+          if (id == null) continue;
+          const t = snap.tilesById[id];
+          if (!t || t.colorId !== colorId) continue;
+          visited.add(k);
+          q.push(t);
+        }
+      }
+      let allConnected = true;
+      for (const pos of target){
+        if (!visited.has(pos)) {allConnected=false; break;}
+      }
+      if (allConnected){
+        breakColorIds.push(colorId);
+        for (const t of list) idsToRemove.push(t.id);
+      }
+    }
+    return {breakColorIds, idsToRemove};
+  }
+
+    // ==========
+  // Solvability (PROVE impossibility only if reachable state-space is exhausted)
+  // ==========
+  function signatureForSnapshot(snap){
+    const N = snap.N;
+    let out = `${N}|`;
+    for (let y=0; y<N; y++){
+      for (let x=0; x<N; x++){
+        const id = snap.board[y][x];
+        if (id == null) out += ".";
+        else out += String(snap.tilesById[id].colorId);
+        out += ",";
+      }
+      out += ";";
+    }
+    return out;
+  }
+
+  function cloneSnapshot(s){
+    const tilesById = {};
+    for (const idStr in s.tilesById){
+      const t = s.tilesById[idStr];
+      tilesById[idStr] = {id: t.id, colorId: t.colorId, x: t.x, y: t.y};
+    }
+    return {
+      N: s.N,
+      board: s.board.map(r => r.slice()),
+      tilesById
+    };
+  }
+
+  function analyzeSolvabilityForSnapshot(rootSnap, {timeBudgetMs=30, nodeLimit=3500}={}){
+    const t0 = performance.now();
+    const dirs = ["up","down","left","right"];
+
+    const visited = new Set();
+    visited.add(signatureForSnapshot(rootSnap));
+
+    const q = [{snap: rootSnap, firstDir: null}];
+    let expanded = 0;
+
+    while (q.length){
+      if (performance.now() - t0 > timeBudgetMs) {
+        return {status:"unknown", firstDir:null, expanded, visited: visited.size};
+      }
+      if (expanded > nodeLimit) {
+        return {status:"unknown", firstDir:null, expanded, visited: visited.size};
+      }
+
+      const cur = q.shift();
+      expanded += 1;
+
+      if (Object.keys(cur.snap.tilesById).length === 0){
+        return {status:"solved", firstDir: cur.firstDir, expanded, visited: visited.size};
+      }
+
+      for (const dir of dirs){
+        const next = cloneSnapshot(cur.snap);
+        const sim = simulateMoveFromSnapshot(next, dir);
+
+        const sig = signatureForSnapshot(sim.snapshot);
+        if (visited.has(sig)) continue;
+        visited.add(sig);
+
+        q.push({
+          snap: sim.snapshot,
+          firstDir: cur.firstDir || dir,
+        });
+      }
+    }
+
+    // Exhausted => proven impossible
+    return {status:"exhausted", firstDir:null, expanded, visited: visited.size};
+  }
+
+  function analyzeSolvabilityCurrentState(opts){
+    const snap = snapshotFromState(state);
+    return analyzeSolvabilityForSnapshot(snap, opts);
+  }
+
+
+  // ==========
+  // Utils
+  // ==========
+  function neighbors4(x,y,N){
+    const out = [];
+    if (x>0) out.push([x-1,y]);
+    if (x<N-1) out.push([x+1,y]);
+    if (y>0) out.push([x,y-1]);
+    if (y<N-1) out.push([x,y+1]);
+    return out;
+  }
+
+  function key(x,y){ return `${x},${y}`; }
+
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+  function randInt(a,b){
+    // inclusive
+    const r = Math.random();
+    return a + Math.floor(r * (b-a+1));
+  }
+
+  function randFloat(a,b){
+    return a + Math.random()*(b-a);
+  }
+
+  function shuffle(arr){
+    for (let i=arr.length-1; i>0; i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  function sleep(ms){ return new Promise(res => setTimeout(res, ms)); }
+  function nextFrame(){ return new Promise(res => requestAnimationFrame(() => res())); }
+
+  function getCssVar(name){
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function toastMsg(msg){
+    const now = Date.now();
+    if (now - lastToastAt < 120) return;
+    lastToastAt = now;
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 1300);
+  }
+
+  function dirToArrow(dir){
+    if (dir === "up") return "↑";
+    if (dir === "down") return "↓";
+    if (dir === "left") return "←";
+    return "→";
+  }
+
+  // ==========
+  // SVGs
+  // ==========
+  function svgWrap(inner){
+    return `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">${inner}</svg>`;
+  }
+
+  function svgX(){
+    return svgWrap(`<line x1="20" y1="20" x2="80" y2="80" stroke="rgba(255,255,255,.92)" stroke-width="12" stroke-linecap="round"/>
+                    <line x1="80" y1="20" x2="20" y2="80" stroke="rgba(255,255,255,.92)" stroke-width="12" stroke-linecap="round"/>`);
+  }
+
+  function svgInnerSquare(){
+    return svgWrap(`<rect x="22" y="22" width="56" height="56" rx="10" ry="10" fill="none" stroke="rgba(255,255,255,.92)" stroke-width="12"/>`);
+  }
+
+  function svgCircle(){
+    return svgWrap(`<circle cx="50" cy="50" r="28" fill="none" stroke="rgba(255,255,255,.92)" stroke-width="12"/>`);
+  }
+
+  function svgTriangle(){
+    return svgWrap(`<path d="M50 18 L82 78 H18 Z" fill="none" stroke="rgba(255,255,255,.92)" stroke-width="12" stroke-linejoin="round"/>`);
+  }
+
+  function svgEquals(){
+    return svgWrap(`<line x1="22" y1="40" x2="78" y2="40" stroke="rgba(255,255,255,.92)" stroke-width="12" stroke-linecap="round"/>
+                    <line x1="22" y1="60" x2="78" y2="60" stroke="rgba(255,255,255,.92)" stroke-width="12" stroke-linecap="round"/>`);
+  }
+
+  function svgStar5(){
+    // 5-point star path
+    return svgWrap(`<path d="M50 16 L61 39 L86 42 L67 58 L72 83 L50 70 L28 83 L33 58 L14 42 L39 39 Z"
+                     fill="none" stroke="rgba(255,255,255,.92)" stroke-width="10" stroke-linejoin="round"/>`);
+  }
+
+  function svgPaw(){
+    // stylized paw: 4 toes + pad
+    return svgWrap(`
+      <circle cx="30" cy="34" r="8"/>
+      <circle cx="50" cy="26" r="8"/>
+      <circle cx="70" cy="34" r="8"/>
+      <circle cx="60" cy="50" r="7"/>
+      <path d="M28 64 C28 52, 40 46, 50 50 C60 46, 72 52, 72 64 C72 76, 60 84, 50 84 C40 84, 28 76, 28 64 Z"/>
+    `);
+  }
+
+  function starSVG(){
+    return `<svg viewBox="0 0 100 100" width="10" height="10" aria-hidden="true">
+      <path d="M50 10 L60 38 L90 40 L66 58 L74 88 L50 72 L26 88 L34 58 L10 40 L40 38 Z" fill="rgba(255,255,255,.96)"/>
+    </svg>`;
+  }
+
+  // ==========
+  // First time: if no save, generate board and plan
+  // ==========
+  if (!loadSave()){
+    generateLevelBoard();
+    state.levelPlan.bestFirstDir = computeHintDirectionForCurrentState({maxDepth: 6, timeBudgetMs: 25});
+    saveNow();
+    renderAll(true);
+  } else {
+    // Ensure grid matches loaded size
+    renderAll(true);
+  }
+
+})();
+</script>
+</body>
+</html>

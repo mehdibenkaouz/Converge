@@ -1,0 +1,41 @@
+﻿PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nickname TEXT UNIQUE NOT NULL,
+  referral_code TEXT UNIQUE NOT NULL,
+  invited_by INTEGER,
+  initial_claimed INTEGER NOT NULL DEFAULT 0,
+  bonus_wallet INTEGER NOT NULL DEFAULT 0,
+  high_score INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(invited_by) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS webauthn_credentials (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  credential_id TEXT UNIQUE NOT NULL,     -- base64url
+  public_key TEXT NOT NULL,               -- base64url
+  counter INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  token_hash TEXT UNIQUE NOT NULL,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS referrals (
+  inviter_user_id INTEGER NOT NULL,
+  invitee_user_id INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (inviter_user_id, invitee_user_id),
+  FOREIGN KEY(inviter_user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY(invitee_user_id) REFERENCES users(id) ON DELETE CASCADE
+);
