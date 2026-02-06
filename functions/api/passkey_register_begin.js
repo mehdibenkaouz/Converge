@@ -22,23 +22,14 @@ export async function onRequest(context) {
       `INSERT INTO users (nickname, referral_code) VALUES (?, ?)`
     ).bind(nickname, referral).run();
   } catch (e) {
-    const msg = String(e?.message || e);
-    if (msg.includes("UNIQUE") && (msg.includes("nickname") || msg.includes("users.nickname"))) {
-      return json({ error: "nickname_taken" }, 409);
-    }
-    if (msg.includes("UNIQUE") && msg.includes("referral_code")) {
-      // collision rarissima: riprova una volta
-      const referral2 = randomCode(10);
-      try {
-        await DB.prepare(`INSERT INTO users (nickname, referral_code) VALUES (?, ?)`)
-          .bind(nickname, referral2).run();
-      } catch (e2) {
-        return json({ error: "db_error" }, 500);
-      }
-    } else {
-      return json({ error: "db_error" }, 500);
-    }
-  }
+  return new Response(
+    JSON.stringify({
+      error: "db_error",
+      detail: String(e.message || e)
+    }),
+    { status: 500 }
+  );
+}
 
   const user = await DB.prepare(
     `SELECT id, referral_code FROM users WHERE nickname = ?`
