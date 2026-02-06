@@ -655,6 +655,9 @@
     </div>
   </div>
 
+  <button id="btn-logout">Logout</button>
+
+
   <div class="toast" id="toast"></div>
 
   
@@ -756,6 +759,24 @@ async function doLogin(username, password){
   setToken(token);
   await syncBonuses();
 }
+
+document.getElementById("btn-logout")?.addEventListener("click", async () => {
+  await logout();
+  alert("Logout fatto.");
+  location.reload();
+});
+
+async function logout() {
+  // Se hai un endpoint /logout è meglio chiamarlo:
+  try {
+    await apiFetch("/logout", { method: "POST" });
+  } catch (_) {}
+
+  // Poi pulisci il cookie lato client (fallback).
+  // Sostituisci "session" col nome reale del cookie se diverso:
+  document.cookie = "session=; Max-Age=0; Path=/; Secure; SameSite=Lax";
+}
+
 
 async function doRegister(username, password, referralCode){
   const { token } = await apiPost("/api/register", { username, password, referralCode });
