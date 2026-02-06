@@ -869,7 +869,7 @@ async function syncBonuses(){
 
   async function passkeyRegister(nickname, referralCode){
     const r1 = await apiPost("/api/passkey_register_begin", { nickname, referralCode });
-    const cred = await navigator.credentials.create({ publicKey: r1.options });
+    const cred = await navigator.credentials.create({ publicKey: pkCreateFromJSON(r1.options) });
     const r2 = await apiPost("/api/passkey_register_finish", { nickname, credential: credToJSON(cred) });
     setToken(r2.token);
     await syncBonuses();
@@ -877,7 +877,7 @@ async function syncBonuses(){
 
   async function passkeyLogin(nicknameOptional){
     const r1 = await apiPost("/api/passkey_login_begin", { nickname: nicknameOptional || "" });
-    const cred = await navigator.credentials.get({ publicKey: r1.options });
+    const cred = await navigator.credentials.get({ publicKey: pkGetFromJSON(r1.options) });
     const r2 = await apiPost("/api/passkey_login_finish", { nickname: nicknameOptional || "", credential: credToJSON(cred) });
     setToken(r2.token);
     await syncBonuses();
@@ -927,6 +927,64 @@ async function syncBonuses(){
     }catch(_){
       // ignora: rete assente ecc.
     }
+  }
+
+
+
+  function b64uToBuf(b64url){
+    if (b64url instanceof ArrayBuffer) return b64url;
+    if (ArrayBuffer.isView(b64url)) return b64url.buffer;
+
+    const pad = "=".repeat((4 - (b64url.length % 4)) % 4);
+    const b64 = (b64url + pad).replace(/-/g, "+").replace(/_/g, "/");
+    const bin = atob(b64);
+
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes.buffer;
+  }
+
+  function deepCopy(obj){
+    // options JSON -> clone sicuro
+    if (typeof structuredClone === "function") return structuredClone(obj);
+    return JSON.parse(JSON.stringify(obj));
+  }
+
+  function pkCreateFromJSON(optionsJSON){
+    const pk = deepCopy(optionsJSON);
+
+    // challenge: string -> ArrayBuffer
+    if (typeof pk.challenge === "string") pk.challenge = b64uToBuf(pk.challenge);
+
+    // user.id: string -> ArrayBuffer
+    if (pk.user && typeof pk.user.id === "string") pk.user.id = b64uToBuf(pk.user.id);
+
+    // excludeCredentials[].id: string -> ArrayBuffer
+    if (Array.isArray(pk.excludeCredentials)) {
+      pk.excludeCredentials = pk.excludeCredentials.map(c => ({
+        ...c,
+        id: (typeof c.id === "string") ? b64uToBuf(c.id) : c.id
+      }));
+    }
+
+    return pk;
+  }
+
+  function pkGetFromJSON(optionsJSON){
+    const pk = deepCopy(optionsJSON);
+
+    // challenge: string -> ArrayBuffer
+    if (typeof pk.challenge === "string") pk.challenge = b64uToBuf(pk.challenge);
+
+    // allowCredentials[].id: string -> ArrayBuffer
+    if (Array.isArray(pk.allowCredentials)) {
+      pk.allowCredentials = pk.allowCredentials.map(c => ({
+        ...c,
+        id: (typeof c.id === "string") ? b64uToBuf(c.id) : c.id
+      }));
+    }
+
+    return pk;
   }
 
   function credToJSON(cred){
