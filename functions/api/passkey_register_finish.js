@@ -28,7 +28,9 @@ export async function onRequest(context) {
 
   if (!ch) return json({ error: "challenge_not_found" }, 400);
 
-  const expectedOrigin = context.env.ORIGIN;
+  const rawOrigin = context.env.ORIGIN || "";
+  // normalize: remove trailing slash(es) so origin is stable (no ending '/')
+  const EXPECTED_ORIGIN = (context.env.ORIGIN || "").replace(/\/$/, "");
   const expectedRPID = context.env.RP_ID;
 
   let verification;
@@ -36,7 +38,7 @@ export async function onRequest(context) {
     verification = await verifyRegistrationResponse({
       response: attResp,
       expectedChallenge: ch.challenge,
-      expectedOrigin,
+      expectedOrigin: EXPECTED_ORIGIN,
       expectedRPID,
       requireUserVerification: false,
     });
