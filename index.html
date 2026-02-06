@@ -697,6 +697,27 @@
 
 
 <script>
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    const logged = await checkSession();
+
+    if (!logged) {
+      showLoginScreen();
+    } else {
+      showAppScreen();
+    }
+  });
+
+  async function checkSession() {
+    try {
+      const r = await apiFetch("/me", { method: "GET" });
+      return r.ok;
+    } catch {
+      return false;
+    }
+  }
+
+
 (() => {
   "use strict";
 
@@ -738,6 +759,18 @@ function getToken(){ return localStorage.getItem(AUTH_TOKEN_KEY) || ""; }
 function setToken(t){ localStorage.setItem(AUTH_TOKEN_KEY, t); }
 function clearToken(){ localStorage.removeItem(AUTH_TOKEN_KEY); }
 
+function showLoginScreen() {
+  document.getElementById("login-screen").style.display = "block";
+  document.getElementById("app-screen").style.display = "none";
+}
+
+function showAppScreen() {
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("app-screen").style.display = "block";
+}
+
+
+
 async function apiPost(path, body){
   const headers = { "Content-Type": "application/json" };
   const t = getToken();
@@ -774,7 +807,6 @@ async function logout() {
 
   // Poi pulisci il cookie lato client (fallback).
   // Sostituisci "session" col nome reale del cookie se diverso:
-  document.cookie = "session=; Max-Age=0; Path=/; Secure; SameSite=Lax";
 }
 
 
