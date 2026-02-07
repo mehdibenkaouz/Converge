@@ -1,6 +1,8 @@
 import { verifyAuthenticationResponse } from "@simplewebauthn/server";
 
 export async function onRequest(context) {
+  try {
+
   if (context.request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
   const DB = context.env.DB;
 
@@ -106,6 +108,9 @@ export async function onRequest(context) {
 
   // backward compat: token == access_token
   return json({ token: access_token, access_token, refresh_token, nickname: row.nickname }, 200);
+  } catch (e) {
+    return json({ error: "worker_exception", message: String(e?.message || e), name: e?.name || null }, 500);
+  }
 }
 
 async function issueSession(DB, userId) {
@@ -114,9 +119,14 @@ async function issueSession(DB, userId) {
   const tokenHash = await sha256b64u(token);
   const expires = new Date(Date.now() + 1000 * 60 * 20).toISOString(); // 20 min
 
-  await DB.prepare(
-    `INSERT INTO sessions (user_id, token_hash, expires_at) VALUES (?, ?, ?)`
-  ).bind(userId, tokenHash, expires).run();
+  try {
+    await DB.prepare(
+      `INSERT INTO sessions (user_id, token_hash, expires_at) VALUES (?, ?, ?)`
+    ).bind(userId, tokenHash, expires).run();
+  } catch (e) {
+    throw new Error("sessions_insert_failed_access: " + String(e?.message || e));
+  }
+
 
   return token;
 }
@@ -127,9 +137,14 @@ async function issueRefreshSession(DB, userId) {
   const tokenHash = await sha256b64u(token);
   const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(); // 30 days
 
-  await DB.prepare(
-    `INSERT INTO sessions (user_id, token_hash, expires_at) VALUES (?, ?, ?)`
-  ).bind(userId, tokenHash, expires).run();
+  try {
+    await DB.prepare(
+      `INSERT INTO sessions (user_id, token_hash, expires_at) VALUES (?, ?, ?)`
+    ).bind(userId, tokenHash, expires).run();
+  } catch (e) {
+    throw new Error("sessions_insert_failed_refresh: " + String(e?.message || e));
+  }
+
 
   return token;
 }
