@@ -47,20 +47,35 @@ export async function onRequest(context) {
   }
 
   const { verified, registrationInfo } = verification;
-  return json({
-    build: "dbg_reginfo_v1",
-    t_credID: typeof registrationInfo?.credentialID,
-    isAB_credID: registrationInfo?.credentialID instanceof ArrayBuffer,
-    isView_credID: ArrayBuffer.isView(registrationInfo?.credentialID),
-    byteLen_credID: registrationInfo?.credentialID?.byteLength ?? null,
-    len_credID: registrationInfo?.credentialID?.length ?? null,
+  const cd = parseClientData(attResp?.response?.clientDataJSON || "");
 
-    t_pub: typeof registrationInfo?.credentialPublicKey,
-    isAB_pub: registrationInfo?.credentialPublicKey instanceof ArrayBuffer,
-    isView_pub: ArrayBuffer.isView(registrationInfo?.credentialPublicKey),
-    byteLen_pub: registrationInfo?.credentialPublicKey?.byteLength ?? null,
-    len_pub: registrationInfo?.credentialPublicKey?.length ?? null,
+  function b64uToStr(s) {
+    s = (s || "").replace(/-/g, "+").replace(/_/g, "/");
+    while (s.length % 4) s += "=";
+    return atob(s);
+  }
+
+  function parseClientData(b64u) {
+    try {
+      const o = JSON.parse(b64uToStr(b64u));
+      return { type: o.type, challenge: o.challenge, origin: o.origin };
+    } catch {
+      return { error: "bad_clientDataJSON" };
+    }
+  }
+
+  return json({
+    build: "dbg_reg_cmp_v2",
+    expected: {
+      challenge: ch.challenge,
+      origin: (context.env.ORIGIN || "").replace(/\/$/, ""),
+      rpID: context.env.RP_ID || null,
+    },
+    client: cd,
+    verified,
+    regKeys: registrationInfo ? Object.keys(registrationInfo) : [],
   }, 200);
+
 
   if (!verified || !registrationInfo) return json({ error: "not_verified" }, 400);
 
