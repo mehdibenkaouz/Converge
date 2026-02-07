@@ -47,6 +47,17 @@ export async function onRequest(context) {
   }
 
   const { verified, registrationInfo } = verification;
+  return json({
+  t_credID: typeof registrationInfo?.credentialID,
+  isAB_credID: registrationInfo?.credentialID instanceof ArrayBuffer,
+  isView_credID: ArrayBuffer.isView(registrationInfo?.credentialID),
+  byteLen_credID: registrationInfo?.credentialID?.byteLength ?? null,
+  t_pub: typeof registrationInfo?.credentialPublicKey,
+  isAB_pub: registrationInfo?.credentialPublicKey instanceof ArrayBuffer,
+  isView_pub: ArrayBuffer.isView(registrationInfo?.credentialPublicKey),
+  byteLen_pub: registrationInfo?.credentialPublicKey?.byteLength ?? null,
+}, 200);
+
   if (!verified || !registrationInfo) return json({ error: "not_verified" }, 400);
 
   const credentialID = toB64u(registrationInfo.credentialID);
