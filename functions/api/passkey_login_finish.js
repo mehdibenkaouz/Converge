@@ -7,29 +7,31 @@ export async function onRequest(context) {
   const body = await context.request.json().catch(() => null);
   if (!body) return json({ error: "bad_json" }, 400);
 
-  const nickname = (body.nickname || "").trim(); // opzionale
   const assertion = body.credential;
 
   if (!assertion) return json({ error: "missing_credential" }, 400);
 
   // challenge più recente (se nickname dato, prova con user_id; altrimenti ultima login in generale)
-  let ch;
-  if (nickname) {
-    const user = await DB.prepare(`SELECT id FROM users WHERE nickname = ?`).bind(nickname).first();
-    if (!user) return json({ error: "user_not_found" }, 404);
+  let nickname = (body.nickname || "").trim();
+  let user = null;
 
-    ch = await DB.prepare(
-      `SELECT id, challenge FROM webauthn_challenges
-       WHERE kind='login' AND (user_id = ? OR user_id IS NULL)
-       ORDER BY id DESC LIMIT 1`
-    ).bind(user.id).first();
-  } else {
-    ch = await DB.prepare(
-      `SELECT id, challenge FROM webauthn_challenges
-       WHERE kind='login'
-       ORDER BY id DESC LIMIT 1`
-    ).first();
+  if (nickname) {
+    user = await DB.prepare(`SELECT id FROM users WHERE nickname = ? COLLATE NOCASE`)
+      .bind(nickname).first();
+    if (!user) nickname = "";
   }
+
+  // poi scegli challenge:
+  const ch = nickname
+    ? await DB.prepare(`SELECT id, challenge FROM webauthn_challenges
+                        WHERE kind='login' AND (user_id = ? OR user_id IS NULL)
+                        ORDER BY id DESC LIMIT 1`).bind(user.id).first()
+    : await DB.prepare(`SELECT id, challenge FROM webauthn_challenges
+                        WHERE kind='login'
+                        ORDER BY id DESC LIMIT 1`).first();
+                        
+
+  
 
   if (!ch) return json({ error: "challenge_not_found" }, 400);
 

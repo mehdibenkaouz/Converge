@@ -5,24 +5,29 @@ export async function onRequest(context) {
   const DB = context.env.DB;
 
   const body = await context.request.json().catch(() => ({}));
-  const nickname = (body.nickname || "").trim(); // opzionale
 
+  let nickname = (body.nickname || "").trim();
+  let user = null;
   let allowCredentials = [];
 
-  // Se nickname fornito, limitiamo alle sue credenziali
   if (nickname) {
-    const user = await DB.prepare(`SELECT id FROM users WHERE nickname = ?`).bind(nickname).first();
-    if (!user) return json({ error: "user_not_found" }, 404);
+    user = await DB.prepare(`SELECT id FROM users WHERE nickname = ? COLLATE NOCASE`)
+      .bind(nickname).first();
 
-    const creds = await DB.prepare(
-      `SELECT credential_id FROM webauthn_credentials WHERE user_id = ?`
-    ).bind(user.id).all();
+    if (user) {
+      const creds = await DB.prepare(
+        `SELECT credential_id FROM webauthn_credentials WHERE user_id = ?`
+      ).bind(user.id).all();
 
-    allowCredentials = (creds.results || []).map(r => ({
-      id: fromB64u(r.credential_id),
-      type: "public-key",
-    }));
+      allowCredentials = (creds.results || []).map(r => ({
+        id: fromB64u(r.credential_id),
+        type: "public-key",
+      }));
+    } else {
+      nickname = ""; // fallback
+    }
   }
+
 
   const options = await generateAuthenticationOptions({
     rpID: context.env.RP_ID,
