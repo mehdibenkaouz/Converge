@@ -3,105 +3,99 @@ import {
 } from "@simplewebauthn/server";
 
 export async function onRequest(context) {
-  try {
+  if (context.request.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
 
-  if (context.request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
   const DB = context.env.DB;
 
-  const body = await context.request.json().catch(() => null);
-  if (!body) return json({ error: "bad_json" }, 400);
-
-  const nickname = (body.nickname || "").trim();
-  const attResp = body.credential; // PublicKeyCredential (JSON) dal client
-
-  if (!nickname || !attResp) return json({ error: "missing_fields" }, 400);
-
-  const user = await DB.prepare(
-    `SELECT id FROM users WHERE username = ? OR nickname = ? LIMIT 1`
-  ).bind(nickname, nickname).first();
-  if (!user) return json({ error: "user_not_found" }, 404);
-
-  // recupera ultima challenge reg per user
-  const ch = await DB.prepare(
-    `SELECT id, challenge FROM webauthn_challenges
-     WHERE kind='reg' AND user_id = ?
-     ORDER BY id DESC LIMIT 1`
-  ).bind(user.id).first();
-
-  if (!ch) return json({ error: "challenge_not_found" }, 400);
-
-  const rawOrigin = context.env.ORIGIN || "";
-  // normalize: remove trailing slash(es) so origin is stable (no ending '/')
-  const EXPECTED_ORIGIN = (context.env.ORIGIN || "").replace(/\/$/, "");
-  const expectedRPID = context.env.RP_ID;
-
-  let verification;
   try {
-    verification = await verifyRegistrationResponse({
-      response: attResp,
-      expectedChallenge: ch.challenge,
-      expectedOrigin: EXPECTED_ORIGIN,
-      expectedRPID,
-      requireUserVerification: false,
-    });
-  } catch (e) {
-    return json({ error: "verify_failed", detail: String(e?.message || e) }, 400);
-  }
+    const body = await context.request.json().catch(() => null);
+    if (!body) return json({ error: "bad_json" }, 400);
 
-  const { verified, registrationInfo } = verification;
-  const cd = parseClientData(attResp?.response?.clientDataJSON || "");
+    const assertion = body.credential;
+    if (!assertion) return json({ error: "missing_credential" }, 400);
 
-  function b64uToStr(s) {
-    s = (s || "").replace(/-/g, "+").replace(/_/g, "/");
-    while (s.length % 4) s += "=";
-    return atob(s);
-  }
+    // challenge più recente (se nickname dato, prova con user_id; altrimenti ultima login in generale)
+    let nickname = (body.nickname || "").trim();
+    let user = null;
 
-  function parseClientData(b64u) {
-    try {
-      const o = JSON.parse(b64uToStr(b64u));
-      return { type: o.type, challenge: o.challenge, origin: o.origin };
-    } catch {
-      return { error: "bad_clientDataJSON" };
+    if (nickname) {
+      user = await DB.prepare(`SELECT id FROM users WHERE nickname = ? COLLATE NOCASE`)
+        .bind(nickname).first();
+      if (!user) nickname = "";
     }
-  }
 
+    const ch = nickname
+      ? await DB.prepare(`SELECT id, challenge FROM webauthn_challenges
+                          WHERE kind='login' AND (user_id = ? OR user_id IS NULL)
+                          ORDER BY id DESC LIMIT 1`).bind(user.id).first()
+      : await DB.prepare(`SELECT id, challenge FROM webauthn_challenges
+                          WHERE kind='login'
+                          ORDER BY id DESC LIMIT 1`).first();
 
+    if (!ch || !ch.challenge) return json({ error: "challenge_not_found" }, 400);
 
-  if (!verified || !registrationInfo) return json({ error: "not_verified" }, 400);
+    // Recupera credenziale dal DB usando credential_id
+    const credIdA = assertion?.rawId;
+    const credIdB = assertion?.id;
+    if (!credIdA && !credIdB) return json({ error: "missing_credential_id" }, 400);
 
-  const credentialID = (registrationInfo.credential && registrationInfo.credential.id) ? registrationInfo.credential.id : "";
-  const credentialPublicKey = toB64u(registrationInfo.credential?.publicKey);
-  if (!credentialID) return json({ error: "bad_credential_id" }, 400);
-    
-  if (!credentialPublicKey) return json({ error: "bad_public_key" }, 400);
-  const counter = registrationInfo.credential?.counter ?? 0;
+    const row = await DB.prepare(
+      `SELECT c.credential_id, c.user_id, c.public_key, c.counter, u.nickname
+       FROM webauthn_credentials c
+       JOIN users u ON u.id = c.user_id
+       WHERE c.credential_id = ? OR c.credential_id = ?`
+    ).bind(credIdA || credIdB, credIdB || credIdA).first();
 
+    if (!row) {
+      return json({ error: "credential_not_found", rawId: credIdA || null, id: credIdB || null }, 404);
+    }
 
-  // salva credenziale
-  try {
+    const usedCredId = row.credential_id;
+
+    const expectedOrigin = context.env.ORIGIN;
+    const expectedRPID = context.env.RP_ID;
+
+    let verification;
+    try {
+      verification = await verifyAuthenticationResponse({
+        response: assertion,
+        expectedChallenge: ch.challenge,
+        expectedOrigin,
+        expectedRPID,
+        authenticator: {
+          credentialID: fromB64u(usedCredId),
+          credentialPublicKey: fromB64u(row.public_key),
+          counter: row.counter || 0,
+        },
+        requireUserVerification: false,
+      });
+    } catch (e) {
+      return json({ error: "verify_failed", message: String(e) }, 400);
+    }
+
+    const { verified, authenticationInfo } = verification;
+    if (!verified || !authenticationInfo) return json({ error: "not_verified" }, 400);
+
     await DB.prepare(
-      `INSERT INTO webauthn_credentials (user_id, credential_id, public_key, counter)
-       VALUES (?, ?, ?, ?)`
-    ).bind(user.id, credentialID, credentialPublicKey, counter).run();
+      `UPDATE webauthn_credentials SET counter = ? WHERE credential_id = ?`
+    ).bind(authenticationInfo.newCounter, usedCredId).run();
+
+    await DB.prepare(`DELETE FROM webauthn_challenges WHERE id = ?`).bind(ch.id).run();
+
+    const token = await issueSession(DB, row.user_id);
+    return json({ token, nickname: row.nickname }, 200);
+
   } catch (e) {
-    // se già esiste, errore
-    return json({ error: "credential_exists" }, 409);
+    console.error("login_finish_exception", e);
+    return json(
+      { error: "worker_exception", message: String(e), stack: e?.stack || null },
+      500
+    );
   }
-
-  // elimina challenge usata (pulizia)
-  await DB.prepare(`DELETE FROM webauthn_challenges WHERE id = ?`).bind(ch.id).run();
-
-  // crea session token
-  const token = await issueSession(DB, user.id);
-  return json({ token }, 200);
-} catch (e) {
-  console.error("register_finish_exception", e);
-  return json({ error: "worker_exception", message: String(e), stack: e?.stack || null }, 500);
 }
 
-
-}
 
 async function issueSession(DB, userId) {
   const raw = crypto.getRandomValues(new Uint8Array(32));
