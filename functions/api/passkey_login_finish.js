@@ -1,14 +1,3 @@
-const clientCh = (() => {
-  try {
-    const s = JSON.parse(atob((assertion.response.clientDataJSON||"").replace(/-/g,"+").replace(/_/g,"/") + "===".slice((assertion.response.clientDataJSON||"").length%4||4)));
-    return s.challenge;
-  } catch { return null; }
-})();
-if (clientCh !== ch.challenge) {
-  return json({ error:"challenge_mismatch", expected: ch.challenge, got: clientCh }, 400);
-}
-
-
 import { verifyAuthenticationResponse } from "@simplewebauthn/server";
 
 export async function onRequest(context) {
@@ -66,10 +55,23 @@ export async function onRequest(context) {
   const expectedOrigin = context.env.ORIGIN;
   const expectedRPID = context.env.RP_ID;
 
+  const clientCh = (() => {
+  try {
+      const b64u = assertion.response.clientDataJSON || "";
+      const b64 = b64u.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((b64u.length % 4) || 4);
+      const o = JSON.parse(atob(b64));
+      return o.challenge;
+    } catch { return null; }
+  })();
+  if (clientCh !== ch.challenge) {
+    return json({ error: "challenge_mismatch", expected: ch.challenge, got: clientCh }, 400);
+  }
+
   let verification;
   try {
     verification = await verifyAuthenticationResponse({
       response: assertion,
+      
       expectedChallenge: ch.challenge,
       expectedOrigin,
       expectedRPID,
