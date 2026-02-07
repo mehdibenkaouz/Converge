@@ -36,17 +36,21 @@ export async function onRequest(context) {
   if (!ch) return json({ error: "challenge_not_found" }, 400);
 
   // Recupera credenziale dal DB usando credential_id
-  const credId = assertion?.id;
-  if (!credId) return json({ error: "missing_credential_id" }, 400);
+  const credIdA = assertion?.rawId;
+  const credIdB = assertion?.id;
+  if (!credIdA && !credIdB) return json({ error: "missing_credential_id" }, 400);
 
   const row = await DB.prepare(
     `SELECT c.user_id, c.public_key, c.counter, u.nickname
-     FROM webauthn_credentials c
-     JOIN users u ON u.id = c.user_id
-     WHERE c.credential_id = ?`
-  ).bind(credId).first();
+    FROM webauthn_credentials c
+    JOIN users u ON u.id = c.user_id
+    WHERE c.credential_id = ? OR c.credential_id = ?`
+  ).bind(credIdA || credIdB, credIdB || credIdA).first();
 
   if (!row) return json({ error: "credential_not_found" }, 404);
+
+  const usedCredId = credIdA || credIdB;
+
 
   const expectedOrigin = context.env.ORIGIN;
   const expectedRPID = context.env.RP_ID;
@@ -59,7 +63,7 @@ export async function onRequest(context) {
       expectedOrigin,
       expectedRPID,
       authenticator: {
-        credentialID: fromB64u(credId),
+        credentialID: fromB64u(usedCredId),
         credentialPublicKey: fromB64u(row.public_key),
         counter: row.counter || 0,
       },
@@ -75,7 +79,7 @@ export async function onRequest(context) {
   // aggiorna counter
   await DB.prepare(
     `UPDATE webauthn_credentials SET counter = ? WHERE credential_id = ?`
-  ).bind(authenticationInfo.newCounter, credId).run();
+  ).bind(authenticationInfo.newCounter, usedCredId).run();
 
   // elimina challenge usata
   await DB.prepare(`DELETE FROM webauthn_challenges WHERE id = ?`).bind(ch.id).run();
