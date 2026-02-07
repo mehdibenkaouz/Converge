@@ -3,6 +3,8 @@ import {
 } from "@simplewebauthn/server";
 
 export async function onRequest(context) {
+  try {
+
   if (context.request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
   const DB = context.env.DB;
 
@@ -92,6 +94,12 @@ export async function onRequest(context) {
   // crea session token
   const token = await issueSession(DB, user.id);
   return json({ token }, 200);
+} catch (e) {
+  console.error("register_finish_exception", e);
+  return json({ error: "worker_exception", message: String(e), stack: e?.stack || null }, 500);
+}
+
+
 }
 
 async function issueSession(DB, userId) {
@@ -115,7 +123,7 @@ async function sha256b64u(text) {
 
 function toB64u(buf) {
   if (!buf) return "";
-  if (typeof buf === "string") return buf; // già base64url
+  if (typeof buf === "string") return buf;
   if (buf instanceof ArrayBuffer) return b64u(new Uint8Array(buf));
   if (ArrayBuffer.isView(buf)) return b64u(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
   return "";
