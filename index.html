@@ -960,7 +960,8 @@ async function syncBonuses(){
     const r1 = await apiPost("/api/passkey_login_begin", { nickname: nicknameOptional || "" });
     const cred = await navigator.credentials.get({ publicKey: pkGetFromJSON(r1.options) });
     const r2 = await apiPost("/api/passkey_login_finish", { nickname: nicknameOptional || "", credential: credToJSON(cred) });
-    setToken(r2);
+    setToken(r2.token);
+    if (r2.refresh_token) setRefreshToken(r2.refresh_token);
     await syncBonuses();
   }
 
