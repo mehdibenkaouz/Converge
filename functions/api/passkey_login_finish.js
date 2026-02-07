@@ -48,6 +48,8 @@ export async function onRequest(context) {
   ).bind(credIdA || credIdB, credIdB || credIdA).first();
 
   if (!row) return json({ error: "credential_not_found", rawId: credIdA || null, id: credIdB || null }, 404);
+  if (!row.public_key) return json({ error: "missing_public_key_db" }, 500);
+  if (!row.credential_id) return json({ error: "missing_credential_id_db" }, 500);
 
   const usedCredId = row.credential_id;
 
