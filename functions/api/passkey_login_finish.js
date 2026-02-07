@@ -101,7 +101,7 @@ export async function onRequest(context) {
   await DB.prepare(`DELETE FROM webauthn_challenges WHERE id = ?`).bind(ch.id).run();
 
   // access + refresh
-  const access_token = await issueAccessSession(DB, row.user_id);
+  const access_token = await issueSession(DB, row.user_id);
   const refresh_token = await issueRefreshSession(DB, row.user_id);
 
   // backward compat: token == access_token
