@@ -1,6 +1,8 @@
 import { verifyAuthenticationResponse } from "@simplewebauthn/server";
 
 export async function onRequest(context) {
+  try {
+
   if (context.request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
   const DB = context.env.DB;
 
@@ -48,11 +50,13 @@ export async function onRequest(context) {
   ).bind(credIdA || credIdB, credIdB || credIdA).first();
 
   if (!row) return json({ error: "credential_not_found", rawId: credIdA || null, id: credIdB || null }, 404);
+  if (!row.public_key) return json({ error: "missing_public_key_db" }, 500);
+  if (!row.credential_id) return json({ error: "missing_credential_id_db" }, 500);
 
   const usedCredId = row.credential_id;
 
 
-  const expectedOrigin = context.env.ORIGIN;
+  const expectedOrigin = (context.env.ORIGIN || "").replace(/\/$/, "");
   const expectedRPID = context.env.RP_ID;
 
   const clientCh = (() => {
@@ -75,12 +79,13 @@ export async function onRequest(context) {
       expectedChallenge: ch.challenge,
       expectedOrigin,
       expectedRPID,
-      authenticator: {
-        credentialID: fromB64u(usedCredId),
-        credentialPublicKey: fromB64u(row.public_key),
-        counter: row.counter || 0,
+      credential: {
+        id: usedCredId,
+        publicKey: fromB64u(row.public_key),
+        counter: Number(row.counter || 0),
+        // transports: row.transports ? row.transports.split(",").map(s=>s.trim()).filter(Boolean) : undefined,
       },
-      requireUserVerification: false,
+
     });
   } catch (e) {
     return json({ error: "verify_failed", message: String(e), name: e?.name || null }, 400);
@@ -97,16 +102,22 @@ export async function onRequest(context) {
   // elimina challenge usata
   await DB.prepare(`DELETE FROM webauthn_challenges WHERE id = ?`).bind(ch.id).run();
 
-  // session token
-  const token = await issueSession(DB, row.user_id);
-  return json({ token, nickname: row.nickname }, 200);
+  // access + refresh
+  const access_token = await issueSession(DB, row.user_id);
+  const refresh_token = await issueRefreshSession(DB, row.user_id);
+
+  // backward compat: token == access_token
+  return json({ token: access_token, access_token, refresh_token, nickname: row.nickname }, 200);
+  } catch (e) {
+    return json({ error: "worker_exception", message: String(e?.message || e), name: e?.name || null }, 500);
+  }
 }
 
 async function issueSession(DB, userId) {
   const raw = crypto.getRandomValues(new Uint8Array(32));
-  const token = b64u(raw);
+  const token = "a." + b64u(raw); // access token
   const tokenHash = await sha256b64u(token);
-  const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString();
+  const expires = new Date(Date.now() + 1000 * 60 * 20).toISOString(); // 20 min
 
   await DB.prepare(
     `INSERT INTO sessions (user_id, token_hash, expires_at) VALUES (?, ?, ?)`
@@ -114,6 +125,20 @@ async function issueSession(DB, userId) {
 
   return token;
 }
+
+async function issueRefreshSession(DB, userId) {
+  const raw = crypto.getRandomValues(new Uint8Array(32));
+  const token = "r." + b64u(raw); // refresh token
+  const tokenHash = await sha256b64u(token);
+  const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(); // 30 days
+
+  await DB.prepare(
+    `INSERT INTO sessions (user_id, token_hash, expires_at) VALUES (?, ?, ?)`
+  ).bind(userId, tokenHash, expires).run();
+
+  return token;
+}
+
 
 async function sha256b64u(text) {
   const enc = new TextEncoder();
