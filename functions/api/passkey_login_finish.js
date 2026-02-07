@@ -41,15 +41,15 @@ export async function onRequest(context) {
   if (!credIdA && !credIdB) return json({ error: "missing_credential_id" }, 400);
 
   const row = await DB.prepare(
-    `SELECT c.user_id, c.public_key, c.counter, u.nickname
+    `SELECT c.credential_id, c.user_id, c.public_key, c.counter, u.nickname
     FROM webauthn_credentials c
     JOIN users u ON u.id = c.user_id
     WHERE c.credential_id = ? OR c.credential_id = ?`
   ).bind(credIdA || credIdB, credIdB || credIdA).first();
 
-  if (!row) return json({ error: "credential_not_found" }, 404);
+  if (!row) return json({ error: "credential_not_found", rawId: credIdA || null, id: credIdB || null }, 404);
 
-  const usedCredId = credIdA || credIdB;
+  const usedCredId = row.credential_id;
 
 
   const expectedOrigin = context.env.ORIGIN;
