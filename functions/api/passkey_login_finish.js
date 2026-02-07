@@ -78,10 +78,11 @@ export async function onRequest(context) {
       expectedOrigin,
       expectedRPID,
       authenticator: {
-        credentialID: fromB64u(usedCredId),
+        credentialID: fromB64u(row.credential_id),
         credentialPublicKey: fromB64u(row.public_key),
-        counter: row.counter || 0,
+        counter: Number(row.counter || 0),
       },
+
       requireUserVerification: false,
     });
   } catch (e) {
