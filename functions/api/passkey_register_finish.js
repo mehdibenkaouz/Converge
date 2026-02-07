@@ -53,6 +53,9 @@ export async function onRequest(context) {
   const credentialPublicKey = toB64u(registrationInfo.credentialPublicKey);
   const counter = registrationInfo.counter || 0;
 
+  if (!credentialID) return json({ error: "bad_credential_id" }, 400);
+  if (!credentialPublicKey) return json({ error: "bad_public_key" }, 400);
+
   // salva credenziale
   try {
     await DB.prepare(
@@ -92,7 +95,11 @@ async function sha256b64u(text) {
 }
 
 function toB64u(buf) {
-  return b64u(new Uint8Array(buf));
+  if (typeof buf === "string") return buf;               // già base64url
+  if (buf instanceof Uint8Array) return b64u(buf);
+  if (buf instanceof ArrayBuffer) return b64u(new Uint8Array(buf));
+  if (buf && buf.buffer instanceof ArrayBuffer) return b64u(new Uint8Array(buf.buffer));
+  return "";
 }
 
 function b64u(bytes) {
