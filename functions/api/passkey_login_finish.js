@@ -108,7 +108,7 @@ export async function onRequest(context) {
   return json({ token: access_token, access_token, refresh_token, nickname: row.nickname }, 200);
 }
 
-async function issueAccessSession(DB, userId) {
+async function issueSession(DB, userId) {
   const raw = crypto.getRandomValues(new Uint8Array(32));
   const token = "a." + b64u(raw); // access token
   const tokenHash = await sha256b64u(token);
