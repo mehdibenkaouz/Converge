@@ -753,11 +753,30 @@
 // ==========
 // Auth + API (Cloudflare Pages Functions)
 // ==========
-const AUTH_TOKEN_KEY = "psb_auth_token_v1";
 
-function getToken(){ return localStorage.getItem(AUTH_TOKEN_KEY) || ""; }
-function setToken(t){ localStorage.setItem(AUTH_TOKEN_KEY, t); }
-function clearToken(){ localStorage.removeItem(AUTH_TOKEN_KEY); }
+const ACCESS_TOKEN_KEY  = "psb_access_token_v1";
+const REFRESH_TOKEN_KEY = "psb_refresh_token_v1";
+
+function getAccessToken(){ return localStorage.getItem(ACCESS_TOKEN_KEY) || ""; }
+function getRefreshToken(){ return localStorage.getItem(REFRESH_TOKEN_KEY) || ""; }
+
+function setTokens({ access_token, refresh_token, token }) {
+  const at = access_token || token || "";
+  const rt = refresh_token || "";
+
+  if (at) localStorage.setItem(ACCESS_TOKEN_KEY, at);
+  if (rt) localStorage.setItem(REFRESH_TOKEN_KEY, rt);
+}
+
+function clearTokens(){
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+}
+
+// backward compat helpers (minimo impatto sul resto del codice)
+function getToken(){ return getAccessToken(); }
+function setToken(t){ setTokens({ token: t }); }
+function clearToken(){ clearTokens(); }
 
 function showLoginScreen() {
   document.getElementById("login-screen").style.display = "block";
@@ -773,8 +792,9 @@ function showAppScreen() {
 
 async function apiPost(path, body){
   const headers = { "Content-Type": "application/json" };
-  const t = getToken();
+  const t = getAccessToken();
   if (t) headers["Authorization"] = "Bearer " + t;
+
 
   const r = await fetch(path, {
     method: "POST",
@@ -803,7 +823,7 @@ async function logout() {
     await apiPost("/api/logout", {});   // così lo vedi in Network
   } catch (_) {}
 
-  clearToken(); // rimuove localStorage token
+  clearTokens(); // rimuove access + refresh
 
   // mostra overlay login
   loginOverlay.classList.remove("hidden");
@@ -888,12 +908,13 @@ async function syncBonuses(){
     attachLoginButtons();
 
     // se ho un token salvato, provo a sincronizzare bonus e partire
-    if (getToken()){
+    if (getAccessToken()){
       startGame();
       // sync bonus in background (non blocca l'avvio)
       syncBonuses().catch(() => {});
       return;
     }
+
 
     // altrimenti mostra login
     loginOverlay.classList.remove("hidden");
@@ -923,7 +944,7 @@ async function syncBonuses(){
     const r1 = await apiPost("/api/passkey_register_begin", { nickname, referralCode });
     const cred = await navigator.credentials.create({ publicKey: pkCreateFromJSON(r1.options) });
     const r2 = await apiPost("/api/passkey_register_finish", { nickname, credential: credToJSON(cred) });
-    setToken(r2.token);
+    setToken(r2);
     await syncBonuses();
   }
 
@@ -931,7 +952,7 @@ async function syncBonuses(){
     const r1 = await apiPost("/api/passkey_login_begin", { nickname: nicknameOptional || "" });
     const cred = await navigator.credentials.get({ publicKey: pkGetFromJSON(r1.options) });
     const r2 = await apiPost("/api/passkey_login_finish", { nickname: nicknameOptional || "", credential: credToJSON(cred) });
-    setToken(r2.token);
+    setToken(r2);
     await syncBonuses();
   }
 
@@ -974,7 +995,7 @@ async function syncBonuses(){
 
 
   async function submitHighScoreIfLoggedIn(score){
-    if (!getToken()) return; // guest/offline: non manda nulla
+    if (!getAccessToken()) return; // guest/offline: non manda nulla
     try{
       await apiPost("/api/score_submit", { score });
     }catch(_){
