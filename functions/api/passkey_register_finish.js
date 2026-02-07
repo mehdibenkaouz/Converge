@@ -64,26 +64,15 @@ export async function onRequest(context) {
     }
   }
 
-  return json({
-    build: "dbg_reg_cmp_v2",
-    expected: {
-      challenge: ch.challenge,
-      origin: (context.env.ORIGIN || "").replace(/\/$/, ""),
-      rpID: context.env.RP_ID || null,
-    },
-    client: cd,
-    verified,
-    regKeys: registrationInfo ? Object.keys(registrationInfo) : [],
-  }, 200);
 
 
   if (!verified || !registrationInfo) return json({ error: "not_verified" }, 400);
 
-  const credentialID = toB64u(registrationInfo.credentialID);
   if (!credentialID) return json({ error: "bad_credential_id" }, 400);
-  const credentialPublicKey = toB64u(registrationInfo.credentialPublicKey);
   if (!credentialPublicKey) return json({ error: "bad_public_key" }, 400);
-  const counter = registrationInfo.counter || 0;
+  const credentialID = (registrationInfo.credential && registrationInfo.credential.id) ? registrationInfo.credential.id : "";
+  const credentialPublicKey = toB64u(registrationInfo.credential?.publicKey);
+  const counter = registrationInfo.credential?.counter ?? 0;
 
 
   // salva credenziale
