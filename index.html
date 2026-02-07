@@ -793,22 +793,21 @@ async function doLogin(username, password){
   await syncBonuses();
 }
 
+
 document.getElementById("btn-logout")?.addEventListener("click", async () => {
   await logout();
-  alert("Logout fatto.");
-  location.reload();
 });
 
 async function logout() {
-  // Se hai un endpoint /logout è meglio chiamarlo:
   try {
-    await apiFetch("/logout", { method: "POST" });
+    await apiPost("/api/logout", {});   // così lo vedi in Network
   } catch (_) {}
 
-  // Poi pulisci il cookie lato client (fallback).
-  // Sostituisci "session" col nome reale del cookie se diverso:
-}
+  clearToken(); // rimuove localStorage token
 
+  // mostra overlay login
+  loginOverlay.classList.remove("hidden");
+}
 
 async function doRegister(username, password, referralCode){
   const { token } = await apiPost("/api/register", { username, password, referralCode });
