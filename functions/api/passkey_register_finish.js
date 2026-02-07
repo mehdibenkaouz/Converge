@@ -48,15 +48,19 @@ export async function onRequest(context) {
 
   const { verified, registrationInfo } = verification;
   return json({
-  t_credID: typeof registrationInfo?.credentialID,
-  isAB_credID: registrationInfo?.credentialID instanceof ArrayBuffer,
-  isView_credID: ArrayBuffer.isView(registrationInfo?.credentialID),
-  byteLen_credID: registrationInfo?.credentialID?.byteLength ?? null,
-  t_pub: typeof registrationInfo?.credentialPublicKey,
-  isAB_pub: registrationInfo?.credentialPublicKey instanceof ArrayBuffer,
-  isView_pub: ArrayBuffer.isView(registrationInfo?.credentialPublicKey),
-  byteLen_pub: registrationInfo?.credentialPublicKey?.byteLength ?? null,
-}, 200);
+    build: "dbg_reginfo_v1",
+    t_credID: typeof registrationInfo?.credentialID,
+    isAB_credID: registrationInfo?.credentialID instanceof ArrayBuffer,
+    isView_credID: ArrayBuffer.isView(registrationInfo?.credentialID),
+    byteLen_credID: registrationInfo?.credentialID?.byteLength ?? null,
+    len_credID: registrationInfo?.credentialID?.length ?? null,
+
+    t_pub: typeof registrationInfo?.credentialPublicKey,
+    isAB_pub: registrationInfo?.credentialPublicKey instanceof ArrayBuffer,
+    isView_pub: ArrayBuffer.isView(registrationInfo?.credentialPublicKey),
+    byteLen_pub: registrationInfo?.credentialPublicKey?.byteLength ?? null,
+    len_pub: registrationInfo?.credentialPublicKey?.length ?? null,
+  }, 200);
 
   if (!verified || !registrationInfo) return json({ error: "not_verified" }, 400);
 
