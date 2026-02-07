@@ -754,29 +754,35 @@
 // Auth + API (Cloudflare Pages Functions)
 // ==========
 
-const ACCESS_TOKEN_KEY  = "psb_access_token_v1";
+const AUTH_TOKEN_KEY  = "psb_auth_token_v1";      // ← NUOVO: legacy
+const ACCESS_TOKEN_KEY = "psb_access_token_v1";
 const REFRESH_TOKEN_KEY = "psb_refresh_token_v1";
 
-function getAccessToken(){ return localStorage.getItem(ACCESS_TOKEN_KEY) || ""; }
-function getRefreshToken(){ return localStorage.getItem(REFRESH_TOKEN_KEY) || ""; }
-
-function setTokens({ access_token, refresh_token, token }) {
-  const at = access_token || token || "";
-  const rt = refresh_token || "";
-
-  if (at) localStorage.setItem(ACCESS_TOKEN_KEY, at);
-  if (rt) localStorage.setItem(REFRESH_TOKEN_KEY, rt);
+function getToken(){  // ← MIGLIORE: check dual + validazione
+  const a = localStorage.getItem(ACCESS_TOKEN_KEY) || "";
+  if (a && a !== "[object Object]") return a;
+  const legacy = localStorage.getItem(AUTH_TOKEN_KEY) || "";
+  if (legacy && legacy !== "[object Object]") return legacy;
+  return "";
 }
 
-function clearTokens(){
+function setToken(t){  // ← MIGLIORE: validazione + salva in entrambi
+  if (!t || typeof t !== "string" || t === "[object Object]") return;
+  localStorage.setItem(ACCESS_TOKEN_KEY, t);
+  localStorage.setItem(AUTH_TOKEN_KEY, t);
+}
+
+function setRefreshToken(t){  // ← NUOVO: dedicato al refresh
+  if (!t || typeof t !== "string" || t === "[object Object]") return;
+  localStorage.setItem(REFRESH_TOKEN_KEY, t);
+}
+
+function clearToken(){  // ← MIGLIORE: rimuove TUTTO
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_TOKEN_KEY);
 }
 
-// backward compat helpers (minimo impatto sul resto del codice)
-function getToken(){ return getAccessToken(); }
-function setToken(t){ setTokens({ token: t }); }
-function clearToken(){ clearTokens(); }
 
 function showLoginScreen() {
   document.getElementById("login-screen").style.display = "block";
@@ -944,7 +950,9 @@ async function syncBonuses(){
     const r1 = await apiPost("/api/passkey_register_begin", { nickname, referralCode });
     const cred = await navigator.credentials.create({ publicKey: pkCreateFromJSON(r1.options) });
     const r2 = await apiPost("/api/passkey_register_finish", { nickname, credential: credToJSON(cred) });
-    setToken(r2);
+    setToken(r2.token);
+    if (r2.refresh_token) setRefreshToken(r2.refresh_token);
+
     await syncBonuses();
   }
 

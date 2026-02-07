@@ -115,7 +115,7 @@ export async function onRequest(context) {
 
 async function issueSession(DB, userId) {
   const raw = crypto.getRandomValues(new Uint8Array(32));
-  const token = "a." + b64u(raw); // access token
+  const token = "a_" + b64u(raw); // access token
   const tokenHash = await sha256b64u(token);
   const expires = new Date(Date.now() + 1000 * 60 * 20).toISOString(); // 20 min
 
@@ -133,7 +133,7 @@ async function issueSession(DB, userId) {
 
 async function issueRefreshSession(DB, userId) {
   const raw = crypto.getRandomValues(new Uint8Array(32));
-  const token = "r." + b64u(raw); // refresh token
+  const token = "r_" + b64u(raw); // refresh token
   const tokenHash = await sha256b64u(token);
   const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(); // 30 days
 
