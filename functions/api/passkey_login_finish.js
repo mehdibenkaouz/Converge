@@ -52,7 +52,7 @@ export async function onRequest(context) {
   const usedCredId = row.credential_id;
 
 
-  const expectedOrigin = context.env.ORIGIN;
+  const expectedOrigin = (context.env.ORIGIN || "").replace(/\/$/, "");
   const expectedRPID = context.env.RP_ID;
 
   const clientCh = (() => {
