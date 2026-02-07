@@ -70,10 +70,11 @@ export async function onRequest(context) {
 
   if (!verified || !registrationInfo) return json({ error: "not_verified" }, 400);
 
-  if (!credentialID) return json({ error: "bad_credential_id" }, 400);
-  if (!credentialPublicKey) return json({ error: "bad_public_key" }, 400);
   const credentialID = (registrationInfo.credential && registrationInfo.credential.id) ? registrationInfo.credential.id : "";
   const credentialPublicKey = toB64u(registrationInfo.credential?.publicKey);
+  if (!credentialID) return json({ error: "bad_credential_id" }, 400);
+    
+  if (!credentialPublicKey) return json({ error: "bad_public_key" }, 400);
   const counter = registrationInfo.credential?.counter ?? 0;
 
 
