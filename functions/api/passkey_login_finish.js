@@ -1,3 +1,14 @@
+const clientCh = (() => {
+  try {
+    const s = JSON.parse(atob((assertion.response.clientDataJSON||"").replace(/-/g,"+").replace(/_/g,"/") + "===".slice((assertion.response.clientDataJSON||"").length%4||4)));
+    return s.challenge;
+  } catch { return null; }
+})();
+if (clientCh !== ch.challenge) {
+  return json({ error:"challenge_mismatch", expected: ch.challenge, got: clientCh }, 400);
+}
+
+
 import { verifyAuthenticationResponse } from "@simplewebauthn/server";
 
 export async function onRequest(context) {
