@@ -783,7 +783,7 @@ async function apiPost(path, body){
   });
 
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.error || ("HTTP_"+r.status));
+  if (!r.ok) throw new Error((data && (data.message || data.error)) || ("HTTP_"+r.status));
   return data;
 }
 
@@ -966,7 +966,8 @@ async function syncBonuses(){
         await passkeyLogin(nickname);
         startGame();
       } catch (e){
-        alert("Login passkey fallito: " + (e?.message || e));
+        console.error("Login passkey fallito:", err);
+        alert("Login passkey fallito: " + (err.message || err));
       }
     });
   }
