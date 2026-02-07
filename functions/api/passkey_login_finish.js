@@ -77,13 +77,13 @@ export async function onRequest(context) {
       expectedChallenge: ch.challenge,
       expectedOrigin,
       expectedRPID,
-      authenticator: {
-        credentialID: fromB64u(row.credential_id),
-        credentialPublicKey: fromB64u(row.public_key),
+      credential: {
+        id: usedCredId,
+        publicKey: fromB64u(row.public_key),
         counter: Number(row.counter || 0),
+        // transports: row.transports ? row.transports.split(",").map(s=>s.trim()).filter(Boolean) : undefined,
       },
 
-      requireUserVerification: false,
     });
   } catch (e) {
     return json({ error: "verify_failed", message: String(e), name: e?.name || null }, 400);
