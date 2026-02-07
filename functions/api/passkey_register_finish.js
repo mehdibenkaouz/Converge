@@ -50,11 +50,11 @@ export async function onRequest(context) {
   if (!verified || !registrationInfo) return json({ error: "not_verified" }, 400);
 
   const credentialID = toB64u(registrationInfo.credentialID);
+  if (!credentialID) return json({ error: "bad_credential_id" }, 400);
   const credentialPublicKey = toB64u(registrationInfo.credentialPublicKey);
+  if (!credentialPublicKey) return json({ error: "bad_public_key" }, 400);
   const counter = registrationInfo.counter || 0;
 
-  if (!credentialID) return json({ error: "bad_credential_id" }, 400);
-  if (!credentialPublicKey) return json({ error: "bad_public_key" }, 400);
 
   // salva credenziale
   try {
@@ -95,10 +95,10 @@ async function sha256b64u(text) {
 }
 
 function toB64u(buf) {
-  if (typeof buf === "string") return buf;               // già base64url
-  if (buf instanceof Uint8Array) return b64u(buf);
+  if (!buf) return "";
+  if (typeof buf === "string") return buf; // già base64url
   if (buf instanceof ArrayBuffer) return b64u(new Uint8Array(buf));
-  if (buf && buf.buffer instanceof ArrayBuffer) return b64u(new Uint8Array(buf.buffer));
+  if (ArrayBuffer.isView(buf)) return b64u(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
   return "";
 }
 
