@@ -83,7 +83,7 @@ export async function onRequest(context) {
       requireUserVerification: false,
     });
   } catch (e) {
-    return json({ error: "verify_failed" }, 400);
+    return json({ error: "verify_failed", message: String(e), name: e?.name || null }, 400);
   }
 
   const { verified, authenticationInfo } = verification;
