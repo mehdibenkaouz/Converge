@@ -19,11 +19,10 @@ export async function onRequest(context) {
 
     const expectedOrigin = String(context.env.ORIGIN || "").replace(/\/$/, "");
     const expectedRPID = String(context.env.RP_ID || "").trim();
-
     if (!expectedOrigin) return json({ error: "missing_env", detail: "ORIGIN is not set" }, 500);
     if (!expectedRPID) return json({ error: "missing_env", detail: "RP_ID is not set" }, 500);
 
-    // 0) Validate shape (client payload must include these)
+    // Shape check minimo (come da tuo payload)
     if (!att.id || !att.rawId || att.type !== "public-key") {
       return json({ error: "bad_credential_shape", detail: "missing id/rawId/type" }, 400);
     }
@@ -31,24 +30,24 @@ export async function onRequest(context) {
       return json({ error: "bad_credential_shape", detail: "missing clientDataJSON/attestationObject" }, 400);
     }
 
-    // normalize id/rawId to base64url no padding (defensive)
+    // Normalizza id/rawId (base64url senza padding)
     const normalizedId = normalizeB64u(att.rawId || att.id);
     att.id = normalizedId;
     att.rawId = normalizedId;
 
-    // 1) Load user
+    // User
     const user = await DB.prepare(
       `SELECT id, nickname FROM users WHERE nickname = ? COLLATE NOCASE LIMIT 1`
     ).bind(nickname).first();
     if (!user) return json({ error: "user_not_found" }, 404);
 
-    // if already has a credential, stop
+    // Se ha già credenziali -> stop
     const hasCred = await DB.prepare(
       `SELECT 1 FROM webauthn_credentials WHERE user_id = ? LIMIT 1`
     ).bind(user.id).first();
     if (hasCred) return json({ error: "already_has_credential" }, 409);
 
-    // 2) Load reg challenge
+    // Challenge reg
     const ch = await DB.prepare(
       `SELECT id, challenge FROM webauthn_challenges
        WHERE kind='reg' AND user_id = ?
@@ -56,7 +55,7 @@ export async function onRequest(context) {
     ).bind(user.id).first();
     if (!ch?.challenge) return json({ error: "challenge_not_found" }, 400);
 
-    // 3) Verify
+    // Verify (IMPORTANT: response deve essere l'oggetto credential ritornato dal browser)
     let verification;
     try {
       verification = await verifyRegistrationResponse({
@@ -72,30 +71,27 @@ export async function onRequest(context) {
 
     const { verified, registrationInfo } = verification;
     if (!verified) return json({ error: "not_verified" }, 400);
-    if (!registrationInfo) {
-      return json({ error: "missing_registrationInfo" }, 400);
-    }
+    if (!registrationInfo) return json({ error: "missing_registrationInfo" }, 400);
 
-    // 4) IMPORTANT: credential_id comes from client (att.id), not from registrationInfo
-    const credentialIdB64u = String(att.id || "").trim();
-    if (!credentialIdB64u) return json({ error: "missing_credential_id_after_normalize" }, 400);
-
-    // public key MUST come from verification
-    const pubKey = registrationInfo.credentialPublicKey;
-    if (!pubKey || byteLen(pubKey) === 0) {
+    // ✅ CAMPi GIUSTI (nuova API): registrationInfo.credential.publicKey ecc.
+    const cred = registrationInfo.credential;
+    if (!cred?.id) return json({ error: "missing_cred_id" }, 400);
+    if (!cred?.publicKey || byteLen(cred.publicKey) === 0) {
       return json({ error: "registrationInfo_missing_publicKey" }, 400);
     }
 
-    const publicKeyB64u = b64u(new Uint8Array(pubKey));
-    const counter = Number(registrationInfo.counter || 0);
+    const credentialIdB64u = String(cred.id); // già base64url
+    const publicKeyB64u = b64u(new Uint8Array(cred.publicKey));
+    const counter = Number(cred.counter || 0);
+    const transports = cred.transports || att.transports || [];
 
-    // 5) Avoid duplicates (unique credential_id)
+    // Evita duplicati
     const existing = await DB.prepare(
       `SELECT id FROM webauthn_credentials WHERE credential_id = ? LIMIT 1`
     ).bind(credentialIdB64u).first();
     if (existing) return json({ error: "credential_already_registered" }, 409);
 
-    // 6) Insert credential
+    // Insert
     await DB.prepare(
       `INSERT INTO webauthn_credentials (user_id, credential_id, public_key, counter, transports)
        VALUES (?, ?, ?, ?, ?)`
@@ -104,15 +100,15 @@ export async function onRequest(context) {
       credentialIdB64u,
       publicKeyB64u,
       counter,
-      JSON.stringify(att?.transports || [])
+      JSON.stringify(transports)
     ).run();
 
-    // 7) Cleanup challenges for this user
+    // Cleanup challenges reg
     await DB.prepare(
       `DELETE FROM webauthn_challenges WHERE user_id = ? AND kind='reg'`
     ).bind(user.id).run();
 
-    // 8) Create sessions
+    // Session
     const access_token = await issueSession(DB, user.id);
     const refresh_token = await issueRefreshSession(DB, user.id);
 
@@ -129,12 +125,7 @@ function byteLen(x) {
 }
 
 function normalizeB64u(s) {
-  try {
-    if (!s) return "";
-    return String(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-  } catch {
-    return "";
-  }
+  return String(s || "").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
 function b64u(bytes) {
@@ -170,6 +161,7 @@ async function sha256b64u(text) {
   const hash = await crypto.subtle.digest("SHA-256", enc.encode(text));
   return b64u(new Uint8Array(hash));
 }
+
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
     status,
