@@ -815,16 +815,23 @@ function showAppScreen() {
 }
 
 
+async function apiFetch(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  const t = getAccessToken();
+  if (t) headers.set("Authorization", "Bearer " + t);
+
+  // Se mandi body JSON e non hai Content-Type, aggiungilo
+  if (options.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  return fetch(path, { ...options, headers });
+}
+
 
 async function apiPost(path, body){
-  const headers = { "Content-Type": "application/json" };
-  const t = getAccessToken();
-  if (t) headers["Authorization"] = "Bearer " + t;
-
-
-  const r = await fetch(path, {
+  const r = await apiFetch(path, {
     method: "POST",
-    headers,
     body: JSON.stringify(body || {})
   });
 
