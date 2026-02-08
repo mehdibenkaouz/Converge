@@ -1739,7 +1739,9 @@ async function syncBonuses(){
 
     if (!me){
       // guest / non loggato
-      if (accUsername) accUsername.textContent = "—";
+    if (me?.nickname) {
+      setNickname(me.nickname); // 🔥 ripristina localStorage
+    }
       return;
     }
 
