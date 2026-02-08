@@ -23,42 +23,40 @@ export async function onRequest(context) {
     if (!expectedOrigin) return json({ error: "missing_env", detail: "ORIGIN is not set" }, 500);
     if (!expectedRPID) return json({ error: "missing_env", detail: "RP_ID is not set" }, 500);
 
-    // 1) user
+    // 0) Validate shape (client payload must include these)
+    if (!att.id || !att.rawId || att.type !== "public-key") {
+      return json({ error: "bad_credential_shape", detail: "missing id/rawId/type" }, 400);
+    }
+    if (!att.response?.clientDataJSON || !att.response?.attestationObject) {
+      return json({ error: "bad_credential_shape", detail: "missing clientDataJSON/attestationObject" }, 400);
+    }
+
+    // normalize id/rawId to base64url no padding (defensive)
+    const normalizedId = normalizeB64u(att.rawId || att.id);
+    att.id = normalizedId;
+    att.rawId = normalizedId;
+
+    // 1) Load user
     const user = await DB.prepare(
       `SELECT id, nickname FROM users WHERE nickname = ? COLLATE NOCASE LIMIT 1`
     ).bind(nickname).first();
-
     if (!user) return json({ error: "user_not_found" }, 404);
 
-    // se ha già credenziale -> stop
+    // if already has a credential, stop
     const hasCred = await DB.prepare(
       `SELECT 1 FROM webauthn_credentials WHERE user_id = ? LIMIT 1`
     ).bind(user.id).first();
-
     if (hasCred) return json({ error: "already_has_credential" }, 409);
 
-    // 2) challenge reg
+    // 2) Load reg challenge
     const ch = await DB.prepare(
       `SELECT id, challenge FROM webauthn_challenges
        WHERE kind='reg' AND user_id = ?
        ORDER BY id DESC LIMIT 1`
     ).bind(user.id).first();
-
     if (!ch?.challenge) return json({ error: "challenge_not_found" }, 400);
 
-    // 3) normalizza attestation (id/rawId DEVONO essere base64url coerenti)
-    const normalizedId = normalizeB64u(att.rawId || att.id);
-    if (!normalizedId) return json({ error: "missing_credential_id" }, 400);
-
-    att.id = normalizedId;
-    att.rawId = normalizedId;
-
-    // controllo minimi campi
-    if (!att.response?.clientDataJSON || !att.response?.attestationObject) {
-      return json({ error: "bad_credential_shape" }, 400);
-    }
-
-    // 4) verify
+    // 3) Verify
     let verification;
     try {
       verification = await verifyRegistrationResponse({
@@ -73,48 +71,48 @@ export async function onRequest(context) {
     }
 
     const { verified, registrationInfo } = verification;
-    if (!verified || !registrationInfo) return json({ error: "not_verified" }, 400);
-
-    // 5) estrai e VALIDAZIONE (prima di convertire!)
-    const credID = registrationInfo.credentialID;
-    const pubKey = registrationInfo.credentialPublicKey;
-
-    if (!credID || byteLen(credID) === 0) {
-      return json({ error: "registrationInfo_missing_credentialID" }, 400);
+    if (!verified) return json({ error: "not_verified" }, 400);
+    if (!registrationInfo) {
+      return json({ error: "missing_registrationInfo" }, 400);
     }
+
+    // 4) IMPORTANT: credential_id comes from client (att.id), not from registrationInfo
+    const credentialIdB64u = String(att.id || "").trim();
+    if (!credentialIdB64u) return json({ error: "missing_credential_id_after_normalize" }, 400);
+
+    // public key MUST come from verification
+    const pubKey = registrationInfo.credentialPublicKey;
     if (!pubKey || byteLen(pubKey) === 0) {
       return json({ error: "registrationInfo_missing_publicKey" }, 400);
     }
 
-    const credIdB64u = b64u(new Uint8Array(credID));
-    const pubKeyB64u = b64u(new Uint8Array(pubKey));
+    const publicKeyB64u = b64u(new Uint8Array(pubKey));
     const counter = Number(registrationInfo.counter || 0);
 
-    // evita duplicati
+    // 5) Avoid duplicates (unique credential_id)
     const existing = await DB.prepare(
       `SELECT id FROM webauthn_credentials WHERE credential_id = ? LIMIT 1`
-    ).bind(credIdB64u).first();
-
+    ).bind(credentialIdB64u).first();
     if (existing) return json({ error: "credential_already_registered" }, 409);
 
-    // 6) insert
+    // 6) Insert credential
     await DB.prepare(
       `INSERT INTO webauthn_credentials (user_id, credential_id, public_key, counter, transports)
        VALUES (?, ?, ?, ?, ?)`
     ).bind(
       user.id,
-      credIdB64u,
-      pubKeyB64u,
+      credentialIdB64u,
+      publicKeyB64u,
       counter,
-      JSON.stringify(att?.transports || att?.response?.transports || [])
+      JSON.stringify(att?.transports || [])
     ).run();
 
-    // 7) cleanup challenge reg (tutte per quell’utente)
+    // 7) Cleanup challenges for this user
     await DB.prepare(
       `DELETE FROM webauthn_challenges WHERE user_id = ? AND kind='reg'`
     ).bind(user.id).run();
 
-    // 8) session
+    // 8) Create sessions
     const access_token = await issueSession(DB, user.id);
     const refresh_token = await issueRefreshSession(DB, user.id);
 
@@ -130,33 +128,13 @@ function byteLen(x) {
   return 0;
 }
 
-// normalizza base64/base64url → base64url senza padding
 function normalizeB64u(s) {
   try {
-    if (!s) return null;
-    const bytes = fromB64u(String(s));
-    return b64u(bytes);
+    if (!s) return "";
+    return String(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
   } catch {
-    try {
-      return String(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-    } catch {
-      return null;
-    }
+    return "";
   }
-}
-
-function b64uToB64(s) {
-  s = String(s).replace(/-/g, "+").replace(/_/g, "/");
-  const pad = "=".repeat((4 - (s.length % 4)) % 4);
-  return s + pad;
-}
-
-function fromB64u(s) {
-  const b64 = b64uToB64(s);
-  const bin = atob(b64);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
 }
 
 function b64u(bytes) {
@@ -192,7 +170,6 @@ async function sha256b64u(text) {
   const hash = await crypto.subtle.digest("SHA-256", enc.encode(text));
   return b64u(new Uint8Array(hash));
 }
-
 function json(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
     status,
