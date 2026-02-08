@@ -646,13 +646,13 @@
     .userbox{
       display:flex;
       align-items:center;
-      gap:10px;
-      padding:10px 12px;
+      padding:10px;
       border-radius:14px;
       background: rgba(255,252,249,.55);
       box-shadow: 0 8px 22px rgba(0,0,0,.08);
       border: 1px solid rgba(255,255,255,.65);
     }
+
     .iconbtn{
       width:42px; height:42px;
       border-radius:12px;
@@ -729,14 +729,11 @@
 
       <!-- USER BOX (top-left) -->
       <div class="userbox" id="userbox">
-        <button class="iconbtn" id="btnAccount" title="Account / Impostazioni" aria-label="Account">
+        <button class="iconbtn" id="btnAccount" title="Impostazioni account" aria-label="Impostazioni account">
           ⚙️
         </button>
-        <div class="usertext">
-          <div class="label">Account</div>
-          <div class="name" id="userLabel">Guest</div>
-        </div>
       </div>
+
 
 
 
@@ -1117,6 +1114,13 @@ async function syncBonuses(){
     // account UI
     btnAccount?.addEventListener("click", openAccount);
     btnCloseAccount?.addEventListener("click", closeAccount);
+    accountOverlay?.addEventListener("click", (e) => {
+      if (e.target === accountOverlay) closeAccount();
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && accountOverlay?.classList.contains("show")) closeAccount();
+    });
 
     btnAccountLogout?.addEventListener("click", async () => {
       closeAccount();
@@ -1745,7 +1749,6 @@ async function syncBonuses(){
 
     if (!me){
       // guest / non loggato
-      if (userLabel) userLabel.textContent = "Guest";
       if (accNickname) accNickname.textContent = "—";
       if (accUsername) accUsername.textContent = "—";
       if (accUserId) accUserId.textContent = "—";
@@ -1754,7 +1757,6 @@ async function syncBonuses(){
 
     const displayName = me.nickname || me.username || ("ID " + me.id);
 
-    if (userLabel) userLabel.textContent = displayName;
     if (accNickname) accNickname.textContent = me.nickname || "—";
     if (accUsername) accUsername.textContent = me.username || "—";
     if (accUserId) accUserId.textContent = String(me.id ?? "—");
@@ -1762,16 +1764,17 @@ async function syncBonuses(){
 
   function openAccount(){
     if (!accountOverlay) return;
-    accountOverlay.classList.remove("hidden");
+    accountOverlay.classList.add("show");
     accountOverlay.setAttribute("aria-hidden", "false");
     refreshUserUI().catch(() => {});
   }
 
   function closeAccount(){
     if (!accountOverlay) return;
-    accountOverlay.classList.add("hidden");
+    accountOverlay.classList.remove("show");
     accountOverlay.setAttribute("aria-hidden", "true");
   }
+
 
   function resetLocalProgress(){
     // cancella solo i progressi locali
