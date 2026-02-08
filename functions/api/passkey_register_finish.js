@@ -104,6 +104,13 @@ async function finishWithChallenge({ DB, user, ch, attestation, expectedOrigin, 
 
   if (existing) return json({ error: "credential_already_registered" }, 409);
 
+  if (!registrationInfo?.credentialID || registrationInfo.credentialID.byteLength === 0) {
+  return json({ error: "registrationInfo_missing_credentialID" }, 400);
+  }
+  if (!registrationInfo?.credentialPublicKey || registrationInfo.credentialPublicKey.byteLength === 0) {
+    return json({ error: "registrationInfo_missing_publicKey" }, 400);
+  }
+
   // 3) INSERT credenziale
   try {
     await DB.prepare(
