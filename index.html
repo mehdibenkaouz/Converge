@@ -732,14 +732,7 @@
         <button class="iconbtn" id="btnAccount" title="Account / Impostazioni" aria-label="Account">
           ⚙️
         </button>
-        <div class="usertext">
-          <div class="label">Account</div>
-          <div class="name" id="userLabel">Guest</div>
-        </div>
       </div>
-
-
-
       <div class="stats">
         <div class="pill">Livello: <strong id="level">1</strong></div>
         <div class="pill">Griglia: <strong id="size">3×3</strong></div>
@@ -824,7 +817,7 @@
     </div>
   </div>
 
-    <div class="login-overlay" id="loginOverlay">
+    <div class="login-overlay hidden" id="loginOverlay">
     <div class="login-modal">
       <h2>Accedi al gioco</h2>
 
@@ -843,28 +836,9 @@
     </div>
 
 
+    </div>
+
 <script>
-
-  document.addEventListener("DOMContentLoaded", async () => {
-    const logged = await checkSession();
-
-    if (!logged) {
-      showLoginScreen();
-    } else {
-      showAppScreen();
-    }
-  });
-
-  async function checkSession() {
-    try {
-      const r = await apiFetch("/me", { method: "GET" });
-      return r.ok;
-    } catch {
-      return false;
-    }
-  }
-
-
 (() => {
   "use strict";
 
@@ -924,17 +898,6 @@ function clearTokens(){
 function getToken(){ return getAccessToken(); }
 function setToken(t){ setTokens({ token: t }); }
 function clearToken(){ clearTokens(); }
-
-function showLoginScreen() {
-  document.getElementById("login-screen").style.display = "block";
-  document.getElementById("app-screen").style.display = "none";
-}
-
-function showAppScreen() {
-  document.getElementById("login-screen").style.display = "none";
-  document.getElementById("app-screen").style.display = "block";
-}
-
 async function apiFetch(path, opts = {}) {
   const headers = { ...(opts.headers || {}) };
 
@@ -977,18 +940,27 @@ document.getElementById("btn-logout")?.addEventListener("click", async () => {
   await logout();
 });
 
+
 async function logout() {
+  // Se hai un endpoint /logout è meglio chiamarlo:
   try {
-    await apiPost("/api/logout", {});   // così lo vedi in Network
+    await apiFetch("/logout", { method: "POST" });
   } catch (_) {}
 
-  clearTokens(); // rimuove access + refresh
+  clearTokens();
   clearNickname();
 
+  // Chiudi overlay aperti
+  hideHint();
+  closeAccount();
 
-  // mostra overlay login
+  // Mostra overlay login
   loginOverlay.classList.remove("hidden");
+
+  // Aggiorna UI "guest"
+  refreshUserUI().catch(() => {});
 }
+
 
 async function doRegister(username, password, referralCode){
   const { token } = await apiPost("/api/register", { username, password, referralCode });
@@ -1049,6 +1021,115 @@ async function syncBonuses(){
     badge.style.display = "inline-flex";
   }
 
+
+// ===== Account UI wiring + /me refresh =====
+const accountOverlay = document.getElementById("accountOverlay");
+const btnAccount = document.getElementById("btnAccount");
+const btnCloseAccount = document.getElementById("btnCloseAccount");
+const btnAccountLogout = document.getElementById("btnAccountLogout");
+const btnResetProgress = document.getElementById("btnResetProgress");
+const btnDeleteAccount = document.getElementById("btnDeleteAccount");
+
+const accNicknameEl = document.getElementById("accNickname");
+const accUsernameEl = document.getElementById("accUsername");
+const accUserIdEl = document.getElementById("accUserId");
+
+function attachAccountButtons(){
+  if (btnAccount) btnAccount.addEventListener("click", openAccount);
+  if (btnCloseAccount) btnCloseAccount.addEventListener("click", closeAccount);
+  if (btnAccountLogout) btnAccountLogout.addEventListener("click", () => { logout(); closeAccount(); });
+
+  if (btnResetProgress) btnResetProgress.addEventListener("click", () => {
+    if (!confirm("Vuoi davvero resettare i progressi locali su questo dispositivo?")) return;
+    localStorage.removeItem(STORAGE_KEY);
+    state = newGameState();
+    toastMsg("Progressi locali resettati");
+    renderAll(true);
+    saveNow();
+    closeAccount();
+  });
+
+  if (btnDeleteAccount) btnDeleteAccount.addEventListener("click", () => {
+    alert("Elimina account: endpoint backend non ancora implementato. Lo facciamo dopo.");
+  });
+
+  if (accountOverlay){
+    // click outside modal closes
+    accountOverlay.addEventListener("click", (e) => {
+      if (e.target === accountOverlay) closeAccount();
+    });
+  }
+
+  // ESC closes overlays
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    hideHint();
+    closeAccount();
+  });
+}
+
+function openAccount(){
+  if (!accountOverlay) return;
+  refreshUserUI().catch(() => {});
+  accountOverlay.classList.add("show");
+  accountOverlay.setAttribute("aria-hidden","false");
+}
+
+function closeAccount(){
+  if (!accountOverlay) return;
+  accountOverlay.classList.remove("show");
+  accountOverlay.setAttribute("aria-hidden","true");
+}
+
+async function fetchMe(){
+  // Try both /me and /api/me to be robust
+  const candidates = ["/me", "/api/me"];
+  for (const path of candidates){
+    try{
+      const r = await apiFetch(path, { method: "GET" });
+      if (!r.ok) continue;
+      return await r.json().catch(() => null);
+    }catch(_){}
+  }
+  return null;
+}
+
+async function refreshUserUI(){
+  const logged = !!getAccessToken();
+
+  // Defaults
+  if (accNicknameEl) accNicknameEl.textContent = "—";
+  if (accUsernameEl) accUsernameEl.textContent = "—";
+  if (accUserIdEl) accUserIdEl.textContent = "—";
+
+  if (!logged){
+    updateUserBadge(); // will hide badge if nickname missing
+    return;
+  }
+
+  const me = await fetchMe();
+
+  // Normalize shape
+  const u = (me && (me.user || me)) || {};
+  const username = (u.username || me?.username || "").trim();
+  const nickname = (u.nickname || me?.nickname || "").trim();
+  const id = (u.id ?? me?.id ?? u.user_id ?? me?.user_id ?? "").toString();
+
+  // Prefer username for badge and account display
+  const badgeName = username || nickname || getNickname() || "—";
+
+  // Store for badge (re-uses nickname storage key)
+  if (badgeName && badgeName !== "—") setNickname(badgeName);
+
+  // Update top-left badge
+  updateUserBadge();
+
+  // Update account modal fields
+  if (accNicknameEl) accNicknameEl.textContent = nickname || "—";
+  if (accUsernameEl) accUsernameEl.textContent = username || badgeName || "—";
+  if (accUserIdEl) accUserIdEl.textContent = id || "—";
+}
+
   // ==========
   // State
   // ==========
@@ -1099,6 +1180,7 @@ async function syncBonuses(){
 
   function init(){
     attachLoginButtons();
+    attachAccountButtons();
 
     // se ho un token salvato, provo a sincronizzare bonus e partire
     if (getAccessToken()){
@@ -1629,7 +1711,7 @@ async function syncBonuses(){
 
   function updateButtons(){
     btnUndo.disabled = isAnimating || !state.undoAvailable || !state.undoSnapshot;
-    btnHint.disabled = isAnimating || state.hintCharges <= 0 || state.impossible;
+    btnHint.disabled = isAnimating || state.impossible;
 
   }
 
@@ -2020,58 +2102,66 @@ async function syncBonuses(){
   // ==========
   // Hint + Solver (lightweight demo)
   // ==========
-  function showHint(){
-    if (isAnimating) return;
-    if (state.hintCharges <= 0) return;
+  
+function showHint(){
+  if (isAnimating) return;
 
-    // If already proven impossible, do not consume hint charges
-    if (state.impossible){
-      toastMsg("Impossible situation. Use Undo.");
-      return;
-    }
+  // If already proven impossible, show a message (do not consume charges)
+  if (state.impossible){
+    hintText.textContent = "Impossible situation. Use Undo.";
+    hintOverlay.classList.add("show");
+    return;
+  }
 
-    // Try to PROVE impossibility on small state spaces
-    const solv = analyzeSolvabilityCurrentState({
-      timeBudgetMs: (state.N <= 5 ? 70 : 28),
-      nodeLimit: (state.N <= 5 ? 18000 : 4500),
-    });
+  // Always allow opening the Hint modal, even with 0 charges.
+  if (!Number.isFinite(state.hintCharges)) state.hintCharges = 0;
+  if (state.hintCharges <= 0){
+    const cd = Number.isFinite(state.hintCooldown) ? state.hintCooldown : 0;
+    hintText.textContent = cd > 0
+      ? `No hints available. Earn one in ${cd} level(s).`
+      : "No hints available right now. Complete levels to earn more.";
+    hintOverlay.classList.add("show");
+    return;
+  }
 
-    if (solv.status === "exhausted"){
-      state.impossible = true;
-      saveNow();
-      updateButtons();
-      toastMsg("Impossible situation. Use Undo.");
-      return;
-    }
+  // Try to PROVE impossibility on small state spaces
+  const solv = analyzeSolvabilityCurrentState({
+    timeBudgetMs: (state.N <= 5 ? 70 : 28),
+    nodeLimit: (state.N <= 5 ? 18000 : 4500),
+  });
 
-    // Consume a charge (only if not impossible)
-    state.hintCharges -= 1;
-    if (state.hintCharges === 0) state.hintCooldown = 3;
+  if (solv.status === "exhausted"){
+    state.impossible = true;
     saveNow();
     updateButtons();
-
-    // If we found an actual solution, use its first move.
-    let dir = (solv.status === "solved") ? solv.firstDir : null;
-
-    // Otherwise fallback to heuristic (fast)
-    if (!dir) dir = state.levelPlan.bestFirstDir;
-    if (!dir) dir = computeHintDirectionForCurrentState({maxDepth: 8, timeBudgetMs: 50});
-    if (!dir){
-      hintText.textContent = "No solution found. Use Undo or keep experimenting.";
-      hintOverlay.classList.add("show");
-      requestAnimationFrame(() => requestAnimationFrame(() => renderHintDemo(dir)));
-
-      return;
-    }
-
-    const arrow = dirToArrow(dir);
-
-    hintText.textContent = `Recommended direction: ${dirToArrow(dir)}. (Simulation: 1 move)`;
+    hintText.textContent = "Impossible situation. Use Undo.";
     hintOverlay.classList.add("show");
-    requestAnimationFrame(() => requestAnimationFrame(() => renderHintDemo(dir)));
-
-
+    return;
   }
+
+  // Consume a charge (only if not impossible)
+  state.hintCharges -= 1;
+  if (state.hintCharges === 0) state.hintCooldown = 3;
+  saveNow();
+  updateButtons();
+
+  // If we found an actual solution, use its first move.
+  let dir = (solv.status === "solved") ? solv.firstDir : null;
+
+  // Otherwise fallback to heuristic (fast)
+  if (!dir) dir = state.levelPlan.bestFirstDir;
+  if (!dir) dir = computeHintDirectionForCurrentState({maxDepth: 8, timeBudgetMs: 50});
+  if (!dir){
+    hintText.textContent = "No solution found. Use Undo and try again.";
+    hintOverlay.classList.add("show");
+    return;
+  }
+
+  hintText.textContent = `Recommended direction: ${dirToArrow(dir)}. (Simulation: 1 move)`;
+  hintOverlay.classList.add("show");
+  requestAnimationFrame(() => requestAnimationFrame(() => renderHintDemo(dir)));
+  return;
+}
 
   function hideHint(){
     if (window.__hintDemoStop) { window.__hintDemoStop();
