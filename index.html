@@ -1181,6 +1181,7 @@ async function refreshUserUI(){
   function init(){
     attachLoginButtons();
     attachAccountButtons();
+    attachButtons();
 
     // se ho un token salvato, provo a sincronizzare bonus e partire
     if (getAccessToken()){
@@ -1211,7 +1212,6 @@ async function refreshUserUI(){
     }
 
     attachInput();
-    attachButtons();
     renderAll(true);
     saveNow();
     refreshUserUI().catch(() => {});
@@ -1795,7 +1795,8 @@ if (!state.undoAvailable || !state.undoSnapshot) return;
 
     btnHint.addEventListener("click", () => {
       if (isAnimating) return;
-      // showHint gestisce anche 0 hint (mostra un messaggio e/o cooldown)
+      if (state.hintCharges <= 0) return;
+      if (state.impossible) return;
       showHint();
     });
 
