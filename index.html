@@ -631,6 +631,7 @@
         <h1>Puzzle Swipe Breaker</h1>
         <div class="sub">Swipe per muovere • Rompi quando un colore è tutto connesso</div>
       </div>
+      <div id="usernameDisplay" class="small" style="margin-left:8px; color: rgba(255,255,255,.92); font-weight:800;">username: —</div>
       <div class="stats">
         <div class="pill">Livello: <strong id="level">1</strong></div>
         <div class="pill">Griglia: <strong id="size">3×3</strong></div>
@@ -641,6 +642,7 @@
         <button id="btnUndo" title="Annulla ultima mossa (1 per livello)">Undo</button>
         <button id="btnHint" title="Mostra una mossa consigliata (1 ogni 3 livelli)">Hint</button>
         <button id="btnNew" title="Nuova partita">Nuova</button>
+        <button id="btnDeleteAccount" style="background:#ff5252; color:white;">Elimina account</button>
       </div>
     </div>
 
@@ -710,11 +712,25 @@
 
   async function checkSession() {
     try {
-      const r = await apiFetch("/me", { method: "GET" });
+      const r = await apiFetch("/api/me", { method: "GET" });
       return r.ok;
     } catch {
       return false;
     }
+  }
+
+  // Generic fetch helper that injects Authorization header when we have a token
+  async function apiFetch(path, opts = {}){
+    const headers = (opts.headers && Object.fromEntries(new Headers(opts.headers))) || {};
+    const t = (typeof localStorage !== 'undefined') ? (localStorage.getItem('psb_access_token_v1') || '') : '';
+    if (t) headers["Authorization"] = "Bearer " + t;
+
+    const res = await fetch(path, {
+      method: opts.method || "GET",
+      headers,
+      body: opts.body,
+    });
+    return res;
   }
 
 
@@ -779,13 +795,23 @@ function setToken(t){ setTokens({ token: t }); }
 function clearToken(){ clearTokens(); }
 
 function showLoginScreen() {
-  document.getElementById("login-screen").style.display = "block";
-  document.getElementById("app-screen").style.display = "none";
+  if (typeof loginOverlay !== 'undefined' && loginOverlay) {
+    loginOverlay.classList.remove("hidden");
+  } else {
+    const lo = document.getElementById("loginOverlay");
+    if (lo) lo.classList.remove("hidden");
+  }
 }
 
 function showAppScreen() {
-  document.getElementById("login-screen").style.display = "none";
-  document.getElementById("app-screen").style.display = "block";
+  if (typeof loginOverlay !== 'undefined' && loginOverlay) {
+    loginOverlay.classList.add("hidden");
+  } else {
+    const lo = document.getElementById("loginOverlay");
+    if (lo) lo.classList.add("hidden");
+  }
+  // refresh username display when showing the app
+  refreshUserInfo().catch(() => {});
 }
 
 
@@ -824,9 +850,25 @@ async function logout() {
   } catch (_) {}
 
   clearTokens(); // rimuove access + refresh
-
   // mostra overlay login
   loginOverlay.classList.remove("hidden");
+  if (usernameDisplay) usernameDisplay.textContent = "username: —";
+}
+
+async function deleteAccount(){
+  if (!confirm("Sei sicuro di voler eliminare il tuo account? Azione irreversibile.")) return;
+  try{
+    await apiPost('/api/delete_account', {});
+  }catch(e){
+    alert('Eliminazione account fallita: ' + (e.message || e));
+    return;
+  }
+  // cleanup local state
+  clearTokens();
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  toastMsg('Account eliminato');
+  if (loginOverlay) loginOverlay.classList.remove('hidden');
+  if (usernameDisplay) usernameDisplay.textContent = 'username: —';
 }
 
 async function doRegister(username, password, referralCode){
@@ -884,6 +926,7 @@ async function syncBonuses(){
   const btnNew  = document.getElementById("btnNew");
 
   const toast = document.getElementById("toast");
+  const usernameDisplay = document.getElementById("usernameDisplay");
   
   
   const loginOverlay = document.getElementById("loginOverlay");
@@ -924,6 +967,7 @@ async function syncBonuses(){
   function startGame(){
     // Hide login overlay
     loginOverlay.classList.add("hidden");
+    refreshUserInfo().catch(() => {});
 
     // Try load save
     const loaded = loadSave();
@@ -987,8 +1031,8 @@ async function syncBonuses(){
         await passkeyLogin(nickname);
         startGame();
       } catch (e){
-        console.error("Login passkey fallito:", err);
-        alert("Login passkey fallito: " + (err.message || err));
+        console.error("Login passkey fallito:", e);
+        alert("Login passkey fallito: " + (e.message || e));
       }
     });
   }
@@ -1336,6 +1380,27 @@ async function syncBonuses(){
     elScore.textContent = String(state.score);
   }
 
+  // Refresh username shown in topbar
+  async function refreshUserInfo(){
+    if (!usernameDisplay) return;
+    try{
+      const r = await apiFetch('/api/me', { method: 'GET' });
+      if (!r || !r.ok) {
+        usernameDisplay.textContent = 'username: —';
+        return;
+      }
+      const d = await r.json().catch(() => null);
+      if (d && d.user){
+        const n = d.user.nickname || d.user.username || '—';
+        usernameDisplay.textContent = `username: ${n}`;
+      } else {
+        usernameDisplay.textContent = 'username: —';
+      }
+    }catch(e){
+      usernameDisplay.textContent = 'username: —';
+    }
+  }
+
   function renderGridBase(){
     const N = state.N;
     elGrid.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
@@ -1506,6 +1571,15 @@ async function syncBonuses(){
       renderAll(true);
       toastMsg("Nuova partita");
     });
+
+    // Delete account button (if present)
+    const btnDeleteAccount = document.getElementById('btnDeleteAccount');
+    if (btnDeleteAccount){
+      btnDeleteAccount.addEventListener('click', async () => {
+        if (isAnimating) return;
+        await deleteAccount();
+      });
+    }
 
     btnCloseHint.addEventListener("click", () => {
       hideHint();
@@ -2438,7 +2512,6 @@ async function syncBonuses(){
     return {
       moved: movedAny,
       brokenCount: removedIds.length,
-      length,
       breakColorIds,
       removedIds,
       snapshot: snap,
