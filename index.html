@@ -1781,6 +1781,7 @@ async function refreshUserUI(){
   function attachButtons(){
     btnUndo.addEventListener("click", () => {
       if (isAnimating) return;
+      hideHint();
       if (!state.undoAvailable || !state.undoSnapshot) return;
       restoreSnapshot(state.undoSnapshot);
       state.undoAvailable = false;
@@ -1792,12 +1793,12 @@ async function refreshUserUI(){
 
     btnHint.addEventListener("click", () => {
       if (isAnimating) return;
-      if (state.hintCharges <= 0) return;
       showHint();
     });
 
     btnNew.addEventListener("click", () => {
       if (isAnimating) return;
+      hideHint();
       if (!confirm("Vuoi iniziare una nuova partita? Il salvataggio attuale verrà sovrascritto.")) return;
       state = newGameState();
       generateLevelBoard();
