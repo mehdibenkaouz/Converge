@@ -6,6 +6,7 @@
   <title>Puzzle Swipe Breaker</title>
   <style>
     :root{
+        /*Inizio del codice, non toccare niente qui sopra*/
       /* --- Brand / theme --- */
       --bg-0: #0b2d13;
       --bg-1: #0f4b22;
@@ -957,7 +958,10 @@ async function doLogin(username, password){
   const { token } = await apiPost("/api/login", { username, password });
   setToken(token);
   await syncBonuses();
-}
+    await syncBonuses();
+    await refreshUserFromServer();
+
+  }
 
 
 document.getElementById("btn-logout")?.addEventListener("click", async () => {
@@ -981,7 +985,10 @@ async function doRegister(username, password, referralCode){
   const { token } = await apiPost("/api/register", { username, password, referralCode });
   setToken(token);
   await syncBonuses();
-}
+    await syncBonuses();
+    await refreshUserFromServer();
+
+  }
 
 async function syncBonuses(){
   // 1) bonus 20 hint una volta
@@ -1034,6 +1041,20 @@ async function syncBonuses(){
 
     nickEl.textContent = nick;
     badge.style.display = "inline-flex";
+  }
+
+  async function refreshUserFromServer(){
+    try{
+      const r = await apiFetch('/api/me', { method: 'GET' });
+      if (!r || !r.ok) return;
+      const d = await r.json().catch(() => null);
+      if (d && d.user && d.user.nickname){
+        setNickname(d.user.nickname);
+        updateUserBadge();
+      }
+    }catch(e){
+      // silently fail
+    }
   }
 
   // ==========
@@ -1176,6 +1197,7 @@ async function syncBonuses(){
     setNickname((r2 && r2.nickname) || nickname);
 
     await syncBonuses();
+    await refreshUserFromServer();
 
   }
 
@@ -1739,9 +1761,7 @@ async function syncBonuses(){
 
     if (!me){
       // guest / non loggato
-    if (me?.nickname) {
-      setNickname(me.nickname); // 🔥 ripristina localStorage
-    }
+      if (accUsername) accUsername.textContent = "—";
       return;
     }
 
