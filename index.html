@@ -1745,7 +1745,14 @@ async function syncBonuses(){
 
     const displayName = me.nickname || me.username || ("ID " + me.id);
 
-    if (accUsername) accUsername.textContent = getNickname() || "—";
+    if (me?.nickname) {
+      setNickname(me.nickname); // 🔥 ripristina localStorage
+    }
+
+    if (accUsername) {
+      accUsername.textContent = me?.nickname || "—";
+    }
+
   }
 
   function openAccount(){
