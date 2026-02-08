@@ -642,6 +642,77 @@
       position: relative; /* IMPORTANT: serve per far funzionare l'assoluto del badge */
     }
 
+    /* ===== Account UI ===== */
+    .userbox{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      background: rgba(255,252,249,.55);
+      box-shadow: 0 8px 22px rgba(0,0,0,.08);
+      border: 1px solid rgba(255,255,255,.65);
+    }
+    .iconbtn{
+      width:42px; height:42px;
+      border-radius:12px;
+      border: 0;
+      background: rgba(255,255,255,.75);
+      box-shadow: 0 6px 16px rgba(0,0,0,.10);
+      cursor:pointer;
+      font-size:18px;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .iconbtn:active{ transform: translateY(1px); }
+    .usertext .label{
+      font-size:12px;
+      opacity:.7;
+      font-weight:700;
+      line-height:1.1;
+    }
+    .usertext .name{
+      font-size:14px;
+      font-weight:900;
+      line-height:1.1;
+      max-width: 160px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+
+    .account-card{
+      background: rgba(255,252,249,.70);
+      border: 1px solid rgba(255,255,255,.65);
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .account-card .row{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(0,0,0,.06);
+    }
+    .account-card .row:last-child{ border-bottom:0; }
+    .account-card .k{ font-weight:800; opacity:.8; }
+    .account-card .v{ font-weight:900; }
+
+    .account-actions{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      margin-bottom: 10px;
+    }
+    .account-actions button.warn{
+      background: rgba(255, 190, 80, .45);
+      border: 1px solid rgba(255,190,80,.75);
+    }
+    .account-actions button.danger{
+      background: rgba(255, 90, 90, .30);
+      border: 1px solid rgba(255,90,90,.75);
+    }
+
   </style>
 </head>
 <body>
@@ -654,6 +725,17 @@
         </div>
         <div class="sub">Swipe to merge tiles and break the grid</div>
 
+      </div>
+
+      <!-- USER BOX (top-left) -->
+      <div class="userbox" id="userbox">
+        <button class="iconbtn" id="btnAccount" title="Account / Impostazioni" aria-label="Account">
+          ⚙️
+        </button>
+        <div class="usertext">
+          <div class="label">Account</div>
+          <div class="name" id="userLabel">Guest</div>
+        </div>
       </div>
 
 
@@ -681,6 +763,44 @@
       </div>
     </div>
   </div>
+
+    <!-- ACCOUNT OVERLAY (seconda pagina) -->
+  <div class="modal-overlay hidden" id="accountOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <header>
+        <h2>Account</h2>
+        <button id="btnCloseAccount">Chiudi</button>
+      </header>
+
+      <div class="content">
+        <div class="account-card">
+          <div class="row">
+            <div class="k">Nickname</div>
+            <div class="v" id="accNickname">—</div>
+          </div>
+          <div class="row">
+            <div class="k">Username</div>
+            <div class="v" id="accUsername">—</div>
+          </div>
+          <div class="row">
+            <div class="k">User ID</div>
+            <div class="v" id="accUserId">—</div>
+          </div>
+        </div>
+
+        <div class="account-actions">
+          <button id="btnAccountLogout">Logout</button>
+          <button id="btnResetProgress" class="warn">Reset progressi</button>
+          <button id="btnDeleteAccount" class="danger">Elimina account</button>
+        </div>
+
+        <div class="small" style="opacity:.85;">
+          Nota: “Reset progressi” azzera solo i progressi locali su questo device. “Elimina account” richiede endpoint backend (lo facciamo dopo).
+        </div>
+      </div>
+    </div>
+  </div>
+
 
   <button id="btn-logout">Logout</button>
 
@@ -815,7 +935,19 @@ function showAppScreen() {
   document.getElementById("app-screen").style.display = "block";
 }
 
+async function apiFetch(path, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
 
+  const t = getAccessToken();
+  if (t) headers["Authorization"] = "Bearer " + t;
+
+  // se mando body, imposto content-type se manca
+  if (opts.body && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  return fetch(path, { ...opts, headers });
+}
 
 async function apiPost(path, body){
   const headers = { "Content-Type": "application/json" };
@@ -960,6 +1092,21 @@ async function syncBonuses(){
   const hintCanvasWrap = document.getElementById("hintCanvasWrap");
   const hintText = document.getElementById("hintText");
 
+  // Account overlay
+  const accountOverlay = document.getElementById("accountOverlay");
+  const btnAccount = document.getElementById("btnAccount");
+  const btnCloseAccount = document.getElementById("btnCloseAccount");
+
+  const accNickname = document.getElementById("accNickname");
+  const accUsername = document.getElementById("accUsername");
+  const accUserId   = document.getElementById("accUserId");
+
+  const btnAccountLogout = document.getElementById("btnAccountLogout");
+  const btnResetProgress = document.getElementById("btnResetProgress");
+  const btnDeleteAccount = document.getElementById("btnDeleteAccount");
+
+  const userLabel = document.getElementById("userLabel");
+
   // ==========
   // Boot
   // ==========
@@ -967,10 +1114,32 @@ async function syncBonuses(){
 
   function init(){
     attachLoginButtons();
+    // account UI
+    btnAccount?.addEventListener("click", openAccount);
+    btnCloseAccount?.addEventListener("click", closeAccount);
+
+    btnAccountLogout?.addEventListener("click", async () => {
+      closeAccount();
+      await logout();
+      refreshUserUI().catch(() => {});
+    });
+
+    btnResetProgress?.addEventListener("click", () => {
+      const ok = confirm("Vuoi davvero resettare i progressi su questo dispositivo?");
+      if (!ok) return;
+      resetLocalProgress();
+      closeAccount();
+    });
+
+    btnDeleteAccount?.addEventListener("click", () => {
+      alert("Elimina account: manca ancora l'endpoint backend. Lo implementiamo nel prossimo step.");
+    });
+
 
     // se ho un token salvato, provo a sincronizzare bonus e partire
     if (getAccessToken()){
       startGame();
+      refreshUserUI().catch(() => {});
       // sync bonus in background (non blocca l'avvio)
       syncBonuses().catch(() => {});
       return;
@@ -999,6 +1168,7 @@ async function syncBonuses(){
     attachButtons();
     renderAll(true);
     saveNow();
+    refreshUserUI().catch(() => {});
     updateUserBadge();
   }
 
@@ -1560,6 +1730,58 @@ async function syncBonuses(){
       else if (k === "ArrowLeft") doMove("left");
       else if (k === "ArrowRight") doMove("right");
     });
+  }
+
+  async function fetchMe(){
+    if (!getAccessToken()) return null;
+    const r = await apiFetch("/me", { method: "GET" });
+    if (!r.ok) return null;
+    const data = await r.json().catch(() => null);
+    return data?.user || null;
+  }
+
+  async function refreshUserUI(){
+    const me = await fetchMe();
+
+    if (!me){
+      // guest / non loggato
+      if (userLabel) userLabel.textContent = "Guest";
+      if (accNickname) accNickname.textContent = "—";
+      if (accUsername) accUsername.textContent = "—";
+      if (accUserId) accUserId.textContent = "—";
+      return;
+    }
+
+    const displayName = me.nickname || me.username || ("ID " + me.id);
+
+    if (userLabel) userLabel.textContent = displayName;
+    if (accNickname) accNickname.textContent = me.nickname || "—";
+    if (accUsername) accUsername.textContent = me.username || "—";
+    if (accUserId) accUserId.textContent = String(me.id ?? "—");
+  }
+
+  function openAccount(){
+    if (!accountOverlay) return;
+    accountOverlay.classList.remove("hidden");
+    accountOverlay.setAttribute("aria-hidden", "false");
+    refreshUserUI().catch(() => {});
+  }
+
+  function closeAccount(){
+    if (!accountOverlay) return;
+    accountOverlay.classList.add("hidden");
+    accountOverlay.setAttribute("aria-hidden", "true");
+  }
+
+  function resetLocalProgress(){
+    // cancella solo i progressi locali
+    try { localStorage.removeItem(STORAGE_KEY); } catch(_) {}
+
+    // riparte con uno stato pulito
+    state = newGameState();
+    renderAll(true);
+    saveNow();
+    toastMsg("Progressi resettati");
   }
 
   function attachButtons(){
