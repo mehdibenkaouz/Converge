@@ -1747,8 +1747,8 @@ async function syncBonuses(){
 
     const displayName = me.nickname || me.username || ("ID " + me.id);
 
-    if (accNickname) accNickname.textContent = me.nickname || "—";
-    if (accUsername) accUsername.textContent = me.username || "—";
+    if (accNickname) accNickname.textContent = getNickname() || "—";
+    if (accUsername) accUsername.textContent = getNickname() || "—";
     if (accUserId) accUserId.textContent = String(me.id ?? "—");
   }
 
