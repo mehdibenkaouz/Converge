@@ -622,6 +622,25 @@
       body{ background-attachment: fixed; }
     }
 
+    .userbadge{
+      position: absolute;
+      left: 12px;
+      top: 10px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,252,249,.75);
+      border: 1px solid rgba(0,0,0,.08);
+      font-size: 12px;
+      color: rgba(31,34,38,.85);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      user-select: none;
+    }
+
+    .topbar{
+      position: relative; /* IMPORTANT: serve per far funzionare l'assoluto del badge */
+    }
+
   </style>
 </head>
 <body>
@@ -829,6 +848,8 @@ async function logout() {
   } catch (_) {}
 
   clearTokens(); // rimuove access + refresh
+  clearNickname();
+
 
   // mostra overlay login
   loginOverlay.classList.remove("hidden");
@@ -860,6 +881,38 @@ async function syncBonuses(){
 }
 
 
+  const NICKNAME_KEY = "psb_nickname";
+
+  function setNickname(n){
+    if (!n) return;
+    localStorage.setItem(NICKNAME_KEY, n);
+    updateUserBadge();
+  }
+
+  function getNickname(){
+    return localStorage.getItem(NICKNAME_KEY) || "";
+  }
+
+  function clearNickname(){
+    localStorage.removeItem(NICKNAME_KEY);
+    updateUserBadge();
+  }
+
+  function updateUserBadge(){
+    const badge = document.getElementById("userBadge");
+    const nickEl = document.getElementById("userNickname");
+    if (!badge || !nickEl) return;
+
+    const nick = getNickname();
+    if (!nick){
+      badge.style.display = "none";
+      nickEl.textContent = "";
+      return;
+    }
+
+    nickEl.textContent = nick;
+    badge.style.display = "inline-flex";
+  }
 
   // ==========
   // State
@@ -943,6 +996,7 @@ async function syncBonuses(){
     attachButtons();
     renderAll(true);
     saveNow();
+    updateUserBadge();
   }
 
   async function passkeyRegister(nickname, referralCode){
@@ -950,7 +1004,12 @@ async function syncBonuses(){
     const cred = await navigator.credentials.create({ publicKey: pkCreateFromJSON(r1.options) });
     const r2 = await apiPost("/api/passkey_register_finish", { nickname, credential: credToJSON(cred) });
     setToken(r2.token);
+
+    // nickname: prima quello dal server, altrimenti quello inserito
+    setNickname((r2 && r2.nickname) || nickname);
+
     await syncBonuses();
+
   }
 
   async function passkeyLogin(nicknameOptional){
@@ -958,7 +1017,12 @@ async function syncBonuses(){
     const cred = await navigator.credentials.get({ publicKey: pkGetFromJSON(r1.options) });
     const r2 = await apiPost("/api/passkey_login_finish", { nickname: nicknameOptional || "", credential: credToJSON(cred) });
     setToken(r2.token);
+
+    // nickname: server > input
+    setNickname((r2 && r2.nickname) || (nicknameOptional || ""));
+
     await syncBonuses();
+
   }
 
 
