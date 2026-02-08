@@ -987,8 +987,8 @@ async function syncBonuses(){
         await passkeyLogin(nickname);
         startGame();
       } catch (e){
-        console.error("Login passkey fallito:", err);
-        alert("Login passkey fallito: " + (err.message || err));
+        console.error("Login passkey fallito:", e);
+        alert("Login passkey fallito: " + (e.message || e));
       }
     });
   }
@@ -1063,19 +1063,28 @@ async function syncBonuses(){
 
   function credToJSON(cred){
     if (!cred) return null;
+
+    // id DEVE corrispondere a rawId (base64url)
+    const rid = bufToB64u(cred.rawId);
+
     const obj = {
-      id: cred.id,
-      rawId: bufToB64u(cred.rawId),
+      id: rid,
+      rawId: rid,
       type: cred.type,
       clientExtensionResults: cred.getClientExtensionResults?.() || {},
+      transports: cred.response?.getTransports?.() || [],
       response: {}
     };
+
     const r = cred.response;
     if (r.attestationObject) obj.response.attestationObject = bufToB64u(r.attestationObject);
-    if (r.authenticatorData) obj.response.authenticatorData = bufToB64u(r.authenticatorData);
     if (r.clientDataJSON) obj.response.clientDataJSON = bufToB64u(r.clientDataJSON);
+
+    // login fields (per assertion)
+    if (r.authenticatorData) obj.response.authenticatorData = bufToB64u(r.authenticatorData);
     if (r.signature) obj.response.signature = bufToB64u(r.signature);
     if (r.userHandle) obj.response.userHandle = bufToB64u(r.userHandle);
+
     return obj;
   }
 
