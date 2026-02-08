@@ -1050,9 +1050,47 @@ function attachAccountButtons(){
     closeAccount();
   });
 
-  if (btnDeleteAccount) btnDeleteAccount.addEventListener("click", () => {
-    alert("Elimina account: endpoint backend non ancora implementato. Lo facciamo dopo.");
+  const ENABLE_REAL_DELETE = false; // <-- quando avrai endpoint vero, metti true
+
+  btnDeleteAccount?.addEventListener("click", async () => {
+    const msg = ENABLE_REAL_DELETE
+      ? "Sei sicuro?\n\nTutti i dati associati al tuo account saranno eliminati.\nAzione irreversibile."
+      : "ATTENZIONE:\n\nQuesta azione SIMULA l'eliminazione dell'account.\nNessun dato verrà cancellato dal server.\n\nVuoi continuare?";
+
+    if (!confirm(msg)) return;
+
+    btnDeleteAccount.disabled = true;
+
+    try {
+      // Chiudi overlay aperti (ordine sicuro)
+      try { hideHint(); } catch {}
+      try { closeAccount(); } catch {}
+
+      if (ENABLE_REAL_DELETE) {
+        // Endpoint vero (quando lo implementi)
+        await apiPost("/api/delete_account", {});
+      } else {
+        // Facoltativo e NON distruttivo
+        try { await apiFetch("/logout", { method: "POST" }); } catch {}
+        try { await apiFetch("/api/logout", { method: "POST" }); } catch {}
+      }
+
+      // Cleanup client-side (sempre)
+      try { clearTokens(); } catch {}
+      try { clearNickname(); } catch {}
+      try { localStorage.removeItem(STORAGE_KEY); } catch {}
+
+      // Torna al login in modo deterministico
+      showLoginScreen();
+
+      toastMsg(ENABLE_REAL_DELETE ? "Account eliminato" : "Account disconnesso + reset locale (test)");
+    } catch (e) {
+      alert("Operazione fallita: " + (e?.message || e));
+    } finally {
+      btnDeleteAccount.disabled = false;
+    }
   });
+
 
   if (accountOverlay){
     // click outside modal closes
