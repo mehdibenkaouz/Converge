@@ -1711,7 +1711,7 @@ async function refreshUserUI(){
 
   function updateButtons(){
     btnUndo.disabled = isAnimating || !state.undoAvailable || !state.undoSnapshot;
-    btnHint.disabled = isAnimating || state.impossible;
+    btnHint.disabled = isAnimating || state.impossible || state.hintCharges <= 0;
 
   }
 
