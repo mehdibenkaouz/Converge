@@ -1781,8 +1781,10 @@ async function refreshUserUI(){
   function attachButtons(){
     btnUndo.addEventListener("click", () => {
       if (isAnimating) return;
+      
+      // chiudi eventuale overlay hint prima di modificare lo stato
       hideHint();
-      if (!state.undoAvailable || !state.undoSnapshot) return;
+if (!state.undoAvailable || !state.undoSnapshot) return;
       restoreSnapshot(state.undoSnapshot);
       state.undoAvailable = false;
       state.undoSnapshot = null;
@@ -1793,13 +1795,16 @@ async function refreshUserUI(){
 
     btnHint.addEventListener("click", () => {
       if (isAnimating) return;
+      // showHint gestisce anche 0 hint (mostra un messaggio e/o cooldown)
       showHint();
     });
 
     btnNew.addEventListener("click", () => {
       if (isAnimating) return;
+      
+      // chiudi eventuale overlay hint
       hideHint();
-      if (!confirm("Vuoi iniziare una nuova partita? Il salvataggio attuale verrà sovrascritto.")) return;
+if (!confirm("Vuoi iniziare una nuova partita? Il salvataggio attuale verrà sovrascritto.")) return;
       state = newGameState();
       generateLevelBoard();
       state.levelPlan.bestFirstDir = computeHintDirectionForCurrentState({maxDepth: 6, timeBudgetMs: 25});
