@@ -1,95 +1,107 @@
-import { verifyRegistrationResponse } from "@simplewebauthn/server";
+import {
+  verifyRegistrationResponse,
+} from "@simplewebauthn/server";
 
 export async function onRequest(context) {
+  if (context.request.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
+
+  const DB = context.env.DB;
+
   try {
-    if (context.request.method !== "POST") {
-      return new Response("Method Not Allowed", { status: 405 });
-    }
-
-    const DB = context.env.DB;
-
     const body = await context.request.json().catch(() => null);
     if (!body) return json({ error: "bad_json" }, 400);
 
-    const nickname = (body.nickname || "").trim();
-    const attestation = body.credential;
+    const assertion = body.credential;
+    if (!assertion) return json({ error: "missing_credential" }, 400);
 
-    if (!nickname) return json({ error: "missing_nickname" }, 400);
-    if (!attestation) return json({ error: "missing_credential" }, 400);
+    // challenge più recente (se nickname dato, prova con user_id; altrimenti ultima login in generale)
+    let nickname = (body.nickname || "").trim();
+    let user = null;
 
-    // 1) User
-    const user = await DB.prepare(
-      `SELECT id, nickname FROM users WHERE nickname = ? COLLATE NOCASE LIMIT 1`
-    ).bind(nickname).first();
+    if (nickname) {
+      user = await DB.prepare(`SELECT id FROM users WHERE nickname = ? COLLATE NOCASE`)
+        .bind(nickname).first();
+      if (!user) nickname = "";
+    }
 
-    if (!user) return json({ error: "user_not_found" }, 404);
+    const ch = nickname
+      ? await DB.prepare(`SELECT id, challenge FROM webauthn_challenges
+                          WHERE kind='login' AND (user_id = ? OR user_id IS NULL)
+                          ORDER BY id DESC LIMIT 1`).bind(user.id).first()
+      : await DB.prepare(`SELECT id, challenge FROM webauthn_challenges
+                          WHERE kind='login'
+                          ORDER BY id DESC LIMIT 1`).first();
 
-    // 2) Challenge di registrazione
-    const ch = await DB.prepare(
-      `SELECT id, challenge
-       FROM webauthn_challenges
-       WHERE kind='register' AND user_id = ?
-       ORDER BY id DESC
-       LIMIT 1`
-    ).bind(user.id).first();
+    if (!ch || !ch.challenge) return json({ error: "challenge_not_found" }, 400);
 
-    if (!ch) return json({ error: "challenge_not_found" }, 400);
+    // Recupera credenziale dal DB usando credential_id
+    const credIdA = assertion?.rawId;
+    const credIdB = assertion?.id;
+    if (!credIdA && !credIdB) return json({ error: "missing_credential_id" }, 400);
 
-    const expectedOrigin = (context.env.ORIGIN || "").replace(/\/$/, "");
+    const row = await DB.prepare(
+      `SELECT c.credential_id, c.user_id, c.public_key, c.counter, u.nickname
+       FROM webauthn_credentials c
+       JOIN users u ON u.id = c.user_id
+       WHERE c.credential_id = ? OR c.credential_id = ?`
+    ).bind(credIdA || credIdB, credIdB || credIdA).first();
+
+    if (!row) {
+      return json({ error: "credential_not_found", rawId: credIdA || null, id: credIdB || null }, 404);
+    }
+
+    const usedCredId = row.credential_id;
+
+    const expectedOrigin = context.env.ORIGIN;
     const expectedRPID = context.env.RP_ID;
 
-    if (!expectedOrigin) return json({ error: "missing_env_origin" }, 500);
-    if (!expectedRPID) return json({ error: "missing_env_rp_id" }, 500);
-
-    // 3) Verifica registrazione (questa è la cosa corretta)
     let verification;
     try {
-      verification = await verifyRegistrationResponse({
-        response: attestation,
+      verification = await verifyAuthenticationResponse({
+        response: assertion,
         expectedChallenge: ch.challenge,
         expectedOrigin,
         expectedRPID,
+        authenticator: {
+          credentialID: fromB64u(usedCredId),
+          credentialPublicKey: fromB64u(row.public_key),
+          counter: row.counter || 0,
+        },
         requireUserVerification: false,
       });
     } catch (e) {
-      return json({ error: "verify_failed", message: String(e), name: e?.name || null }, 400);
+      return json({ error: "verify_failed", message: String(e) }, 400);
     }
 
-    const { verified, registrationInfo } = verification;
-    if (!verified || !registrationInfo) return json({ error: "not_verified" }, 400);
+    const { verified, authenticationInfo } = verification;
+    if (!verified || !authenticationInfo) return json({ error: "not_verified" }, 400);
 
-    const credentialID_b64u = b64u(toU8(registrationInfo.credentialID));
-    const publicKey_b64u = b64u(toU8(registrationInfo.credentialPublicKey));
-    const counter = Number(registrationInfo.counter || 0);
-
-    // 4) Salva credenziale (ora la tabella NON sarà più vuota)
-    // Se vuoi evitare duplicati: UNIQUE su credential_id oppure catch errore SQLITE_CONSTRAINT.
     await DB.prepare(
-      `INSERT INTO webauthn_credentials (user_id, credential_id, public_key, counter)
-       VALUES (?, ?, ?, ?)`
-    ).bind(user.id, credentialID_b64u, publicKey_b64u, counter).run();
+      `UPDATE webauthn_credentials SET counter = ? WHERE credential_id = ?`
+    ).bind(authenticationInfo.newCounter, usedCredId).run();
 
-    // 5) Consuma challenge
-    await DB.prepare(`DELETE FROM webauthn_challenges WHERE id = ?`)
-      .bind(ch.id).run();
+    await DB.prepare(`DELETE FROM webauthn_challenges WHERE id = ?`).bind(ch.id).run();
 
-    // 6) Crea sessioni come fai nel login_finish (access + refresh)
-    const access_token = await issueSession(DB, user.id, "a.", 20 * 60 * 1000);
-    const refresh_token = await issueSession(DB, user.id, "r.", 30 * 24 * 60 * 60 * 1000);
-
-    return json({ token: access_token, access_token, refresh_token, nickname: user.nickname }, 200);
+    const token = await issueSession(DB, row.user_id);
+    return json({ token, nickname: row.nickname }, 200);
 
   } catch (e) {
-    return json({ error: "worker_exception", message: String(e?.message || e), name: e?.name || null }, 500);
+    console.error("login_finish_exception", e);
+    return json(
+      { error: "worker_exception", message: String(e), stack: e?.stack || null },
+      500
+    );
   }
 }
 
-async function issueSession(DB, userId, prefix, ttlMs) {
-  const raw = crypto.getRandomValues(new Uint8Array(32));
-  const token = prefix + b64u(raw);
 
+async function issueSession(DB, userId) {
+  const raw = crypto.getRandomValues(new Uint8Array(32));
+  const token = b64u(raw);
   const tokenHash = await sha256b64u(token);
-  const expires = new Date(Date.now() + ttlMs).toISOString();
+  const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString();
 
   await DB.prepare(
     `INSERT INTO sessions (user_id, token_hash, expires_at) VALUES (?, ?, ?)`
@@ -104,12 +116,12 @@ async function sha256b64u(text) {
   return b64u(new Uint8Array(hash));
 }
 
-function toU8(x) {
-  if (x instanceof Uint8Array) return x;
-  if (x instanceof ArrayBuffer) return new Uint8Array(x);
-  if (ArrayBuffer.isView(x)) return new Uint8Array(x.buffer);
-  // fallback (non dovrebbe servire)
-  return new Uint8Array(x);
+function toB64u(buf) {
+  if (!buf) return "";
+  if (typeof buf === "string") return buf;
+  if (buf instanceof ArrayBuffer) return b64u(new Uint8Array(buf));
+  if (ArrayBuffer.isView(buf)) return b64u(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
+  return "";
 }
 
 function b64u(bytes) {
@@ -117,9 +129,7 @@ function b64u(bytes) {
   bytes.forEach(b => bin += String.fromCharCode(b));
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
+
 function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+  return new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
 }
