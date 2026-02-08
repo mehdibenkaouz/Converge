@@ -1739,17 +1739,13 @@ async function syncBonuses(){
 
     if (!me){
       // guest / non loggato
-      if (accNickname) accNickname.textContent = "—";
       if (accUsername) accUsername.textContent = "—";
-      if (accUserId) accUserId.textContent = "—";
       return;
     }
 
     const displayName = me.nickname || me.username || ("ID " + me.id);
 
-    if (accNickname) accNickname.textContent = getNickname() || "—";
     if (accUsername) accUsername.textContent = getNickname() || "—";
-    if (accUserId) accUserId.textContent = String(me.id ?? "—");
   }
 
   function openAccount(){
