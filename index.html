@@ -840,7 +840,7 @@
               <div class="settings-note">Influisce su scorrimento e rottura. Le stelline restano uguali.</div>
             </div>
             <div>
-                <button id="btnMusic"></button>
+                <button id="btnMusic">Music: ON</button>
             </div>
             
             <div style="text-align:right; min-width:220px;">
@@ -1233,7 +1233,6 @@ const accUsernameEl = document.getElementById("accUsername");
 const accUserIdEl = document.getElementById("accUserId");
 const btnLogout = document.getElementById("btnLogout");
 
-if (btnMusic) btnMusic.addEventListener("click", toggleBgm);
 
 function attachAccountButtons(){
   if (btnAccount) btnAccount.addEventListener("click", openAccount);
@@ -1416,6 +1415,7 @@ async function refreshUserUI(){
 
   const animSpeedInput = document.getElementById("animSpeed");
   const btnMusic = document.getElementById("btnMusic");
+  btnMusic?.addEventListener("click", toggleBgm);
   const animSpeedVal   = document.getElementById("animSpeedVal");
   const instantModeInput = document.getElementById("instantMode");
 
