@@ -979,6 +979,48 @@ function setInstantMode(on){
 
   const STORAGE_KEY = "psb_save_v1";
 
+  // ==========
+  // BGM (musica di sottofondo) - MINIMAL & SAFE
+  // ==========
+  const BGM_URL = "bgm.mp3";     // metti bgm.mp3 accanto a index.html (oppure cambia path)
+  const BGM_DEFAULT_VOL = 0.08;  // 0.00..1.00 (0.08 = basso)
+
+  const bgm = new Audio(BGM_URL);
+  bgm.loop = true;
+  bgm.preload = "auto";
+  bgm.volume = BGM_DEFAULT_VOL;
+
+  let bgmStarted = false;
+
+  function startBgm(){
+    if (bgmStarted) return;
+    // play() può fallire se chiamato senza gesto utente: lo gestiamo senza rompere nulla
+    const p = bgm.play();
+    bgmStarted = true;
+
+    if (p && typeof p.catch === "function"){
+      p.catch(() => {
+        // Autoplay bloccato: riproverà al prossimo tap/keydown
+        bgmStarted = false;
+      });
+    }
+  }
+
+  // Avvia al primo input utente (mobile/desktop)
+  window.addEventListener("pointerdown", startBgm, { once: true, capture: true });
+  window.addEventListener("keydown", startBgm, { once: true, capture: true });
+
+  // (Consigliato) Pausa se la tab va in background
+  document.addEventListener("visibilitychange", () => {
+    try{
+      if (document.hidden){
+        bgm.pause();
+        bgmStarted = false;
+      } else {
+        startBgm();
+      }
+    } catch(_) {}
+  });
 
 // ==========
 // Auth + API (Cloudflare Pages Functions)
@@ -1063,6 +1105,9 @@ async function logout() {
 
   clearTokens();
   clearNickname();
+  try { bgm.pause(); } catch(_) {}
+  bgmStarted = false;
+
 
   // Chiudi overlay aperti
   hideHint();
@@ -1396,6 +1441,7 @@ async function refreshUserUI(){
   function startGame(){
     // Hide login overlay
     loginOverlay.classList.add("hidden");
+    startBgm();
 
     // Try load save
     const loaded = loadSave();
