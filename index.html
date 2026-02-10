@@ -168,6 +168,7 @@
     overflow:hidden;
   }
 
+
   /* Gradient border shine */
   .topbar::before{
     content:"";
@@ -841,6 +842,149 @@
     margin-top: 12px;
   }
 
+/* =========================
+   GAME OVER OVERLAY
+   ========================= */
+
+  .gameover{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999; /* sopra tutto */
+    flex-direction: column;
+    gap: 170px;
+  }
+
+
+  .gameover-bar{
+    width: min(500px, 300vw);
+    background: transparent;
+    padding: 18px;
+    text-align: center;
+  }
+
+  .gameover.hidden{ display: none; }
+
+  .gameover-card{
+    width: min(500px, 300vw);
+    background: transparent;
+    padding: 18px;
+    text-align: center;
+
+        /* Standard (supporto parziale) */
+    animation: spinBorder 32s linear infinite;
+
+  }
+
+
+.gameover-title {
+  font-size: 50px;
+  font-weight: 800;
+  margin-bottom: 6px;
+
+  filter:
+    blur(0.2px)
+    brightness(3.2)
+    drop-shadow(0 0 10px rgba(124,245,197,.8))
+    drop-shadow(0 0 18px rgba(124,170,245,.7))
+    drop-shadow(0 0 26px rgba(245,124,215,.6));
+}
+
+
+  .gameover-text{
+    font-size: 30px;
+    opacity: .85;
+  }
+
+  .gameover-actions{
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    justify-content: center;
+  }
+
+  /* stile bottoni (se non hai già classi btn) */
+  #btnGameOverUndo, #btnGameOverClose{
+    padding: 30px 53px;
+    border-radius: 12px;
+    border: 0;
+    font-weight: 800;
+    cursor: pointer;
+      text-shadow:
+    0 0 10px rgba(124,245,197,.9),
+    0 0 20px rgba(124,170,245,.8),
+    0 0 30px rgba(245,124,215,.7);
+  }
+
+  /* Undo disabilitato: colore diverso */
+  #btnGameOverUndo.undo-disabled,
+  #btnGameOverUndo:disabled{
+    background: #9aa0a6;
+    color: #fff;
+    opacity: .65;
+    cursor: not-allowed;
+  }
+
+  /* Chiudi/Ricomincia (se vuoi differenziarlo) */
+  #btnGameOverClose{
+    background: #111;
+    color: #fff;
+  }
+
+
+
+  #btnGameOverUndo{
+    background: #4e9e80;
+    color: #fff;
+  }
+
+  .stallo-msg {
+    position: fixed;
+    inset: 0;                 /* copre tutto lo schermo */
+    z-index: 10000;           /* sopra TUTTO */
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 48px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.55); /* velo scuro davanti al gioco */
+
+    pointer-events: none;     /* NON blocca il gioco */
+    animation: stalloFade 1.2s ease forwards;
+  }
+
+  .stallo-msg.hidden {
+    display: none;
+  }
+
+  @keyframes stalloFade {
+    0%   { opacity: 0; transform: scale(0.9); }
+    20%  { opacity: 1; transform: scale(1.05); }
+    80%  { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.95); }
+  }
+
+  @keyframes undoPulse {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.18); }
+    100% { transform: scale(1); }
+  }
+
+  .undo-pulse {
+    animation: undoPulse 0.8s ease-in-out infinite;
+  }
+
+
+
 </style>
 </head>
 
@@ -996,6 +1140,21 @@
 
     </div>
   </div>
+    <div id="gameOverOverlay" class="gameover hidden">
+
+      <!-- CARD INFORMATIVA -->
+      <div class="gameover-card">
+        <div class="gameover-title">Game Over</div>
+        <div class="gameover-text" id="gameOverText">Mosse finite</div>
+      </div>
+
+      <!-- BARRA AZIONI SEPARATA -->
+      <div class="gameover-bar">
+        <button id="btnGameOverUndo" class="btn">Undo</button>
+        <button id="btnGameOverClose" class="btn secondary">Chiudi</button>
+      </div>
+
+    </div>
 
     <!-- ACCOUNT OVERLAY (seconda pagina) -->
   <div class="modal-overlay hidden" id="accountOverlay" aria-hidden="true">
@@ -1040,6 +1199,18 @@
             <div style="display:flex; align-items:center; gap:10px;">
               <label class="switch" title="Movimento istantaneo">
                 <input type="checkbox" id="instantMode">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <div class="k">Relax mode</div>
+              <div class="settings-note">Solo griglie 3×3 / 5×5. Niente 7×7 o 10×10 (non cambia il punteggio, solo la difficoltà).</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <label class="switch" title="Relax mode">
+                <input type="checkbox" id="relaxMode">
                 <span class="slider"></span>
               </label>
             </div>
@@ -1110,6 +1281,8 @@
 <script>
 let GAME_SPEED = 1;          // 0.5 slow ... 5 fast
 let INSTANT_MODE = false;    // true => no waits / no move blocking
+let RELAX_MODE = false;      // true => only 3x3/5x5 levels
+
 
 const UI_SETTINGS_KEY = "psb_ui_settings_v2";
 
@@ -1132,6 +1305,11 @@ function setGameSpeed(v) {
 function setInstantMode(on){
   INSTANT_MODE = !!on;
   document.documentElement.classList.toggle("instant", INSTANT_MODE);
+}
+
+function setRelaxMode(on){
+  RELAX_MODE = !!on;
+  document.documentElement.classList.toggle("relax", RELAX_MODE);
 }
 
 
@@ -1602,6 +1780,9 @@ async function refreshUserUI(){
 
   const btnUndo = document.getElementById("btnUndo");
   const btnHint = document.getElementById("btnHint");
+  const gameOverOverlay = document.getElementById("gameOverOverlay");
+  const btnGameOverUndo = document.getElementById("btnGameOverUndo");
+  const btnGameOverClose = document.getElementById("btnGameOverClose");
   const hintBadge = document.getElementById("hintBadge");
 
   function updateHintBadge(){
@@ -1671,7 +1852,9 @@ async function refreshUserUI(){
   btnMusic?.addEventListener("click", toggleBgm);
   const animSpeedVal   = document.getElementById("animSpeedVal");
   const instantModeInput = document.getElementById("instantMode");
+  const relaxModeInput = document.getElementById("relaxMode");
 
+  
   // FX (stelline) a velocità costante
   document.documentElement.style.setProperty("--anim-fx", 1);
 
@@ -1679,16 +1862,19 @@ async function refreshUserUI(){
   const savedUI = loadUiSettings();
   const savedSpeed = clamp(parseFloat(savedUI.gameSpeed ?? savedUI.animSpeed ?? 1) || 1, 0.5, 5.0);
   const savedInstant = !!savedUI.instantMode;
+  const savedRelax = !!savedUI.relaxMode;
 
   setGameSpeed(savedSpeed);
   setInstantMode(savedInstant);
+  setRelaxMode(savedRelax);
 
   if (animSpeedVal) animSpeedVal.textContent = savedSpeed.toFixed(1) + "×";
   if (animSpeedInput) animSpeedInput.value = String(savedSpeed.toFixed(1));
   if (instantModeInput) instantModeInput.checked = savedInstant;
+  if (relaxModeInput) relaxModeInput.checked = savedRelax;
 
   function persistUI(){
-    saveUiSettings({ gameSpeed: GAME_SPEED, instantMode: INSTANT_MODE });
+    saveUiSettings({ gameSpeed: GAME_SPEED, instantMode: INSTANT_MODE, relaxMode: RELAX_MODE });
   }
 
   if (animSpeedInput) {
@@ -1703,6 +1889,13 @@ async function refreshUserUI(){
   if (instantModeInput){
     instantModeInput.addEventListener("change", () => {
       setInstantMode(instantModeInput.checked);
+      persistUI();
+    });
+  }
+
+  if (relaxModeInput){
+    relaxModeInput.addEventListener("change", () => {
+      setRelaxMode(relaxModeInput.checked);
       persistUI();
     });
   }
@@ -1963,6 +2156,11 @@ async function refreshUserUI(){
   }
 
   function pickGridSizeForLevel(level){
+
+    if (RELAX_MODE) {
+      // In relax mode, mantieni 3x3 o 5x5 per sempre
+      return (Math.random() < 0.35) ? 3 : 5;
+    }
     if (level < 5) {
       // lascia la tua progressione attuale (o come preferisci)
       // esempio: 1-3 => 3, 4 => 5
@@ -1973,6 +2171,9 @@ async function refreshUserUI(){
 
 
   function startLevel(nextLevel){
+    stalloShown = false;
+    stopPulseUndoButton();
+
     state.level = nextLevel;
 
     // size cycles / varies with level (simple mapping; you can change later)
@@ -2247,10 +2448,42 @@ async function refreshUserUI(){
     }
   }
 
+
+  function openGameOver(reason){
+    if (!gameOverOverlay) return;
+
+    const txt = document.getElementById("gameOverText");
+    if (txt) txt.textContent = reason ? String(reason) : "Mosse finite.";
+
+    gameOverOverlay.classList.remove("hidden");
+    gameOverOverlay.classList.add("show");
+    gameOverOverlay.setAttribute("aria-hidden","false");
+
+    const canUndo = !!(state.undoAvailable && state.undoSnapshot);
+    if (btnGameOverUndo){
+      btnGameOverUndo.disabled = !canUndo;
+      btnGameOverUndo.classList.toggle("undo-disabled", !canUndo);
+    }
+  }
+
+  function closeGameOver(){
+    if (!gameOverOverlay) return;
+    gameOverOverlay.classList.add("hidden");
+    gameOverOverlay.classList.remove("show");
+    gameOverOverlay.setAttribute("aria-hidden","true");
+  }
+
   function updateButtons(){
     btnUndo.disabled = isAnimating || !state.undoAvailable || !state.undoSnapshot;
     btnHint.disabled = isAnimating || state.impossible || state.hintCharges <= 0;
     updateHintBadge();
+  }
+
+
+  function onRewardedAdCompleted(){
+    state.hintCharges += 2;
+    updateHintBadge();
+    saveNow();
   }
 
   // ==========
@@ -2319,18 +2552,49 @@ async function refreshUserUI(){
   }
 
   function attachButtons(){
+    btnGameOverUndo?.addEventListener("click", () => {
+      if (btnGameOverUndo.disabled) return;
+      closeGameOver();
+      btnUndo.click(); // riusa la logica Undo normale
+    });
+
+    btnGameOverClose?.addEventListener("click", () => {
+      closeGameOver();
+
+      // ricomincia partita
+      state = newGameState();
+      generateLevelBoard();
+      state.levelPlan.bestFirstDir =
+        computeHintDirectionForCurrentState({ maxDepth: 6, timeBudgetMs: 25 });
+
+      saveNow();
+      renderAll(true);
+    });
+
+    // =========================
+    // UNDO BUTTON (NORMALE)
+    // =========================
+
     btnUndo.addEventListener("click", () => {
       if (isAnimating) return;
-      
+
       // chiudi eventuale overlay hint prima di modificare lo stato
       hideHint();
-if (!state.undoAvailable || !state.undoSnapshot) return;
+
+      // undo disponibile?
+      if (!state.undoAvailable || !state.undoSnapshot) return;
+
+      // ripristina snapshot e brucia l'undo
       restoreSnapshot(state.undoSnapshot);
       state.undoAvailable = false;
       state.undoSnapshot = null;
+
       saveNow();
       renderAll(true);
+      stalloShown = false;
       toastMsg("Undo usato");
+      stalloShown = false;
+      stopPulseUndoButton();
     });
     
     btnHint.addEventListener("click", () => {
@@ -2354,26 +2618,26 @@ if (!state.undoAvailable || !state.undoSnapshot) return;
       
       // chiudi eventuale overlay hint
       hideHint();
-if (!confirm("Vuoi iniziare una nuova partita? Il salvataggio attuale verrà sovrascritto.")) return;
-      state = newGameState();
-      generateLevelBoard();
-      state.levelPlan.bestFirstDir = computeHintDirectionForCurrentState({maxDepth: 6, timeBudgetMs: 25});
-      saveNow();
-      renderAll(true);
-      toastMsg("Nuova partita");
-    });
+    if (!confirm("Vuoi iniziare una nuova partita? Il salvataggio attuale verrà sovrascritto.")) return;
+          state = newGameState();
+          generateLevelBoard();
+          state.levelPlan.bestFirstDir = computeHintDirectionForCurrentState({maxDepth: 6, timeBudgetMs: 25});
+          saveNow();
+          renderAll(true);
+          toastMsg("Nuova partita");
+        });
 
-    btnCloseHint.addEventListener("click", () => {
-      hideHint();
-    });
+        btnCloseHint.addEventListener("click", () => {
+          hideHint();
+        });
 
-    hintOverlay.addEventListener("click", (e) => {
-      if (e.target === hintOverlay) hideHint();
-    });
+        hintOverlay.addEventListener("click", (e) => {
+          if (e.target === hintOverlay) hideHint();
+        });
 
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && hintOverlay.classList.contains("show")) hideHint();
-    });
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && hintOverlay.classList.contains("show")) hideHint();
+        });
   }
 
   // ==========
@@ -2393,9 +2657,13 @@ if (!confirm("Vuoi iniziare una nuova partita? Il salvataggio attuale verrà sov
     }
 
     if (state.moves <= 0) {
-      toastMsg("Mosse finite");
-      return;
+      state.moves = 0;          // clamp
+      gameOver("Mosse finite");    
+      updateButtons?.();        // se esiste (altrimenti rimuovi questa riga)
+      return;                   // FONDAMENTALE: stop totale
     }
+
+    if (state.moves < 0) state.moves = 0;
 
     const before = snapshotState();
 
@@ -2532,11 +2800,12 @@ if (!confirm("Vuoi iniziare una nuova partita? Il salvataggio attuale verrà sov
           nodeLimit: (state.N <= 5 ? 18000 : 4500),
         });
 
-        if (solv.status === "exhausted"){
-          state.impossible = true;
-          toastMsg("Impossible situation. Use Undo.");
-        } else {
+        if (solv.status === "exhausted") {
+          showStalloMessage();
+          pulseUndoButton();
+        }else {
           state.impossible = false;
+          state.impossibleNotified = false;
         }
 
         updateButtons();
@@ -3178,18 +3447,12 @@ function showHint(){
   // Game Over
   // ==========
   function gameOver(reason){
-    toastMsg(`Game Over — ${reason}`);
-    // submit final score when game ends
-    try { submitHighScoreIfLoggedIn(state.score); } catch (e) { /* ignore */ }
-    // start new game after short delay
-    setTimeout(() => {
-      if (!confirm(`Game Over: ${reason}. Vuoi ricominciare?`)) return;
-      state = newGameState();
-      generateLevelBoard();
-      state.levelPlan.bestFirstDir = computeHintDirectionForCurrentState({maxDepth: 6, timeBudgetMs: 25});
-      saveNow();
-      renderAll(true);
-    }, 100);
+    state.moves = 0;            // clamp definitivo
+    openGameOver(reason);       // se vuoi mostrare la reason nell’overlay
+    try { submitHighScoreIfLoggedIn(state.score); } catch (e) {}
+    saveNow?.();
+    renderAll?.(true);
+    updateButtons?.();
   }
 
   // ==========
@@ -3556,6 +3819,51 @@ function showHint(){
     setTimeout(() => toast.classList.remove("show"), 1300);
   }
 
+
+  function pulseUndoButton() {
+    const btn = document.getElementById("btnUndo");
+    if (!btn) return;
+    btn.classList.add("undo-pulse");
+  }
+
+  function stopPulseUndoButton() {
+    const btn = document.getElementById("btnUndo");
+    if (!btn) return;
+    btn.classList.remove("undo-pulse");
+  }
+
+  let stalloShown = false;
+
+  function showStalloMessage() {
+    if (stalloShown) return;
+    stalloShown = true;
+
+    const el = document.getElementById("stalloMsg");
+    if (!el) return;
+
+    el.classList.remove("hidden");
+
+    setTimeout(() => {
+      el.classList.add("hidden");
+    }, 1200);
+  }
+
+
+  let lastBigToastAt = 0;
+  function bigToast(msg, ms=1100){
+    const now = Date.now();
+    if (now - lastBigToastAt < 250) return;
+    lastBigToastAt = now;
+    toast.textContent = msg;
+    toast.classList.add("big");
+    toast.classList.add("show");
+    setTimeout(() => {
+      toast.classList.remove("show");
+      // remove big after transition to avoid layout pop
+      setTimeout(() => toast.classList.remove("big"), 180);
+    }, ms);
+  }
+
   function dirToArrow(dir){
     if (dir === "up") return "↑";
     if (dir === "down") return "↓";
@@ -3642,6 +3950,12 @@ function showHint(){
   </div>
 </div>
 
+
+</div>
+
+<div id="stalloMsg" class="stallo-msg hidden">
+  STALLO! PREMERE UNDO
+</div>
 
 </body>
 </html>
