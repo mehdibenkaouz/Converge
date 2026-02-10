@@ -771,8 +771,178 @@
   html.instant .tile{ transition: none !important; }
   html.instant .tile.prebreak{ animation: none !important; }
   html.instant .tile.fadeout{ transition: none !important; }
+
+  .ad-banner-slot{
+    width:100%;
+    min-height:50px; /* banner standard */
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin-top:10px;
+  }
+
+  .hint-btn-wrap{
+    position: relative;
+    display: inline-block;
+  }
+
+  .hint-badge{
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 999px;
+    background: #e53935;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+
+    border: 2px solid rgba(255,255,255,.85);
+    box-shadow: 0 6px 16px rgba(0,0,0,.18);
+    user-select: none;
+    pointer-events: none;
+  }
+
+  .reward-overlay{
+    position: fixed;
+    inset: 0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: rgba(0,0,0,.45);
+    z-index: 9999;
+  }
+
+  .reward-overlay.hidden{ display:none; }
+
+  .reward-card{
+    width: min(420px, 92vw);
+    background: rgba(255,255,255,.92);
+    color: #111;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 18px 60px rgba(0,0,0,.25);
+  }
+
+  .reward-title{ font-weight: 800; font-size: 16px; margin-bottom: 6px; }
+  .reward-text{ font-size: 14px; line-height: 1.3; }
+
+  .reward-actions{
+    display:flex;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
 </style>
 </head>
+
+<script>
+  // === ADS ABSTRACTION (works on Web = no-op, works on APK once we wire AdMob) ===
+  const Ads = (() => {
+    let rewardedBusy = false;
+    let lastRewardTs = 0;
+
+    // Cooldown anti-spam: 60s tra rewarded (modifica se vuoi)
+    const REWARD_COOLDOWN_MS = 60_000;
+
+    function isNativeApp() {
+      // Capacitor injects window.Capacitor in native builds
+      return !!window.Capacitor;
+    }
+
+    async function init() {
+      // In web: do nothing
+      // In APK: we'll call the real AdMob init later
+      if (isNativeApp() && typeof window.adsInitNative === "function") {
+        await window.adsInitNative();
+      }
+    }
+
+    async function showBanner() {
+      if (isNativeApp() && typeof window.showBannerNative === "function") {
+        await window.showBannerNative();
+      }
+    }
+
+    async function hideBanner() {
+      if (isNativeApp() && typeof window.hideBannerNative === "function") {
+        await window.hideBannerNative();
+      }
+    }
+
+    async function showRewardedFor2Hints() {
+      const now = Date.now();
+      if (rewardedBusy) return { ok: false, reason: "busy" };
+      if (now - lastRewardTs < REWARD_COOLDOWN_MS) return { ok: false, reason: "cooldown" };
+
+      rewardedBusy = true;
+
+      try {
+        if (isNativeApp() && typeof window.showRewardedNative === "function") {
+          // Must return { rewarded: true/false }
+          const res = await window.showRewardedNative();
+          if (res && res.rewarded === true) {
+            lastRewardTs = now;
+            return { ok: true, rewarded: true };
+          }
+          return { ok: true, rewarded: false };
+        } else {
+          // Web fallback: no rewarded ads
+          return { ok: false, reason: "web_no_ads" };
+        }
+      } finally {
+        rewardedBusy = false;
+      }
+    }
+
+    return { init, showBanner, hideBanner, showRewardedFor2Hints };
+  })();
+
+  // === UI HOOK: Reward button gives +2 hints only if rewarded ===
+  (function wireRewardButton() {
+    const btn = document.getElementById("btnReward2Hints");
+    const status = document.getElementById("rewardStatus");
+    if (!btn) return;
+
+    function setStatus(msg) {
+      if (status) status.textContent = msg || "";
+    }
+
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      setStatus("");
+
+      const r = await Ads.showRewardedFor2Hints();
+
+      if (r.ok && r.rewarded) {
+        // TODO: collega qui la tua logica hint
+        // Esempio: addHints(2);
+        if (typeof window.addHints === "function") window.addHints(2);
+        else if (typeof window.hintsAdd === "function") window.hintsAdd(2);
+
+        setStatus("✅ Ricevuti +2 hint!");
+      } else {
+        if (r.reason === "cooldown") setStatus("⏳ Puoi guardare un’altra pubblicità tra poco.");
+        else if (r.reason === "web_no_ads") setStatus("ℹ️ Disponibile nell’app Android.");
+        else setStatus("❌ Pubblicità non disponibile ora.");
+      }
+
+      btn.disabled = false;
+    });
+  })();
+
+  
+</script>
+
+
 <body>
   <div class="app">
     <div class="topbar">
@@ -799,9 +969,18 @@
       </div>
       <div class="btns">
         <button id="btnUndo" title="Annulla ultima mossa (1 per livello)">Undo</button>
-        <button id="btnHint" title="Mostra una mossa consigliata (1 ogni 3 livelli)">Hint</button>
+
         <button id="btnNew" title="Nuova partita">Nuova</button>
+
+
+        <button id="btnReward2Hints" class="btn secondary" type="button"> AD +2 hint </button>
+        <div id="rewardStatus" class="small" style="margin-top:6px; opacity:.85;"></div>
+
       </div>
+              <div class="hint-btn-wrap">
+          <button id="btnHint">Hint</button>
+          <span class="hint-badge" id="hintBadge">0</span>
+        </div>
     </div>
 
     <div class="board-wrap">
@@ -813,6 +992,8 @@
         Suggerimento: tocca e trascina sul board (touch) o trascina col mouse. Una mossa consuma sempre 1.
       </div>
       <button id="btn-logout">Logout</button>
+      <div id="ad-banner-slot" class="ad-banner-slot" aria-label="Advertisement"></div>
+
     </div>
   </div>
 
@@ -1178,6 +1359,7 @@ async function syncBonuses(){
     toastMsg("Bonus: 20 hint!");
   }
 
+
   // 2) referral wallet -> converte in hint
   const w = await apiPost("/api/withdraw", {});
   if (w.withdrawn > 0 && state) {
@@ -1379,6 +1561,29 @@ async function refreshUserUI(){
    * tilesById[tileId] = { id, colorId, x, y }
    */
   let state = null;
+  // ===== Rewarded Ads hook: give hints safely =====
+  window.addHints = function addHints(n){
+    n = Math.floor(Number(n) || 0);
+    if (n <= 0) return;
+
+    // se lo state non è pronto (es. prima di startGame), ignora
+    if (!state) return;
+
+    // aggiungi hint
+    if (!Number.isFinite(state.hintCharges)) state.hintCharges = 0;
+    state.hintCharges += n;
+
+    // se avevi cooldown attivo ma ora hai hint, rendili subito utilizzabili
+    if (state.hintCharges > 0) state.hintCooldown = 0;
+
+    // se eri in "impossible" non bloccare gli hint a livello UI
+    state.impossible = false;
+
+    try { saveNow(); } catch(_) {}
+    try { updateButtons(); } catch(_) {}
+    try { toastMsg(`+${n} hint!`); } catch(_) {}
+  };
+
   let isAnimating = false;
   let MOVE_TOKEN = 0; // used to cancel in-flight animations when instant mode is enabled
   let lastToastAt = 0;
@@ -1397,11 +1602,57 @@ async function refreshUserUI(){
 
   const btnUndo = document.getElementById("btnUndo");
   const btnHint = document.getElementById("btnHint");
+  const hintBadge = document.getElementById("hintBadge");
+
+  function updateHintBadge(){
+    if (!hintBadge) return;
+    const n = Math.max(0, Number(state?.hintCharges ?? 0));
+    hintBadge.textContent = (n > 99) ? "99+" : String(n);
+    hintBadge.style.display = "inline-flex"; // sempre visibile
+  }
+
   const btnNew  = document.getElementById("btnNew");
 
   const toast = document.getElementById("toast");
   
   
+  const rewardOverlay = document.getElementById("rewardOverlay");
+  const btnRewardWatch = document.getElementById("btnRewardWatch");
+  const btnRewardCancel = document.getElementById("btnRewardCancel");
+  const rewardStatus = document.getElementById("rewardStatus");
+
+  function openReward(){
+    if (!rewardOverlay) return;
+    rewardStatus.textContent = "";
+    rewardOverlay.classList.remove("hidden");
+  }
+  function closeReward(){
+    if (!rewardOverlay) return;
+    rewardOverlay.classList.add("hidden");
+  }
+
+  btnRewardCancel?.addEventListener("click", closeReward);
+
+  btnRewardWatch?.addEventListener("click", async () => {
+    btnRewardWatch.disabled = true;
+    rewardStatus.textContent = "";
+
+    // Qui chiamiamo la rewarded (web fallback: dirà "Disponibile nell’app")
+    const r = await Ads.showRewardedFor2Hints();
+
+    if (r.ok && r.rewarded) {
+      window.addHints?.(2);   // usa la funzione che aumenta state.hintCharges
+      updateButtons();
+      closeReward();
+    } else {
+      if (r.reason === "web_no_ads") rewardStatus.textContent = "Disponibile nell’app Android.";
+      else if (r.reason === "cooldown") rewardStatus.textContent = "Riprova tra poco.";
+      else rewardStatus.textContent = "Pubblicità non disponibile ora.";
+    }
+
+    btnRewardWatch.disabled = false;
+  });
+
   const loginOverlay = document.getElementById("loginOverlay");
   const btnPasskeyLogin = document.getElementById("btnPasskeyLogin");
   const btnPasskeyRegister = document.getElementById("btnPasskeyRegister");
@@ -1999,7 +2250,7 @@ async function refreshUserUI(){
   function updateButtons(){
     btnUndo.disabled = isAnimating || !state.undoAvailable || !state.undoSnapshot;
     btnHint.disabled = isAnimating || state.impossible || state.hintCharges <= 0;
-
+    updateHintBadge();
   }
 
   // ==========
@@ -2081,13 +2332,22 @@ if (!state.undoAvailable || !state.undoSnapshot) return;
       renderAll(true);
       toastMsg("Undo usato");
     });
-
+    
     btnHint.addEventListener("click", () => {
       if (isAnimating) return;
-      if (state.hintCharges <= 0) return;
       if (state.impossible) return;
+
+      if (state.hintCharges <= 0) {
+        openReward();
+        return;
+      }
+
       showHint();
+      updateButtons();
     });
+
+    
+
 
     btnNew.addEventListener("click", () => {
       if (isAnimating) return;
@@ -3370,5 +3630,18 @@ function showHint(){
 
 })();
 </script>
+<div id="rewardOverlay" class="reward-overlay hidden" role="dialog" aria-modal="true">
+  <div class="reward-card">
+    <div class="reward-title">Hai finito gli hint</div>
+    <div class="reward-text">Guarda una pubblicità (pochi secondi) e ottieni <b>+2 hint</b>.</div>
+    <div class="reward-actions">
+      <button id="btnRewardWatch" class="btn">Guarda</button>
+      <button id="btnRewardCancel" class="btn secondary">Annulla</button>
+    </div>
+    <div id="rewardStatus" class="small" style="margin-top:8px; opacity:.85;"></div>
+  </div>
+</div>
+
+
 </body>
 </html>
