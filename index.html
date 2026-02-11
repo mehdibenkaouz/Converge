@@ -2081,6 +2081,8 @@ function attachAccountButtons(){
     if (!confirm("Vuoi davvero resettare i progressi locali su questo dispositivo?")) return;
     localStorage.removeItem(STORAGE_KEY);
     state = newGameState();
+    startLevel(1);
+    toastMsg(t("toast.reset_done") || "Progressi resettati");
     toastMsg("Progressi locali resettati");
     renderAll(true);
     saveNow();
@@ -2118,7 +2120,14 @@ function attachAccountButtons(){
       try { localStorage.removeItem(STORAGE_KEY); } catch {}
 
       // Torna al login in modo deterministico
-      showLoginScreen();
+      try {
+        if (typeof showLoginScreen === "function") showLoginScreen();
+        else {
+          // fallback minimale: mostra overlay login e reset UI
+          try { loginOverlay?.classList.remove("hidden"); } catch {}
+        }
+      } catch {}
+
 
       toastMsg(ENABLE_REAL_DELETE ? "Account eliminato" : "Account disconnesso + reset locale (test)");
     } catch (e) {
@@ -2445,6 +2454,13 @@ async function refreshUserUI(){
       toastMsg("Partita caricata");
     } else {
       state = newGameState();
+      // --- FIX: se non c'è una board valida (primo avvio / reset), avvia Level 1
+      if (!state || !state.tilesById || Object.keys(state.tilesById).length === 0) {
+        state = newGameState();
+        startLevel(1);
+        return;
+      }
+
     }
 
     attachInput();
