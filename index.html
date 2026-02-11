@@ -2316,6 +2316,8 @@ async function refreshUserUI(){
     state.moves = Math.max(state.moves, 3);
     if (RELAX_MODE) state.moves = Math.max(state.moves, 5);
     state.N = pickGridSizeForLevelConsideringMoves(nextLevel, state.moves);
+    // Sync sizeIndex <-> N per evitare mismatch 5x5 vs 3x3
+    state.sizeIndex = Math.max(0, SIZES.indexOf(state.N));
 
 
     state.undoAvailable = true;
@@ -2785,18 +2787,29 @@ async function refreshUserUI(){
     
 
 
-    btnNew.addEventListener("click", () => {
-      if (isAnimating) return;
-      
-      // chiudi eventuale overlay hint
-      hideHint();
-    if (!confirm("Vuoi iniziare una nuova partita? Il salvataggio attuale verrà sovrascritto.")) return;
-          state = newGameState();
-          generateLevelBoard();
-          state.levelPlan.bestFirstDir = computeHintDirectionForCurrentState({maxDepth: 6, timeBudgetMs: 25});
-          saveNow();
-          renderAll(true);
-          toastMsg("Nuova partita");
+        btnNew.addEventListener("click", () => {
+          if (isAnimating) return;
+
+          hideHint();
+
+          if (!confirm("Vuoi iniziare una nuova partita? Il salvataggio attuale verrà sovrascritto.")) return;
+
+          try {
+            // reset totale e coerente
+            state = newGameState();
+
+            // IMPORTANTISSIMO: usa la stessa logica dei livelli (gated + render + save)
+            startLevel(1);
+
+            // opzionale: se vuoi anche il toast "Nuova partita"
+            // toastMsg("Nuova partita");
+          } catch (e) {
+            console.error("NEW GAME ERROR:", e);
+            alert("Errore durante Nuova partita: " + (e?.message || e));
+
+            // fallback: almeno forziamo un render completo
+            try { renderAll(true); } catch (_) {}
+          }
         });
 
         btnCloseHint.addEventListener("click", () => {
@@ -2944,7 +2957,7 @@ async function refreshUserUI(){
     if (!moved){
       toastMsg("Nessuno spostamento");
       saveNow();
-      renderAll(false);
+      renderAll(true);
       updateButtons();
       return;
     }
