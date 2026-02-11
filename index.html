@@ -1585,9 +1585,17 @@ document.getElementById("btn-logout")?.addEventListener("click", async () => {
 
 async function logout() {
   // Se hai un endpoint /logout è meglio chiamarlo:
-  try {
-    await apiFetch("/logout", { method: "POST" });
-  } catch (_) {}
+ try {
+
+    await apiFetch("/api/logout", { method: "POST" });
+
+  } catch (_) {
+
+    // fallback legacy (may 405 on static hosting)
+
+    try { await apiFetch("/logout", { method: "POST" }); } catch (_) {}
+
+  }
 
   clearTokens();
   clearNickname();
@@ -1851,6 +1859,18 @@ async function refreshUserUI(){
   let isAnimating = false;
   let MOVE_TOKEN = 0; // used to cancel in-flight animations when instant mode is enabled
   let lastToastAt = 0;
+
+  let stalloShown = false;
+
+  // ===== AUTO / Tutorial mode =====
+  let AUTO_MODE = false;
+  let autoReturnSnapshot = null; // snapshot della partita "vera" per ripristino post-tutorial
+  let autoLoopRunning = false;
+  let autoStop = false;
+
+  // se vuoi velocità senza animazioni pesanti:
+  const AUTO_STEP_DELAY_MS = 60; // 0..200 a piacere
+
 
   // ==========
   // DOM
@@ -2957,7 +2977,7 @@ async function refreshUserUI(){
     if (!moved){
       toastMsg("Nessuno spostamento");
       saveNow();
-      renderAll(true);
+      renderAll(false);
       updateButtons();
       return;
     }
@@ -3766,6 +3786,9 @@ async function refreshUserUI(){
     state.level = snap.level;
     state.sizeIndex = snap.sizeIndex;
     state.N = snap.N;
+     // Fix legacy saves: keep sizeIndex coherent with N
+
+    if (Array.isArray(SIZES) && SIZES.includes(state.N)) state.sizeIndex = Math.max(0, SIZES.indexOf(state.N));
     state.score = snap.score;
     state.moves = snap.moves;
     state.undoAvailable = snap.undoAvailable;
@@ -4329,17 +4352,7 @@ async function refreshUserUI(){
     btn.classList.remove("undo-pulse");
   }
 
-  let stalloShown = false;
-
-  // ===== AUTO / Tutorial mode =====
-  let AUTO_MODE = false;
-  let autoReturnSnapshot = null; // snapshot della partita "vera" per ripristino post-tutorial
-  let autoLoopRunning = false;
-  let autoStop = false;
-
-  // se vuoi velocità senza animazioni pesanti:
-  const AUTO_STEP_DELAY_MS = 60; // 0..200 a piacere
-
+  
   function enterAutoTutorial(){
     // salva partita reale (per ripristinare dopo)
     autoReturnSnapshot = deepCopy(state);
