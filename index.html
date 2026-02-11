@@ -1167,6 +1167,7 @@
       </div>
       <div class="btns">
         <button id="btnUndo" title="Annulla ultima mossa (1 per livello)">Undo</button>
+        <button id="btnAuto" class="pill">TUTORIAL/AUTO</button>
 
         <button id="btnNew" title="Nuova partita">Nuova</button>
 
@@ -2260,16 +2261,43 @@ async function refreshUserUI(){
     return weightedPickGrid();
   }
 
+  function pickGridSizeForLevelConsideringMoves(level, moves){
+    const base = pickGridSizeForLevel(level);
+    const m = Math.max(0, Number(moves) || 0);
+
+    let cap;
+    if (RELAX_MODE) cap = 5;
+    else if (m <= 5) cap = 3;
+    else if (m <= 11) cap = 5;
+    else if (m <= 19) cap = 7;
+    else cap = 10;
+
+    return Math.min(base, cap);
+  }
+
+
+  function regenCleanLevel(){
+    // “pulito” = stesso livello ma board rigenerata
+    // Se la tua startLevel già rigenera la board, basta richiamarla.
+    startLevel(state.level);
+  }
+
 
   function startLevel(nextLevel){
     stalloShown = false;
     stopPulseUndoButton();
 
     state.level = nextLevel;
+    // Reward: +10 hint at levels 10,20,40,80...
+    const reward = checkLevelReward(state.level);
+    if (reward > 0 && state.last_reward_level < state.level) {
+      state.hintCharges += reward;
+      state.last_reward_level = state.level;
+    }
+
     // ===== Level reward: +10 hint at levels 10,20,40,80,160...
     if (!Number.isFinite(state.last_reward_level)) state.last_reward_level = 0;
 
-    const reward = checkLevelReward(state.level);
     if (reward > 0 && state.last_reward_level < state.level) {
       if (!Number.isFinite(state.hintCharges)) state.hintCharges = 0;
       state.hintCharges += reward;
@@ -2282,14 +2310,13 @@ async function refreshUserUI(){
     }
 
 
-    // size cycles / varies with level (simple mapping; you can change later)
-    // We'll use: 1-3 -> 3x3, 4-7 -> 5x5, 8-12 -> 7x7, 13+ -> 10x10
-    state.N = pickGridSizeForLevel(nextLevel);
 
     // Le mosse NON si resettano: si accumulano tra i livelli.
     // Garantiamo solo un minimo per evitare soft-lock a 0.
     state.moves = Math.max(state.moves, 3);
     if (RELAX_MODE) state.moves = Math.max(state.moves, 5);
+    state.N = pickGridSizeForLevelConsideringMoves(nextLevel, state.moves);
+
 
     state.undoAvailable = true;
     state.undoSnapshot = null;
@@ -2421,49 +2448,87 @@ async function refreshUserUI(){
     }
   }
 
+
   function generateLevelBoardGated(){
-    // tenta: se non passa i gate “forti”, cambia N e riprova
-    const MAX_RETRIES = 18;
+    const movesBudget = Math.max(0, (state.moves|0));
 
-    for (let k=0; k<MAX_RETRIES; k++){
-      // scegli N (liv >=5 random, altrimenti come regola tua)
-      state.N = pickGridSizeForLevel(state.level);
+    const uniq = (arr) => {
+      const out = [];
+      const seen = new Set();
+      for (const x of arr){
+        if (seen.has(x)) continue;
+        seen.add(x);
+        out.push(x);
+      }
+      return out;
+    };
 
-      // genera una board (questa già fa i suoi MAX_ATTEMPTS interni)
-      generateLevelBoard();
+    // Preferenza “normale” (livello), ma poi la correggiamo in base alle mosse reali
+    const preferByLevel = pickGridSizeForLevel(state.level);
 
-      // Gate extra: per N>=7 non pretendiamo "solved" (troppo caro),
-      // ma pretendiamo almeno che NON sia provatamente impossibile.
-      const snap = snapshotFromState(state);
+    // Candidate sizes “in base alle mosse”: se hai poche mosse, scala giù anche se sei al livello 100
+    let byMoves;
+    if (RELAX_MODE){
+      byMoves = (movesBudget <= 7) ? [3,5] : [5,3];
+    } else {
+      if (movesBudget <= 6)       byMoves = [3,5];
+      else if (movesBudget <= 10) byMoves = [5,3,7];
+      else if (movesBudget <= 16) byMoves = [7,5,3,10];
+      else                        byMoves = [10,7,5,3];
+    }
 
-      const opts = (state.N <= 3)
-        ? { timeBudgetMs: 160, nodeLimit: 90000 }
-        : (state.N <= 5)
-          ? { timeBudgetMs: 240, nodeLimit: 160000 }
-          : (state.N <= 7)
-            ? { timeBudgetMs: 70, nodeLimit: 18000 }
-            : { timeBudgetMs: 55, nodeLimit: 14000 }; // 10x10: non esplodere
+    // Ordine finale: prefer livello in testa, poi la scala per mosse
+    const candidateSizes = uniq([preferByLevel, ...byMoves]);
 
-      const solv = analyzeSolvabilityForSnapshot(snap, opts);
+    // Budget solver per size (generazione può “spendere” più del hint veloce)
+    const solverOptsForN = (N) => {
+      if (N <= 3) return { timeBudgetMs: 180, nodeLimit: 220000 };
+      if (N <= 5) return { timeBudgetMs: 260, nodeLimit: 320000 };
+      if (N <= 7) return { timeBudgetMs: 360, nodeLimit: 420000 };
+      return          { timeBudgetMs: 520, nodeLimit: 520000 }; // 10x10: più budget
+    };
 
-      if (state.N <= 5){
-        // su piccolo: vogliamo una soluzione vera
-        if (solv.status === "solved") return true;
-        continue;
-      } else {
-        // su grande: basta che non sia “exhausted”
-        // (unknown va bene: non abbiamo provato che è impossibile)
-        if (solv.status !== "exhausted") return true;
-        continue;
+    // retries per size
+    const triesForN = (N) => {
+      if (N <= 3) return 70;
+      if (N <= 5) return 60;
+      if (N <= 7) return 40;
+      return 26; // 10x10: meno tentativi, ma ogni tentativo è più “caro”
+    };
+
+    // Gate: accettiamo SOLO se troviamo una soluzione ENTRO movesBudget
+    for (const N of candidateSizes){
+      const TRIES = triesForN(N);
+      for (let t = 0; t < TRIES; t++){
+        state.N = N;
+
+        // Genera board
+        generateLevelBoard();
+
+        // Verifica solvibilità entro mosse attuali
+        const snap = snapshotFromState(state);
+        const solv = analyzeSolvabilityForSnapshotWithMoves(snap, movesBudget, solverOptsForN(N));
+
+        if (solv.status === "solved"){
+          return true;
+        }
+        // se unknown/exhausted => rigenera
       }
     }
 
-    // fallback: se proprio sfiga, forziamo 5x5 e rigeneriamo
-    state.N = 5;
+    // Fallback di sicurezza: forza 3x3 e rigenera finché risolvibile
+    state.N = 3;
+    for (let t = 0; t < 200; t++){
+      generateLevelBoard();
+      const snap = snapshotFromState(state);
+      const solv = analyzeSolvabilityForSnapshotWithMoves(snap, movesBudget, { timeBudgetMs: 220, nodeLimit: 380000 });
+      if (solv.status === "solved") return true;
+    }
+
+    // Se anche qui fallisse (ultra improbabile), almeno non crashiamo
     generateLevelBoard();
     return true;
   }
-
 
   // ==========
   // Rendering
@@ -2745,6 +2810,79 @@ async function refreshUserUI(){
         window.addEventListener("keydown", (e) => {
           if (e.key === "Escape" && hintOverlay.classList.contains("show")) hideHint();
         });
+  }
+
+  const btnAuto = document.getElementById("btnAuto");
+
+  if (btnAuto){
+    btnAuto.addEventListener("click", async () => {
+      if (AUTO_MODE){
+        // STOP
+        AUTO_MODE = false;
+        autoStop = true;
+        btnAuto.classList.remove("active");
+        toastMsg("AUTO: OFF");
+        return;
+      }
+
+      // START
+      AUTO_MODE = true;
+      autoStop = false;
+      btnAuto.classList.add("active");
+      toastMsg("AUTO: ON");
+
+      // facoltativo: crea una partita “pulita” non salvata
+      // se hai una funzione newGame / reset / startGame, chiamala qui:
+      // startNewGame?.();
+
+      if (!autoLoopRunning){
+        autoLoopRunning = true;
+        runAutoLoop().finally(() => { autoLoopRunning = false; });
+      }
+    });
+  }
+
+  async function runAutoLoop(){
+    while (AUTO_MODE && !autoStop){
+      await waitNotBusy();
+
+      const pick = await pickBestDirAuto();
+
+      if (!AUTO_MODE || autoStop) break;
+
+      if (pick?.dir){
+        // esegui la mossa (usa la tua funzione reale: doMove / applyMove / swipeMove etc.)
+        // Cerca nel file la funzione che viene chiamata quando fai swipe.
+        if (typeof doMove === "function"){
+          await doMove(pick.dir);
+        } else if (typeof performMove === "function"){
+          await performMove(pick.dir);
+        } else {
+          // fallback: se non trovi, almeno fermati
+          bigToast("AUTO: manca doMove()", 1200);
+          AUTO_MODE = false;
+          break;
+        }
+
+        await sleep(AUTO_STEP_DELAY_MS);
+        continue;
+      }
+
+      // nessuna mossa trovata
+      // nessuna mossa trovata → in AUTO rigeneriamo SEMPRE un livello pulito
+      bigToast("AUTO: regen level", 700);
+      showStalloMessage();
+      pulseUndoButton();
+
+      regenCleanLevel();
+      await sleep(120);
+      continue;
+
+
+      // se per qualche motivo il solver deep non esiste
+      bigToast("AUTO: solver non disponibile", 1200);
+      AUTO_MODE = false;
+    }
   }
 
 
@@ -3624,6 +3762,8 @@ async function refreshUserUI(){
   }
 
   function saveNow(){
+    if (AUTO_MODE) return; // in tutorial mode NON si salva nulla
+
     const payload = snapshotState();
     // include undo snapshot separately
     payload.undoSnapshot = state.undoSnapshot;
@@ -3937,9 +4077,127 @@ async function refreshUserUI(){
     return {status:"exhausted", firstDir:null, expanded, visited: visited.size};
   }
 
+  function analyzeSolvabilityForSnapshotWithMoves(
+    rootSnap,
+    initialMoves,
+    { timeBudgetMs = 140, nodeLimit = 180000 } = {}
+  ){
+    const t0 = performance.now();
+    const dirs = ["up","down","left","right"];
+
+    const startMoves = Math.max(0, (initialMoves|0));
+    const root = cloneSnapshot(rootSnap);
+
+    const totalTiles0 = Object.keys(root.tilesById).length;
+    const movesCap = startMoves + Math.floor(totalTiles0 / 2); // upper bound safe
+    const capMoves = (m) => Math.min(movesCap, Math.max(0, m|0));
+
+    // Max-heap semplice (priority maggiore = prima)
+    const heap = [];
+    const heapPush = (node) => {
+      heap.push(node);
+      let i = heap.length - 1;
+      while (i > 0){
+        const p = ((i - 1) >> 1);
+        if (heap[p].prio >= heap[i].prio) break;
+        [heap[p], heap[i]] = [heap[i], heap[p]];
+        i = p;
+      }
+    };
+    const heapPop = () => {
+      if (!heap.length) return null;
+      const top = heap[0];
+      const last = heap.pop();
+      if (heap.length){
+        heap[0] = last;
+        let i = 0;
+        for (;;){
+          const l = i*2 + 1, r = l + 1;
+          let best = i;
+          if (l < heap.length && heap[l].prio > heap[best].prio) best = l;
+          if (r < heap.length && heap[r].prio > heap[best].prio) best = r;
+          if (best === i) break;
+          [heap[i], heap[best]] = [heap[best], heap[i]];
+          i = best;
+        }
+      }
+      return top;
+    };
+
+    const sig0 = signatureForSnapshot(root);
+    const bestMovesBySig = new Map();
+    bestMovesBySig.set(sig0, startMoves);
+
+    const tiles0 = Object.keys(root.tilesById).length;
+    heapPush({
+      snap: root,
+      firstDir: null,
+      movesLeft: startMoves,
+      depth: 0,
+      prio: (startMoves * 10) - tiles0
+    });
+
+    let expanded = 0;
+
+    while (heap.length){
+      if ((performance.now() - t0) > timeBudgetMs){
+        return { status:"unknown", firstDir:null, expanded, visited: bestMovesBySig.size };
+      }
+      if (expanded >= nodeLimit){
+        return { status:"unknown", firstDir:null, expanded, visited: bestMovesBySig.size };
+      }
+
+      const cur = heapPop();
+      expanded++;
+
+      const remaining = Object.keys(cur.snap.tilesById).length;
+      if (remaining === 0){
+        return {
+          status: "solved",
+          firstDir: cur.firstDir,
+          depth: cur.depth,
+          expanded,
+          visited: bestMovesBySig.size
+        };
+      }
+
+      for (const dir of dirs){
+        // clona e simula
+        const nextSnap = cloneSnapshot(cur.snap);
+        const sim = simulateMoveFromSnapshot(nextSnap, dir);
+
+        // Se non si muove nulla, in gioco NON consumi mosse e NON rompi: trattiamo come "skip"
+        if (!sim.moved) continue;
+
+        const gained = Math.floor(sim.brokenCount / 2);
+        let nextMoves = cur.movesLeft - 1 + gained;
+        if (nextMoves < 0) continue;
+        nextMoves = capMoves(nextMoves);
+
+        const sig = signatureForSnapshot(sim.snapshot);
+        const prevBest = bestMovesBySig.get(sig);
+        if (prevBest != null && prevBest >= nextMoves) continue;
+        bestMovesBySig.set(sig, nextMoves);
+
+        const tilesLeft = Object.keys(sim.snapshot.tilesById).length;
+        heapPush({
+          snap: sim.snapshot,
+          firstDir: cur.firstDir || dir,
+          movesLeft: nextMoves,
+          depth: cur.depth + 1,
+          prio: (nextMoves * 10) - tilesLeft
+        });
+      }
+    }
+
+    // Se esaurisci davvero l'heap senza time/node limit => impossibile entro quelle mosse (provato)
+    return { status:"exhausted", firstDir:null, expanded, visited: bestMovesBySig.size };
+  }
+
+
   function analyzeSolvabilityCurrentState(opts){
     const snap = snapshotFromState(state);
-    return analyzeSolvabilityForSnapshot(snap, opts);
+    return analyzeSolvabilityForSnapshotWithMoves(snap, state.moves|0, opts);
   }
 
 
@@ -4029,6 +4287,18 @@ async function refreshUserUI(){
   }
 
 
+  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+  // se hai un flag tipo `animating` / `isAnimating` / `busy`, usa quello.
+  // altrimenti puoi “aspettare” finché non finisce la mossa.
+  async function waitNotBusy(){
+    // PROVA a usare il tuo flag reale:
+    while (window.isAnimating || window.animating || window.busy) {
+      await sleep(16);
+    }
+  }
+
+
   function pulseUndoButton() {
     const btn = document.getElementById("btnUndo");
     if (!btn) return;
@@ -4042,6 +4312,15 @@ async function refreshUserUI(){
   }
 
   let stalloShown = false;
+
+  // ===== AUTO / Tutorial mode =====
+  let AUTO_MODE = false;
+  let autoLoopRunning = false;
+  let autoStop = false;
+
+  // se vuoi velocità senza animazioni pesanti:
+  const AUTO_STEP_DELAY_MS = 60; // 0..200 a piacere
+
 
   function showStalloMessage() {
     if (stalloShown) return;
@@ -4078,6 +4357,39 @@ async function refreshUserUI(){
     if (dir === "down") return "↓";
     if (dir === "left") return "←";
     return "→";
+  }
+
+
+  async function pickBestDirAuto(){
+    // 1) prova il percorso "fast" se ce l’hai (hint normale)
+    try{
+      if (typeof computeHintDirectionForCurrentState === "function"){
+        const d = computeHintDirectionForCurrentState();
+        if (d) return { dir: d, mode: "fast" };
+      }
+    }catch(_){}
+
+    // 2) deep calc (usa il solver che ESISTE già nel file)
+    // Aumentiamo budget per AUTO, così trova davvero una strada.
+    try{
+      if (typeof analyzeSolvabilityCurrentState === "function"){
+        const solv = analyzeSolvabilityCurrentState({
+          timeBudgetMs: 220,   // puoi alzare a 400 se vuoi più “certezza”
+          nodeLimit: 20000     // puoi alzare, ma occhio ai freeze
+        });
+
+        const d =
+          solv?.bestFirstDir ||
+          solv?.firstDir ||
+          (Array.isArray(solv?.path) ? solv.path[0] : null) ||
+          null;
+
+        if (d) return { dir: d, mode: "deep", status: solv?.status || "unknown" };
+
+        return { dir: null, mode: "deep", status: solv?.status || "unknown" };
+      }
+    }catch(_){}
+
   }
 
   // ==========
