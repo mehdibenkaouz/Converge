@@ -353,6 +353,7 @@
     overflow:hidden;
     touch-action:none;
     user-select:none;
+    direction: ltr;
   }
 
   /* Inner animated border + glow */
@@ -378,6 +379,7 @@
     display:grid;
     gap: var(--gap);
     z-index: 1;
+    direction: ltr;
   }
   .cell{
     border-radius: var(--tile-round);
@@ -1043,6 +1045,369 @@
 </head>
 
 <script>
+    
+  // === i18n (IT/EN/FR/DE/ES/RU/JA/AR/ZH) ===
+  const I18N = {
+    it: {
+      "label.level":"Livello",
+      "label.grid":"Griglia",
+      "label.moves":"Mosse",
+      "label.score":"Score",
+      "btn.undo":"Undo",
+      "btn.auto":"TUTORIAL/AUTO",
+      "btn.new":"Nuova",
+      "btn.hint":"Hint",
+      "btn.ad_hints":"AD +2 hint",
+      "modal.account":"Account",
+      "btn.close":"Chiudi",
+      "label.nickname":"Nickname",
+      "label.username":"Username",
+      "label.anim_speed":"Velocità animazioni",
+      "note.anim_speed":"Influisce su scorrimento e rottura. Le stelline restano uguali.",
+      "btn.music_on":"Music: ON",
+      "btn.music_off":"Music: OFF",
+      "label.instant":"Movimento istantaneo",
+      "note.instant":"Nessuna attesa: puoi scorrere anche mentre gli effetti sono in corso (l'animazione può essere tagliata).",
+      "label.relax":"Relax mode",
+      "note.relax":"Solo griglie 3×3 / 5×5. Niente 7×7 o 10×10 (non cambia il punteggio, solo la difficoltà).",
+      "label.user_id":"User ID",
+      "label.language":"Lingua",
+      "btn.logout":"Logout",
+      "btn.reset_progress":"Reset progressi",
+      "btn.delete_account":"Elimina account",
+      "note.reset_delete":"<span data-i18n=\"note.reset_delete\">Nota: “Reset progressi” azzera solo i progressi locali su questo device. “Elimina account” richiede endpoint backend (lo facciamo dopo).</span>",
+      "toast.new_game":"Nuova partita",
+      "confirm.new_game":"Vuoi iniziare una nuova partita? Il salvataggio attuale verrà sovrascritto.",
+      "confirm.reset_progress":"Vuoi azzerare i progressi locali su questo dispositivo?",
+      "confirm.delete_account":"Sei sicuro? Tutti i dati associati al tuo account saranno eliminati. Azione irreversibile.",
+      "stallo":"STALLO! PREMERE UNDO",
+    },
+    en: {
+      "label.level":"Level",
+      "label.grid":"Grid",
+      "label.moves":"Moves",
+      "label.score":"Score",
+      "btn.undo":"Undo",
+      "btn.auto":"TUTORIAL/AUTO",
+      "btn.new":"New",
+      "btn.hint":"Hint",
+      "btn.ad_hints":"AD +2 hints",
+      "modal.account":"Account",
+      "btn.close":"Close",
+      "label.nickname":"Nickname",
+      "label.username":"Username",
+      "label.anim_speed":"Animation speed",
+      "note.anim_speed":"Affects scrolling and breaking. Stars stay the same.",
+      "btn.music_on":"Music: ON",
+      "btn.music_off":"Music: OFF",
+      "label.instant":"Instant move",
+      "note.instant":"No waiting: you can swipe even while effects run (animation may be cut).",
+      "label.relax":"Relax mode",
+      "note.relax":"Only 3×3 / 5×5 grids. No 7×7 or 10×10 (score unchanged, only difficulty).",
+      "label.user_id":"User ID",
+      "label.language":"Language",
+      "btn.logout":"Logout",
+      "btn.reset_progress":"Reset progress",
+      "btn.delete_account":"Delete account",
+      "note.reset_delete":"Note: “Reset progress” clears only local progress on this device. “Delete account” requires a backend endpoint (we'll add it later).",
+      "toast.new_game":"New game",
+      "confirm.new_game":"Start a new game? Your current save will be overwritten.",
+      "confirm.reset_progress":"Reset local progress on this device?",
+      "confirm.delete_account":"Are you sure? All data linked to your account will be deleted. This cannot be undone.",
+      "stallo":"STALLED! PRESS UNDO",
+    },
+    fr: {
+      "label.level":"Niveau",
+      "label.grid":"Grille",
+      "label.moves":"Coups",
+      "label.score":"Score",
+      "btn.undo":"Annuler",
+      "btn.auto":"TUTORIEL/AUTO",
+      "btn.new":"Nouveau",
+      "btn.hint":"Indice",
+      "btn.ad_hints":"PUB +2 indices",
+      "modal.account":"Compte",
+      "btn.close":"Fermer",
+      "label.nickname":"Pseudo",
+      "label.username":"Nom d’utilisateur",
+      "label.anim_speed":"Vitesse d’animation",
+      "note.anim_speed":"Influe sur le défilement et la casse. Les étoiles restent identiques.",
+      "btn.music_on":"Musique : ON",
+      "btn.music_off":"Musique : OFF",
+      "label.instant":"Mouvement instantané",
+      "note.instant":"Aucune attente : glisse même pendant les effets (animation parfois coupée).",
+      "label.relax":"Mode relax",
+      "note.relax":"Seulement 3×3 / 5×5. Pas de 7×7 ou 10×10 (score inchangé, difficulté seulement).",
+      "label.user_id":"ID utilisateur",
+      "label.language":"Langue",
+      "btn.logout":"Déconnexion",
+      "btn.reset_progress":"Réinitialiser",
+      "btn.delete_account":"Supprimer le compte",
+      "note.reset_delete":"Note : “Réinitialiser” efface seulement les progrès locaux. “Supprimer le compte” nécessite un endpoint backend (plus tard).",
+      "toast.new_game":"Nouvelle partie",
+      "confirm.new_game":"Démarrer une nouvelle partie ? La sauvegarde actuelle sera écrasée.",
+      "confirm.reset_progress":"Réinitialiser les progrès locaux sur cet appareil ?",
+      "confirm.delete_account":"Êtes-vous sûr ? Toutes les données seront supprimées. Action irréversible.",
+      "stallo":"BLOQUÉ ! APPUYEZ SUR ANNULER",
+    },
+    de: {
+      "label.level":"Level",
+      "label.grid":"Gitter",
+      "label.moves":"Züge",
+      "label.score":"Punkte",
+      "btn.undo":"Rückgängig",
+      "btn.auto":"TUTORIAL/AUTO",
+      "btn.new":"Neu",
+      "btn.hint":"Hinweis",
+      "btn.ad_hints":"WERBUNG +2 Hinweise",
+      "modal.account":"Konto",
+      "btn.close":"Schließen",
+      "label.nickname":"Nickname",
+      "label.username":"Benutzername",
+      "label.anim_speed":"Animationsgeschwindigkeit",
+      "note.anim_speed":"Beeinflusst Scrollen und Zerbrechen. Sterne bleiben gleich.",
+      "btn.music_on":"Musik: AN",
+      "btn.music_off":"Musik: AUS",
+      "label.instant":"Sofortzug",
+      "note.instant":"Keine Wartezeit: Wischen auch während Effekten (Animation kann abgeschnitten werden).",
+      "label.relax":"Relax-Modus",
+      "note.relax":"Nur 3×3 / 5×5. Kein 7×7 oder 10×10 (Punkte gleich, nur Schwierigkeit).",
+      "label.user_id":"User-ID",
+      "label.language":"Sprache",
+      "btn.logout":"Abmelden",
+      "btn.reset_progress":"Fortschritt zurücksetzen",
+      "btn.delete_account":"Konto löschen",
+      "note.reset_delete":"Hinweis: „Fortschritt zurücksetzen“ löscht nur lokale Daten auf diesem Gerät. „Konto löschen“ braucht ein Backend (später).",
+      "toast.new_game":"Neues Spiel",
+      "confirm.new_game":"Neues Spiel starten? Dein aktueller Spielstand wird überschrieben.",
+      "confirm.reset_progress":"Lokalen Fortschritt auf diesem Gerät zurücksetzen?",
+      "confirm.delete_account":"Bist du sicher? Alle Kontodaten werden gelöscht. Nicht rückgängig machbar.",
+      "stallo":"BLOCKIERT! DRÜCKE RÜCKGÄNGIG",
+    },
+    es: {
+      "label.level":"Nivel",
+      "label.grid":"Cuadrícula",
+      "label.moves":"Movimientos",
+      "label.score":"Puntuación",
+      "btn.undo":"Deshacer",
+      "btn.auto":"TUTORIAL/AUTO",
+      "btn.new":"Nuevo",
+      "btn.hint":"Pista",
+      "btn.ad_hints":"ANUNCIO +2 pistas",
+      "modal.account":"Cuenta",
+      "btn.close":"Cerrar",
+      "label.nickname":"Apodo",
+      "label.username":"Usuario",
+      "label.anim_speed":"Velocidad de animación",
+      "note.anim_speed":"Afecta al deslizamiento y rotura. Las estrellas se mantienen.",
+      "btn.music_on":"Música: ON",
+      "btn.music_off":"Música: OFF",
+      "label.instant":"Movimiento instantáneo",
+      "note.instant":"Sin espera: puedes deslizar mientras corren efectos (la animación puede cortarse).",
+      "label.relax":"Modo relax",
+      "note.relax":"Solo 3×3 / 5×5. Sin 7×7 o 10×10 (puntuación igual, solo dificultad).",
+      "label.user_id":"ID de usuario",
+      "label.language":"Idioma",
+      "btn.logout":"Cerrar sesión",
+      "btn.reset_progress":"Reiniciar progreso",
+      "btn.delete_account":"Eliminar cuenta",
+      "note.reset_delete":"Nota: “Reiniciar progreso” borra solo el progreso local en este dispositivo. “Eliminar cuenta” requiere backend (luego).",
+      "toast.new_game":"Nueva partida",
+      "confirm.new_game":"¿Empezar una nueva partida? Se sobrescribirá tu guardado actual.",
+      "confirm.reset_progress":"¿Reiniciar el progreso local en este dispositivo?",
+      "confirm.delete_account":"¿Seguro? Se eliminarán todos los datos de tu cuenta. Acción irreversible.",
+      "stallo":"¡BLOQUEADO! PULSA DESHACER",
+    },
+    ru: {
+      "label.level":"Уровень",
+      "label.grid":"Сетка",
+      "label.moves":"Ходы",
+      "label.score":"Счёт",
+      "btn.undo":"Отмена",
+      "btn.auto":"ОБУЧЕНИЕ/АВТО",
+      "btn.new":"Новая",
+      "btn.hint":"Подсказка",
+      "btn.ad_hints":"РЕКЛАМА +2 подсказки",
+      "modal.account":"Аккаунт",
+      "btn.close":"Закрыть",
+      "label.nickname":"Ник",
+      "label.username":"Имя пользователя",
+      "label.anim_speed":"Скорость анимации",
+      "note.anim_speed":"Влияет на прокрутку и разрушение. Звёзды не меняются.",
+      "btn.music_on":"Музыка: ВКЛ",
+      "btn.music_off":"Музыка: ВЫКЛ",
+      "label.instant":"Мгновенный ход",
+      "note.instant":"Без ожидания: свайпайте даже во время эффектов (анимация может обрезаться).",
+      "label.relax":"Relax режим",
+      "note.relax":"Только 3×3 / 5×5. Без 7×7 или 10×10 (счёт не меняется, только сложность).",
+      "label.user_id":"ID пользователя",
+      "label.language":"Язык",
+      "btn.logout":"Выйти",
+      "btn.reset_progress":"Сброс прогресса",
+      "btn.delete_account":"Удалить аккаунт",
+      "note.reset_delete":"Примечание: “Сброс прогресса” очищает только локальные данные. “Удалить аккаунт” требует backend (позже).",
+      "toast.new_game":"Новая игра",
+      "confirm.new_game":"Начать новую игру? Текущий прогресс будет перезаписан.",
+      "confirm.reset_progress":"Сбросить локальный прогресс на этом устройстве?",
+      "confirm.delete_account":"Вы уверены? Все данные аккаунта будут удалены. Это необратимо.",
+      "stallo":"ЗАСТРЯЛО! НАЖМИТЕ ОТМЕНУ",
+    },
+    ja: {
+      "label.level":"レベル",
+      "label.grid":"グリッド",
+      "label.moves":"手数",
+      "label.score":"スコア",
+      "btn.undo":"元に戻す",
+      "btn.auto":"チュートリアル/オート",
+      "btn.new":"新規",
+      "btn.hint":"ヒント",
+      "btn.ad_hints":"広告 +2 ヒント",
+      "modal.account":"アカウント",
+      "btn.close":"閉じる",
+      "label.nickname":"ニックネーム",
+      "label.username":"ユーザー名",
+      "label.anim_speed":"アニメ速度",
+      "note.anim_speed":"スクロールと破壊に影響。スターは同じです。",
+      "btn.music_on":"音楽: ON",
+      "btn.music_off":"音楽: OFF",
+      "label.instant":"即時移動",
+      "note.instant":"待ち時間なし：効果中でもスワイプ可能（アニメが途中で切れる場合あり）。",
+      "label.relax":"リラックスモード",
+      "note.relax":"3×3 / 5×5 のみ。7×7/10×10 なし（スコアは同じで難易度のみ）。",
+      "label.user_id":"ユーザーID",
+      "label.language":"言語",
+      "btn.logout":"ログアウト",
+      "btn.reset_progress":"進捗リセット",
+      "btn.delete_account":"アカウント削除",
+      "note.reset_delete":"注: 「進捗リセット」はこの端末のローカルのみ。 「アカウント削除」はバックエンドが必要（後で）。",
+      "toast.new_game":"新しいゲーム",
+      "confirm.new_game":"新しいゲームを開始しますか？現在のセーブは上書きされます。",
+      "confirm.reset_progress":"この端末のローカル進捗をリセットしますか？",
+      "confirm.delete_account":"本当によろしいですか？アカウントのデータはすべて削除されます。元に戻せません。",
+      "stallo":"詰み！ UNDO を押して",
+    },
+    ar: {
+      "label.level":"المستوى",
+      "label.grid":"الشبكة",
+      "label.moves":"الحركات",
+      "label.score":"النقاط",
+      "btn.undo":"تراجع",
+      "btn.auto":"تعليم/تلقائي",
+      "btn.new":"جديدة",
+      "btn.hint":"تلميح",
+      "btn.ad_hints":"إعلان +2 تلميحات",
+      "modal.account":"الحساب",
+      "btn.close":"إغلاق",
+      "label.nickname":"اللقب",
+      "label.username":"اسم المستخدم",
+      "label.anim_speed":"سرعة الحركة",
+      "note.anim_speed":"تؤثر على السحب والكسر. النجوم تبقى كما هي.",
+      "btn.music_on":"الموسيقى: تشغيل",
+      "btn.music_off":"الموسيقى: إيقاف",
+      "label.instant":"حركة فورية",
+      "note.instant":"بدون انتظار: يمكنك السحب أثناء المؤثرات (قد تُقصّ الحركة).",
+      "label.relax":"وضع الاسترخاء",
+      "note.relax":"فقط 3×3 / 5×5. بدون 7×7 أو 10×10 (النقاط لا تتغير، فقط الصعوبة).",
+      "label.user_id":"معرّف المستخدم",
+      "label.language":"اللغة",
+      "btn.logout":"تسجيل الخروج",
+      "btn.reset_progress":"إعادة ضبط التقدم",
+      "btn.delete_account":"حذف الحساب",
+      "note.reset_delete":"ملاحظة: “إعادة ضبط التقدم” تمسح فقط التقدم المحلي على هذا الجهاز. “حذف الحساب” يحتاج خادم (لاحقاً).",
+      "toast.new_game":"لعبة جديدة",
+      "confirm.new_game":"بدء لعبة جديدة؟ سيتم استبدال الحفظ الحالي.",
+      "confirm.reset_progress":"هل تريد إعادة ضبط التقدم المحلي على هذا الجهاز؟",
+      "confirm.delete_account":"هل أنت متأكد؟ سيتم حذف كل بيانات الحساب. إجراء غير قابل للتراجع.",
+      "stallo":"عالق! اضغط تراجع",
+    },
+    zh: {
+      "label.level":"关卡",
+      "label.grid":"网格",
+      "label.moves":"步数",
+      "label.score":"得分",
+      "btn.undo":"撤销",
+      "btn.auto":"教程/自动",
+      "btn.new":"新局",
+      "btn.hint":"提示",
+      "btn.ad_hints":"广告 +2 提示",
+      "modal.account":"账户",
+      "btn.close":"关闭",
+      "label.nickname":"昵称",
+      "label.username":"用户名",
+      "label.anim_speed":"动画速度",
+      "note.anim_speed":"影响滑动与破碎效果，星级不变。",
+      "btn.music_on":"音乐：开",
+      "btn.music_off":"音乐：关",
+      "label.instant":"瞬间移动",
+      "note.instant":"无需等待：效果播放中也可滑动（动画可能被截断）。",
+      "label.relax":"轻松模式",
+      "note.relax":"仅 3×3 / 5×5。无 7×7 或 10×10（分数不变，仅难度变化）。",
+      "label.user_id":"用户ID",
+      "label.language":"语言",
+      "btn.logout":"退出登录",
+      "btn.reset_progress":"重置进度",
+      "btn.delete_account":"删除账户",
+      "note.reset_delete":"注： “重置进度”只清除本设备本地进度。“删除账户”需要后端接口（稍后）。",
+      "toast.new_game":"新游戏",
+      "confirm.new_game":"开始新游戏？当前存档将被覆盖。",
+      "confirm.reset_progress":"重置本设备的本地进度？",
+      "confirm.delete_account":"确定吗？账户相关数据将被删除，且不可恢复。",
+      "stallo":"卡住了！请按撤销",
+    }
+  };
+
+  const LANG_KEY = "psb_lang_v1";
+
+  function normLang(code){
+    const c = (code || "").toLowerCase();
+    if (c.startsWith("it")) return "it";
+    if (c.startsWith("en")) return "en";
+    if (c.startsWith("fr")) return "fr";
+    if (c.startsWith("de")) return "de";
+    if (c.startsWith("es")) return "es";
+    if (c.startsWith("ru")) return "ru";
+    if (c.startsWith("ja")) return "ja";
+    if (c.startsWith("ar")) return "ar";
+    if (c.startsWith("zh")) return "zh";
+    return "en";
+  }
+
+  function getLang(){
+    const saved = localStorage.getItem(LANG_KEY);
+    if (saved && I18N[saved]) return saved;
+    // auto-detect only on first run
+    const auto = normLang(navigator.language || (navigator.languages && navigator.languages[0]) || "en");
+    localStorage.setItem(LANG_KEY, auto);
+    return auto;
+  }
+
+  function setLang(lang){
+    const l = I18N[lang] ? lang : "en";
+    localStorage.setItem(LANG_KEY, l);
+    applyI18n(l);
+  }
+
+  function t(key){
+    const lang = getLang();
+    return (I18N[lang] && I18N[lang][key]) || (I18N.it && I18N.it[key]) || key;
+  }
+
+  function applyI18n(lang){
+    const l = I18N[lang] ? lang : "en";
+    document.documentElement.lang = l === "zh" ? "zh" : l;
+    document.documentElement.dir = (l === "ar") ? "rtl" : "ltr";
+
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+      const k = el.getAttribute("data-i18n");
+      if (!k) return;
+      el.textContent = (I18N[l] && I18N[l][k]) || (I18N.it && I18N.it[k]) || el.textContent;
+    });
+
+    // update dynamic button labels (music)
+    if (typeof updateMusicButton === "function") updateMusicButton();
+  }
+  // === end i18n ===
+
   // === ADS ABSTRACTION (works on Web = no-op, works on APK once we wire AdMob) ===
   const Ads = (() => {
     let rewardedBusy = false;
@@ -1160,24 +1525,24 @@
         </button>
       </div>
       <div class="stats">
-        <div class="pill">Livello: <strong id="level">1</strong></div>
-        <div class="pill">Griglia: <strong id="size">3×3</strong></div>
-        <div class="pill">Mosse: <strong id="moves">3</strong></div>
-        <div class="pill">Score: <strong id="score">0</strong></div>
+        <div class="pill"><span data-i18n="label.level">Livello</span>: <strong id="level">1</strong></div>
+        <div class="pill"><span data-i18n="label.grid">Griglia</span>: <strong id="size">3×3</strong></div>
+        <div class="pill"><span data-i18n="label.moves">Mosse</span>: <strong id="moves">3</strong></div>
+        <div class="pill"><span data-i18n="label.score">Score</span>: <strong id="score">0</strong></div>
       </div>
       <div class="btns">
-        <button id="btnUndo" title="Annulla ultima mossa (1 per livello)">Undo</button>
-        <button id="btnAuto" class="pill">TUTORIAL/AUTO</button>
+        <button id="btnUndo" title="Annulla ultima mossa (1 per livello)" data-i18n="btn.undo">Undo</button>
+        <button id="btnAuto" class="pill" data-i18n="btn.auto">TUTORIAL/AUTO</button>
 
-        <button id="btnNew" title="Nuova partita">Nuova</button>
+        <button id="btnNew" title="Nuova partita" data-i18n="btn.new">Nuova</button>
 
 
-        <button id="btnReward2Hints" class="btn secondary" type="button"> AD +2 hint </button>
+        <button id="btnReward2Hints" class="btn secondary" type="button" data-i18n="btn.ad_hints"> AD +2 hint </button>
         <div id="rewardStatus" class="small" style="margin-top:6px; opacity:.85;"></div>
 
       </div>
               <div class="hint-btn-wrap">
-          <button id="btnHint">Hint</button>
+          <button id="btnHint" data-i18n="btn.hint">Hint</button>
           <span class="hint-badge" id="hintBadge">0</span>
         </div>
     </div>
@@ -1187,9 +1552,7 @@
         <div class="grid" id="grid"></div>
         <div class="tiles-layer" id="tiles"></div>
       </div>
-      <div class="small" style="margin-top:10px; opacity:.9;">
-        Suggerimento: tocca e trascina sul board (touch) o trascina col mouse. Una mossa consuma sempre 1.
-      </div>
+
       <button id="btn-logout">Logout</button>
       <div id="ad-banner-slot" class="ad-banner-slot" aria-label="Advertisement"></div>
 
@@ -1215,24 +1578,24 @@
   <div class="modal-overlay hidden" id="accountOverlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true">
       <header>
-        <h2>Account</h2>
-        <button id="btnCloseAccount">Chiudi</button>
+        <h2 data-i18n="modal.account">Account</h2>
+        <button id="btnCloseAccount" data-i18n="btn.close">Chiudi</button>
       </header>
 
       <div class="content">
         <div class="account-card">
           <div class="row">
-            <div class="k">Nickname</div>
+            <div class="k" data-i18n="label.nickname">Nickname</div>
             <div class="v" id="accNickname">—</div>
           </div>
           <div class="row">
-            <div class="k">Username</div>
+            <div class="k" data-i18n="label.username">Username</div>
             <div class="v" id="accUsername">—</div>
           </div>
           <div class="row" style="align-items:flex-start;">
             <div>
-              <div class="k" style="margin-bottom:6px;">Velocità animazioni</div>
-              <div class="settings-note">Influisce su scorrimento e rottura. Le stelline restano uguali.</div>
+              <div class="k" style="margin-bottom:6px;" data-i18n="label.anim_speed">Velocità animazioni</div>
+              <div class="settings-note" data-i18n="note.anim_speed">Influisce su scorrimento e rottura. Le stelline restano uguali.</div>
             </div>
 
 
@@ -1244,12 +1607,12 @@
 
           </div>
             <div>
-                <button id="btnMusic">Music: ON</button>
+                <button id="btnMusic" data-i18n="btn.music_on">Music: ON</button>
             </div>
           <div class="row">
             <div>
-              <div class="k">Movimento istantaneo</div>
-              <div class="settings-note">Nessuna attesa: puoi scorrere anche mentre gli effetti sono in corso (l'animazione può essere tagliata).</div>
+              <div class="k" data-i18n="label.instant">Movimento istantaneo</div>
+              <div class="settings-note" data-i18n="note.instant">Nessuna attesa: puoi scorrere anche mentre gli effetti sono in corso (l'animazione può essere tagliata).</div>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
               <label class="switch" title="Movimento istantaneo">
@@ -1260,8 +1623,8 @@
           </div>
           <div class="row">
             <div>
-              <div class="k">Relax mode</div>
-              <div class="settings-note">Solo griglie 3×3 / 5×5. Niente 7×7 o 10×10 (non cambia il punteggio, solo la difficoltà).</div>
+              <div class="k" data-i18n="label.relax">Relax mode</div>
+              <div class="settings-note" data-i18n="note.relax">Solo griglie 3×3 / 5×5. Niente 7×7 o 10×10 (non cambia il punteggio, solo la difficoltà).</div>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
               <label class="switch" title="Relax mode">
@@ -1269,21 +1632,40 @@
                 <span class="slider"></span>
               </label>
             </div>
+
           </div>
+          
+          <div class="row">
+            <div class="k" data-i18n="label.language">Lingua</div>
+            <div style="text-align:right; min-width:220px;">
+              <select id="langSelect" style="width:220px; padding:8px 10px; border-radius:12px;">
+                <option value="it">Italiano</option>
+                <option value="en">English</option>
+                <option value="fr">Français</option>
+                <option value="de">Deutsch</option>
+                <option value="es">Español</option>
+                <option value="ru">Русский</option>
+                <option value="ja">日本語</option>
+                <option value="ar">العربية</option>
+                <option value="zh">中文</option>
+              </select>
+            </div>
+          </div>
+
                   <div class="row">
-            <div class="k">User ID</div>
+            <div class="k" data-i18n="label.user_id">User ID</div>
             <div class="v" id="accUserId">—</div>
           </div>
         </div>
 
         <div class="account-actions">
-          <button id="btnAccountLogout">Logout</button>
-          <button id="btnResetProgress" class="warn">Reset progressi</button>
-          <button id="btnDeleteAccount" class="danger">Elimina account</button>
+          <button id="btnAccountLogout" data-i18n="btn.logout">Logout</button>
+          <button id="btnResetProgress" class="warn" data-i18n="btn.reset_progress">Reset progressi</button>
+          <button id="btnDeleteAccount" class="danger" data-i18n="btn.delete_account">Elimina account</button>
         </div>
 
         <div class="small" style="opacity:.85;">
-          Nota: “Reset progressi” azzera solo i progressi locali su questo device. “Elimina account” richiede endpoint backend (lo facciamo dopo).
+          <span data-i18n="note.reset_delete">Nota: “Reset progressi” azzera solo i progressi locali su questo device. “Elimina account” richiede endpoint backend (lo facciamo dopo).</span>
         </div>
       </div>
     </div>
@@ -1294,7 +1676,7 @@
 
 
   <div class="toast" id="toast"></div>
-  <div id="stalloMsg" class="stallo-msg hidden">STALLO! PREMERE UNDO</div>
+  <div id="stalloMsg" class="stallo-msg hidden" data-i18n="stallo">STALLO! PREMERE UNDO</div>
 
 
   
@@ -1488,7 +1870,7 @@ function setRelaxMode(on){
   }
   function updateMusicButton(){
     if (!btnMusic) return;
-    btnMusic.textContent = isBgmEnabled() ? "Music: ON" : "Music: OFF";
+    btnMusic.textContent = isBgmEnabled() ? t("btn.music_on") : t("btn.music_off");
   }
 
 
@@ -1584,25 +1966,34 @@ document.getElementById("btn-logout")?.addEventListener("click", async () => {
 
 
 async function logout() {
-  // Logout "sicuro": non dipende dal server (evita 405 / Failed to fetch),
-  // ma se hai l’endpoint, lo chiamiamo comunque best-effort.
-  try { await apiFetch("/api/logout", { method: "POST" }); } catch (_) {}
+  // Se hai un endpoint /logout è meglio chiamarlo:
+ try {
+
+    await apiFetch("/api/logout", { method: "POST" });
+
+  } catch (_) {
+
+    // fallback legacy (may 405 on static hosting)
+
+    try { await apiFetch("/logout", { method: "POST" }); } catch (_) {}
+
+  }
 
   clearTokens();
   clearNickname();
-
   try { bgm.pause(); } catch(_) {}
   bgmStarted = false;
 
+
+  // Chiudi overlay aperti
   hideHint();
-  try { closeAccount(); } catch (_) {}
-  try { closeGameOver(); } catch (_) {}
+  closeAccount();
 
+  // Mostra overlay login
   loginOverlay.classList.remove("hidden");
-  toastMsg("Logout");
 
+  // Aggiorna UI "guest"
   refreshUserUI().catch(() => {});
-  updateUserBadge();
 }
 
 
@@ -2009,8 +2400,20 @@ async function refreshUserUI(){
   init();
 
   function init(){
+    // i18n boot
+    const _lang = getLang();
+    applyI18n(_lang);
+
     attachLoginButtons();
     attachAccountButtons();
+
+    // language selector
+    const langSelect = document.getElementById("langSelect");
+    if (langSelect) {
+      langSelect.value = getLang();
+      langSelect.addEventListener("change", () => setLang(langSelect.value));
+    }
+
     updateMusicButton();
     attachButtons();
     
@@ -2035,41 +2438,18 @@ async function refreshUserUI(){
     loginOverlay.classList.add("hidden");
     startBgm();
 
+    // Try load save
     const loaded = loadSave();
     if (loaded) {
       state = loaded;
+      toastMsg("Partita caricata");
     } else {
       state = newGameState();
     }
 
     attachInput();
-
-    const tilesCount = state && state.tilesById ? Object.keys(state.tilesById).length : 0;
-    const boardOk =
-      Array.isArray(state.board) &&
-      state.board.length === state.N &&
-      state.board.every(r => Array.isArray(r) && r.length === state.N);
-
-    if (!boardOk || tilesCount === 0){
-      // Se il salvataggio è “vuoto” (bug precedente) o hai appena finito un livello,
-      // rigeneriamo in modo coerente usando la pipeline dei livelli.
-      let targetLevel = Math.max(1, Number(state.level) || 1);
-
-      // Se avevi un save ma la board è vuota, in pratica eri “a fine livello”
-      if (loaded && tilesCount === 0) targetLevel += 1;
-
-      // evita mismatch/TDZ legati a snapshot vecchi
-      state.undoSnapshot = null;
-      state.impossible = false;
-      state.impossibleNotified = false;
-
-      startLevel(targetLevel);
-    } else {
-      toastMsg("Partita caricata");
-      renderAll(true);
-      saveNow();
-    }
-
+    renderAll(true);
+    saveNow();
     refreshUserUI().catch(() => {});
     updateUserBadge();
   }
@@ -2822,20 +3202,21 @@ async function refreshUserUI(){
 
 
         btnNew.addEventListener("click", () => {
+          if (isAnimating) return;
+
           hideHint();
 
-          if (!confirm("Vuoi iniziare una nuova partita? Il salvataggio attuale verrà sovrascritto.")) return;
-
-          // Nuova partita deve SEMPRE funzionare, anche se un'animazione è rimasta “appesa”.
-          // Cancella animazioni in volo e sblocca subito l'input.
-          MOVE_TOKEN++;
-          isAnimating = false;
-          closeGameOver();
+          if (!confirm(t("confirm.new_game"))) return;
 
           try {
+            // reset totale e coerente
             state = newGameState();
-            startLevel(1); // pipeline unica e coerente (gated + render + save)
-            toastMsg("Nuova partita");
+
+            // IMPORTANTISSIMO: usa la stessa logica dei livelli (gated + render + save)
+            startLevel(1);
+
+            // opzionale: se vuoi anche il toast "Nuova partita"
+            // toastMsg(t("toast.new_game"));
           } catch (e) {
             console.error("NEW GAME ERROR:", e);
             alert("Errore durante Nuova partita: " + (e?.message || e));
