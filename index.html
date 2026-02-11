@@ -3752,9 +3752,16 @@ btnPasskeyRegister.addEventListener("click", async () => {
   // ==========
   
   function openHintOverlay(){
-    openHintOverlay();
+    // mostra overlay
+    hintOverlay.classList.add("show");
     hintOverlay.setAttribute("aria-hidden","false");
+
+    // focus dentro al dialog (aiuta anche per accessibilità)
+    requestAnimationFrame(() => {
+      try { btnCloseHint?.focus(); } catch {}
+    });
   }
+
 
   function showHint(){
     if (isAnimating) return;
