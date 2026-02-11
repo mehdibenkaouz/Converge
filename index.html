@@ -1065,6 +1065,24 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .hidden{ display:none !important; }
 
+  .reward-overlay{
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,.6);
+    z-index: 9999;
+  }
+  .reward-card{
+    background: #111827;
+    color: #fff;
+    padding: 18px;
+    width: min(420px, 92vw);
+    border-radius: 14px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.35);
+  }
+  .hidden{ display:none !important; }
 
 
 </style>
@@ -1539,7 +1557,7 @@
 
 
         <button id="btnReward2Hints" class="btn secondary" type="button" data-i18n="btn.ad_hints"> AD +2 hint </button>
-        <div id="rewardStatus" class="small" style="margin-top:6px; opacity:.85;"></div>
+          <div id="rewardOverlayStatus" class="small" style="margin-top:8px; opacity:.85;"></div>
 
       </div>
               <div class="hint-btn-wrap">
@@ -2350,10 +2368,64 @@ async function refreshUserUI(){
 
   const toast = document.getElementById("toast");
   
-  
+
+  // ===== Rewarded +2 hints overlay =====
   const rewardOverlay = document.getElementById("rewardOverlay");
+  const btnReward2Hints = document.getElementById("btnReward2Hints");
   const btnRewardWatch = document.getElementById("btnRewardWatch");
   const btnRewardCancel = document.getElementById("btnRewardCancel");
+  const rewardOverlayStatus = document.getElementById("rewardOverlayStatus");
+  const rewardTopStatus = document.getElementById("rewardTopStatus");
+
+  function openReward(){
+    if (!rewardOverlay) return;
+    rewardOverlay.classList.remove("hidden");
+    rewardOverlay.setAttribute("aria-hidden","false");
+    if (rewardOverlayStatus) rewardOverlayStatus.textContent = "";
+    btnRewardWatch?.focus();
+  }
+
+  function closeReward(){
+    if (!rewardOverlay) return;
+    rewardOverlay.classList.add("hidden");
+    rewardOverlay.setAttribute("aria-hidden","true");
+  }
+
+  // Apri overlay dal bottone "AD +2 hint"
+  btnReward2Hints?.addEventListener("click", openReward);
+  btnRewardCancel?.addEventListener("click", closeReward);
+
+  btnRewardWatch?.addEventListener("click", async () => {
+    try{
+      btnRewardWatch.disabled = true;
+      if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Caricamento…";
+
+      const r = await Ads.showRewardedFor2Hints();
+
+      if (r && r.ok && r.rewarded) {
+        // +2 hint: usa la tua funzione esistente
+        if (typeof onRewardedAdCompleted === "function" && state) onRewardedAdCompleted();
+        if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Ok! +2 hint aggiunti.";
+        closeReward();
+      } else {
+        const reason = r?.reason || "no_reward";
+        if (reason === "web_no_ads") {
+          if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Disponibile solo nell’app Android.";
+        } else if (reason === "cooldown") {
+          if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Riprova tra poco.";
+        } else if (reason === "busy") {
+          if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Attendi…";
+        } else {
+          if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Pubblicità non disponibile ora.";
+        }
+      }
+    } catch(e){
+      if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Errore: " + (e?.message || e);
+    } finally {
+      if (btnRewardWatch) btnRewardWatch.disabled = false;
+    }
+  });
+
   const rewardStatus = document.getElementById("rewardStatus");
   // ===== Offline overlay (solo UI; il gioco resta online-only) =====
   const offlineOverlay = document.getElementById("offlineOverlay");
@@ -3271,6 +3343,42 @@ btnPasskeyRegister.addEventListener("click", async () => {
   }
 
   function attachButtons(){
+    // ===== Rewarded +2 hints overlay =====
+    const rewardOverlay = document.getElementById("rewardOverlay");
+    const btnReward2Hints = document.getElementById("btnReward2Hints");
+    const btnRewardWatch = document.getElementById("btnRewardWatch");
+    const btnRewardCancel = document.getElementById("btnRewardCancel");
+    const rewardStatus = document.getElementById("rewardStatus");
+
+    function openRewardOverlay(){
+      if (!rewardOverlay) return;
+      rewardOverlay.classList.remove("hidden");
+      rewardOverlay.setAttribute("aria-hidden", "false");
+      // opzionale: reset status
+      if (rewardStatus) rewardStatus.textContent = "";
+    }
+
+    function closeRewardOverlay(){
+      if (!rewardOverlay) return;
+      rewardOverlay.classList.add("hidden");
+      rewardOverlay.setAttribute("aria-hidden", "true");
+    }
+
+    if (btnReward2Hints) btnReward2Hints.addEventListener("click", openRewardOverlay);
+    if (btnRewardCancel) btnRewardCancel.addEventListener("click", closeRewardOverlay);
+
+    if (btnRewardWatch) btnRewardWatch.addEventListener("click", async () => {
+      try{
+        if (rewardStatus) rewardStatus.textContent = "Caricamento…";
+        // qui in futuro metti l’ads reale
+        await Ads.showRewardedFor2Hints(); // per ora fallback / simulazione
+        if (rewardStatus) rewardStatus.textContent = "Ok! +2 hint aggiunti.";
+        closeRewardOverlay();
+      } catch(e){
+        if (rewardStatus) rewardStatus.textContent = "Errore: " + (e?.message || e);
+      }
+    });
+
     btnGameOverUndo?.addEventListener("click", () => {
       if (btnGameOverUndo.disabled) return;
       closeGameOver();
