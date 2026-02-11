@@ -853,7 +853,33 @@
     pointer-events: none;
   }
 
-  .reward-overlay{
+  
+  /* Offline overlay */
+  .offline-overlay{
+    position: fixed;
+    inset: 0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: rgba(0,0,0,.55);
+    z-index: 10000;
+  }
+  .offline-overlay.hidden{ display:none; }
+  .offline-card{
+    width: min(420px, 92vw);
+    background: rgba(24,24,28,.92);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 18px;
+    padding: 18px 16px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.45);
+    color: rgba(255,255,255,.92);
+    text-align:center;
+  }
+  .offline-title{ font-weight: 800; font-size: 18px; margin-bottom: 8px; }
+  .offline-text{ opacity: .9; line-height: 1.35; }
+  .offline-actions{ display:flex; gap:10px; justify-content:center; margin-top: 14px; }
+
+.reward-overlay{
     position: fixed;
     inset: 0;
     display:flex;
@@ -1472,37 +1498,12 @@
   // === UI HOOK: Reward button gives +2 hints only if rewarded ===
   (function wireRewardButton() {
     const btn = document.getElementById("btnReward2Hints");
-    const status = document.getElementById("rewardStatus");
     if (!btn) return;
-
-    function setStatus(msg) {
-      if (status) status.textContent = msg || "";
-    }
-
-    btn.addEventListener("click", async () => {
-      btn.disabled = true;
-      setStatus("");
-
-      const r = await Ads.showRewardedFor2Hints();
-
-      if (r.ok && r.rewarded) {
-        // TODO: collega qui la tua logica hint
-        // Esempio: addHints(2);
-        if (typeof window.addHints === "function") window.addHints(2);
-        else if (typeof window.hintsAdd === "function") window.hintsAdd(2);
-
-        setStatus("✅ Ricevuti +2 hint!");
-      } else {
-        if (r.reason === "cooldown") setStatus("⏳ Puoi guardare un’altra pubblicità tra poco.");
-        else if (r.reason === "web_no_ads") setStatus("ℹ️ Disponibile nell’app Android.");
-        else setStatus("❌ Pubblicità non disponibile ora.");
-      }
-
-      btn.disabled = false;
+    btn.addEventListener("click", () => {
+      // Apri sempre il popup (anche sul web), poi il bottone "Guarda" gestisce Ads.showRewardedFor2Hints()
+      openReward?.();
     });
   })();
-
-  
 </script>
 
 
@@ -2354,6 +2355,31 @@ async function refreshUserUI(){
   const btnRewardWatch = document.getElementById("btnRewardWatch");
   const btnRewardCancel = document.getElementById("btnRewardCancel");
   const rewardStatus = document.getElementById("rewardStatus");
+  // ===== Offline overlay (solo UI; il gioco resta online-only) =====
+  const offlineOverlay = document.getElementById("offlineOverlay");
+  const btnOfflineRefresh = document.getElementById("btnOfflineRefresh");
+
+  function showOffline(){
+    if (!offlineOverlay) return;
+    offlineOverlay.classList.remove("hidden");
+  }
+  function hideOffline(){
+    if (!offlineOverlay) return;
+    offlineOverlay.classList.add("hidden");
+  }
+
+  // Mostra subito se la pagina viene servita dalla cache ma la rete è giù
+  if (typeof navigator !== "undefined" && navigator && navigator.onLine === false) showOffline();
+
+  window.addEventListener("offline", () => showOffline());
+  window.addEventListener("online", () => hideOffline());
+
+  btnOfflineRefresh?.addEventListener("click", () => {
+    // tenta un reload: se torna la rete, riparte; se no resta qui
+    location.reload();
+  });
+
+
 
   function openReward(){
     if (!rewardOverlay) return;
@@ -3593,10 +3619,18 @@ btnPasskeyRegister.addEventListener("click", async () => {
     if (Object.keys(state.tilesById).length > 0 && state.undoSnapshot){
       const quick = anyBreakPossibleSoon(4);
       if (!quick){
-        const solv = analyzeSolvabilityCurrentState({
-          timeBudgetMs: (state.N <= 5 ? 70 : 28),
-          nodeLimit: (state.N <= 5 ? 18000 : 4500),
-        });
+        let solv = { status: "unknown" };
+        try{
+          if (typeof analyzeSolvabilityCurrentState === "function") {
+            solv = analyzeSolvabilityCurrentState({
+              timeBudgetMs: (state.N <= 5 ? 70 : 28),
+              nodeLimit: (state.N <= 5 ? 18000 : 4500),
+            }) || { status: "unknown" };
+          }
+        } catch (e){
+          // se qualcosa va storto col solver, non bloccare la UI
+          solv = { status: "unknown" };
+        }
 
         if (solv.status === "exhausted") {
           showStalloMessage();
@@ -5075,6 +5109,18 @@ btnPasskeyRegister.addEventListener("click", async () => {
   }
 </script>
 
+
+
+  <!-- Offline overlay -->
+  <div id="offlineOverlay" class="offline-overlay hidden" role="dialog" aria-modal="true">
+    <div class="offline-card">
+      <div class="offline-title">Nessuna connessione</div>
+      <div class="offline-text">Sembra che tu sia offline. Riconnettiti e premi <b>Refresh</b>.</div>
+      <div class="offline-actions">
+        <button id="btnOfflineRefresh" class="btn">Refresh</button>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
