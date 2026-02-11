@@ -2003,25 +2003,55 @@ async function doRegister(username, password, referralCode){
   await syncBonuses();
 }
 
-async function syncBonuses(){
-  // 1) bonus 20 hint una volta
-  const c = await apiPost("/api/claim_initial", {});
-  if (c.granted === 20 && state && state.hintCharges < 20) {
-    state.hintCharges = 20;
-    state.hintCooldown = 0;
-    saveNow();
-    toastMsg("Bonus: 20 hint!");
+
+async function syncBonuses() {
+  // bonus una volta per device (anti-abuso semplice)
+  if (localStorage.getItem("welcome_claimed_device") === "1") return;
+
+  let c = null;
+  try {
+    c = await apiPost("/api/claim_initial", {});
+  } catch (_) {
+    // se offline o non loggato, non fare nulla
+    return;
   }
 
+  const granted = Number(c?.granted || 0);
+  if (!Number.isFinite(granted) || granted <= 0) {
+    // niente da dare: marca comunque come già gestito per evitare spam chiamate
+    localStorage.setItem("welcome_claimed_device", "1");
+    return;
+  }
+
+  // applica il bonus: porta almeno a "granted" (senza diminuire se già più alto)
+  if (state) {
+    const cur = Number(state.hintCharges || 0);
+    if (cur < granted) {
+      state.hintCharges = granted;
+      state.hintCooldown = 0;
+      saveNow();
+    }
+  }
+
+  localStorage.setItem("welcome_claimed_device", "1");
+
+  // messaggio benvenuto (no popup)
+  toastMsg(`🎁 ${t?.("welcome.bonus_hints") || "Ecco i tuoi hint di benvenuto:"} ${granted}`);
 
   // 2) referral wallet -> converte in hint
-  const w = await apiPost("/api/withdraw", {});
-  if (w.withdrawn > 0 && state) {
-    state.hintCharges += w.withdrawn;
-    saveNow();
-    toastMsg(`Bonus invitati: +${w.withdrawn} hint!`);
+  try {
+    const w = await apiPost("/api/withdraw", {});
+    const withdrawn = Number(w?.withdrawn || 0);
+    if (withdrawn > 0 && state) {
+      state.hintCharges += withdrawn;
+      saveNow();
+      toastMsg(`Bonus invitati: +${withdrawn} hint!`);
+    }
+  } catch (_) {
+    // se fallisce withdraw, non bloccare il resto
   }
 }
+
 
 
   const NICKNAME_KEY = "psb_nickname";
@@ -2531,7 +2561,10 @@ async function refreshUserUI(){
         startGame();
       } catch (e){
         console.error("Login passkey fallito:", e);
-        alert("Login passkey fallito: " + (e.message || e));
+        if (!String(e?.message || "").includes("credential not found")) {
+            alert("Login passkey fallito: " + (e?.message || e));
+          }
+
       }
     });
   }

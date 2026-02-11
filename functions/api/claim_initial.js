@@ -9,7 +9,7 @@ export async function onRequest(context) {
   await DB.prepare(`UPDATE users SET initial_claimed = 1 WHERE id = ? AND initial_claimed = 0`)
     .bind(user.id).run();
 
-  return json({ granted: 20 }, 200);
+  return json({ granted: 5 }, 200);
 }
 
 /* --- auth helpers (uguali a me.js) --- */
