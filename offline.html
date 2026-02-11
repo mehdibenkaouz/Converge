@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>No Internet</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0f172a;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+    }
+
+    .box {
+      max-width: 320px;
+    }
+
+    h1 {
+      margin-bottom: 12px;
+      font-size: 24px;
+    }
+
+    p {
+      opacity: 0.7;
+      margin-bottom: 24px;
+    }
+
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: white;
+      color: black;
+    }
+
+    button:hover {
+      opacity: 0.85;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>No Internet</h1>
+    <p>Converge requires an internet connection.</p>
+    <button onclick="location.href='/'">Refresh</button>
+  </div>
+</body>
+</html>

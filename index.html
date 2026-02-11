@@ -5068,6 +5068,13 @@ btnPasskeyRegister.addEventListener("click", async () => {
 <div id="stalloMsg" class="stallo-msg hidden">
   STALLO! PREMERE UNDO
 </div>
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js")
+      .catch(err => console.log("SW registration failed:", err));
+  }
+</script>
+
 
 </body>
 </html>
