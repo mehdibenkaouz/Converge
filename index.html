@@ -2102,6 +2102,12 @@ const accUserIdEl = document.getElementById("accUserId");
 const btnLogout = document.getElementById("btnLogout");
 
 
+function userStorageKey(baseKey){
+  const uk = window.currentUserKey || localStorage.getItem("psb_userkey_v1") || "anon";
+  return baseKey + ":" + uk;
+}
+
+
 function attachAccountButtons(){
   if (btnAccount) btnAccount.addEventListener("click", openAccount);
   if (btnCloseAccount) btnCloseAccount.addEventListener("click", closeAccount);
@@ -4248,11 +4254,20 @@ async function refreshUserUI(){
     const payload = snapshotState();
     // include undo snapshot separately
     payload.undoSnapshot = state.undoSnapshot;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    localStorage.setItem(userStorageKey(STORAGE_KEY), JSON.stringify(payload));
   }
 
   function loadSave(){
-    const raw = localStorage.getItem(STORAGE_KEY);
+      // MIGRAZIONE: se esiste un vecchio salvataggio globale, spostalo sullo user corrente
+      const legacy = localStorage.getItem(STORAGE_KEY);
+      const scopedKey = userStorageKey(STORAGE_KEY);
+      if (legacy && !localStorage.getItem(scopedKey)) {
+        localStorage.setItem(scopedKey, legacy);
+        // opzionale: pulisci il vecchio per evitare cross-account leakage
+        // localStorage.removeItem(STORAGE_KEY);
+      }
+
+    const raw = localStorage.getItem(scopedKey);
     if (!raw) return null;
     try{
       const s = JSON.parse(raw);
