@@ -2817,11 +2817,7 @@ async function refreshUserUI(){
   if (btnAuto){
     btnAuto.addEventListener("click", async () => {
       if (AUTO_MODE){
-        // STOP
-        AUTO_MODE = false;
-        autoStop = true;
-        btnAuto.classList.remove("active");
-        toastMsg("AUTO: OFF");
+        exitAutoTutorial();   // ripristina partita vera + stop
         return;
       }
 
@@ -2830,6 +2826,7 @@ async function refreshUserUI(){
       autoStop = false;
       btnAuto.classList.add("active");
       toastMsg("AUTO: ON");
+      enterAutoTutorial(); // tutorial sempre da zero
 
       // facoltativo: crea una partita “pulita” non salvata
       // se hai una funzione newGame / reset / startGame, chiamala qui:
@@ -2843,45 +2840,53 @@ async function refreshUserUI(){
   }
 
   async function runAutoLoop(){
-    while (AUTO_MODE && !autoStop){
-      await waitNotBusy();
+    try{
+      while (AUTO_MODE && !autoStop){
+        await waitNotBusy();
 
-      const pick = await pickBestDirAuto();
+        const pick = await pickBestDirAuto();
 
-      if (!AUTO_MODE || autoStop) break;
+        if (!AUTO_MODE || autoStop) break;
 
-      if (pick?.dir){
-        // esegui la mossa (usa la tua funzione reale: doMove / applyMove / swipeMove etc.)
-        // Cerca nel file la funzione che viene chiamata quando fai swipe.
-        if (typeof doMove === "function"){
-          await doMove(pick.dir);
-        } else if (typeof performMove === "function"){
-          await performMove(pick.dir);
-        } else {
-          // fallback: se non trovi, almeno fermati
-          bigToast("AUTO: manca doMove()", 1200);
-          AUTO_MODE = false;
-          break;
+        if (pick?.dir){
+          // esegui la mossa (usa la tua funzione reale: doMove / applyMove / swipeMove etc.)
+          // Cerca nel file la funzione che viene chiamata quando fai swipe.
+          if (typeof doMove === "function"){
+            await doMove(pick.dir);
+          } else if (typeof performMove === "function"){
+            await performMove(pick.dir);
+          } else {
+            // fallback: se non trovi, almeno fermati
+            bigToast("AUTO: manca doMove()", 1200);
+            AUTO_MODE = false;
+            break;
+          }
+
+          await sleep(AUTO_STEP_DELAY_MS);
+          continue;
         }
 
-        await sleep(AUTO_STEP_DELAY_MS);
+        // nessuna mossa trovata
+        // nessuna mossa trovata → in AUTO rigeneriamo SEMPRE un livello pulito
+        bigToast("AUTO: regen level", 700);
+        showStalloMessage();
+        pulseUndoButton();
+
+        regenCleanLevel();
+        await sleep(120);
         continue;
+
+
+        // se per qualche motivo il solver deep non esiste
+        bigToast("AUTO: solver non disponibile", 1200);
+        AUTO_MODE = false;
       }
-
-      // nessuna mossa trovata
-      // nessuna mossa trovata → in AUTO rigeneriamo SEMPRE un livello pulito
-      bigToast("AUTO: regen level", 700);
-      showStalloMessage();
-      pulseUndoButton();
-
-      regenCleanLevel();
-      await sleep(120);
-      continue;
-
-
-      // se per qualche motivo il solver deep non esiste
-      bigToast("AUTO: solver non disponibile", 1200);
-      AUTO_MODE = false;
+    } finally {
+          // se esce per qualunque motivo (solver, errore, exhausted, ecc.)
+    // e non hai già ripristinato manualmente, ripristina qui
+        if (autoReturnSnapshot){
+          exitAutoTutorial({silent:true});
+        }
     }
   }
 
@@ -4315,11 +4320,46 @@ async function refreshUserUI(){
 
   // ===== AUTO / Tutorial mode =====
   let AUTO_MODE = false;
+  let autoReturnSnapshot = null; // snapshot della partita "vera" per ripristino post-tutorial
   let autoLoopRunning = false;
   let autoStop = false;
 
   // se vuoi velocità senza animazioni pesanti:
   const AUTO_STEP_DELAY_MS = 60; // 0..200 a piacere
+
+  function enterAutoTutorial(){
+    // salva partita reale (per ripristinare dopo)
+    autoReturnSnapshot = deepCopy(state);
+
+    // tutorial sempre da zero
+    state = newGameState();
+
+    // genera subito il livello 1 (IMPORTANTE: AUTO_MODE deve già essere true,
+    // così startLevel non salva su storage)
+    startLevel(1);
+  }
+
+  function exitAutoTutorial({silent=false} = {}){
+    // spegne e ripristina
+    AUTO_MODE = false;
+    autoStop = true;
+
+    const btnAuto = document.getElementById("btnAuto");
+    if (btnAuto) btnAuto.classList.remove("active");
+
+    if (autoReturnSnapshot){
+      state = autoReturnSnapshot;
+      autoReturnSnapshot = null;
+
+      stalloShown = false;
+      stopPulseUndoButton();
+
+      renderAll(true);
+      saveNow(); // salva solo la partita vera (AUTO_MODE ora è false)
+    }
+
+    if (!silent) toastMsg("AUTO: OFF");
+  }
 
 
   function showStalloMessage() {
