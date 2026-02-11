@@ -5245,5 +5245,45 @@ btnPasskeyRegister.addEventListener("click", async () => {
     </div>
   </div>
 
+<script>
+  document.addEventListener("DOMContentLoaded", function(){
+
+    const rewardOverlay = document.getElementById("rewardOverlay");
+    const btnReward2Hints = document.getElementById("btnReward2Hints");
+    const btnRewardWatch = document.getElementById("btnRewardWatch");
+    const btnRewardCancel = document.getElementById("btnRewardCancel");
+    const rewardOverlayStatus = document.getElementById("rewardOverlayStatus");
+
+    function openReward(){
+      rewardOverlay?.classList.remove("hidden");
+      rewardOverlay?.setAttribute("aria-hidden","false");
+    }
+
+    function closeReward(){
+      rewardOverlay?.classList.add("hidden");
+      rewardOverlay?.setAttribute("aria-hidden","true");
+    }
+
+    btnReward2Hints?.addEventListener("click", openReward);
+    btnRewardCancel?.addEventListener("click", closeReward);
+
+    btnRewardWatch?.addEventListener("click", async () => {
+      if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Caricamento…";
+      try{
+        const r = await Ads.showRewardedFor2Hints();
+        if (r && r.ok && r.rewarded){
+          if (typeof onRewardedAdCompleted === "function") onRewardedAdCompleted();
+          closeReward();
+        } else {
+          rewardOverlayStatus.textContent = "Pubblicità non disponibile.";
+        }
+      } catch(e){
+        rewardOverlayStatus.textContent = "Errore.";
+      }
+    });
+
+  });
+</script>
+
 </body>
 </html>
