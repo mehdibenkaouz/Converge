@@ -1981,6 +1981,10 @@ async function logout() {
 
   clearTokens();
   clearNickname();
+  // IMPORTANT: evita che lo scoped save del vecchio account venga riusato dopo logout
+  try { localStorage.removeItem("psb_userkey_v1"); } catch {}
+  try { window.currentUserKey = null; } catch {}
+
   try { bgm.pause(); } catch(_) {}
   bgmStarted = false;
 
@@ -3729,6 +3733,8 @@ async function refreshUserUI(){
     if (state.impossible){
       hintText.textContent = "Impossible situation. Use Undo.";
       hintOverlay.classList.add("show");
+      
+      hintOverlay.setAttribute("aria-hidden","false");
       return;
     }
 
@@ -3871,7 +3877,14 @@ async function refreshUserUI(){
   function hideHint(){
     if (window.__hintDemoStop) { window.__hintDemoStop();
     window.__hintDemoStop = null; }
+    try {
+      if (hintOverlay && hintOverlay.contains(document.activeElement)) {
+        document.getElementById("btnHint")?.focus();
+      }
+    } catch {}
+
     hintOverlay.classList.remove("show");
+    hintOverlay.setAttribute("aria-hidden","true");
     hintCanvasWrap.innerHTML = "";
   }
 
@@ -4278,38 +4291,42 @@ async function refreshUserUI(){
     localStorage.setItem(userStorageKey(STORAGE_KEY), JSON.stringify(payload));
   }
 
-  function loadSave(){
-      // MIGRAZIONE: se esiste un vecchio salvataggio globale, spostalo sullo user corrente
-      const legacy = localStorage.getItem(STORAGE_KEY);
-      const scopedKey = userStorageKey(STORAGE_KEY);
-      // migra legacy SOLO se sei guest (non loggato), altrimenti rischi di “sporcare” altri account
-      const logged = !!getAccessToken();
-      if (!raw && legacy && !logged) {
-        localStorage.setItem(scopedKey, legacy);
-        localStorage.removeItem(STORAGE_KEY);
-        raw = legacy;
-      }
+function loadSave(){
+  const scopedKey = userStorageKey(STORAGE_KEY);
 
-    const raw = localStorage.getItem(scopedKey);
-    if (!raw) return null;
-    try{
-      const s = JSON.parse(raw);
-      // basic validation
-      if (!s || typeof s.N !== "number" || !Array.isArray(s.board) || !s.tilesById) return null;
-      const st = newGameState();
-      // merge
-      Object.assign(st, s);
-      // reapply nested structures safely
-      st.board = s.board.map(r=>r.slice());
-      st.tilesById = s.tilesById;
-      st.levelPlan = s.levelPlan || {bestFirstDir:null};
-      st.undoSnapshot = s.undoSnapshot || null;
-      st.impossible = !!s.impossible;
-      return st;
-    } catch {
-      return null;
-    }
+  // Prima prova a leggere lo scoped save (per-account)
+  let raw = null;
+  try { raw = localStorage.getItem(scopedKey); } catch {}
+
+  // MIGRAZIONE: se esiste un vecchio salvataggio globale (guest legacy), spostalo SOLO per guest
+  const logged = !!getAccessToken();
+  let legacy = null;
+  try { legacy = localStorage.getItem(STORAGE_KEY); } catch {}
+
+  if (!raw && legacy && !logged){
+    try { localStorage.setItem(scopedKey, legacy); } catch {}
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    raw = legacy;
   }
+
+  if (!raw) return null;
+
+  try{
+    const s = JSON.parse(raw);
+    // basic validation
+    if (!s || typeof s.N !== "number" || !Array.isArray(s.board) || !s.tilesById) return null;
+    const st = newGameState();
+    Object.assign(st, s);
+    st.board = s.board.map(r=>r.slice());
+    st.tilesById = s.tilesById;
+    st.levelPlan = s.levelPlan || {bestFirstDir:null};
+    st.undoSnapshot = s.undoSnapshot || null;
+    st.impossible = !!s.impossible;
+    return st;
+  } catch {
+    return null;
+  }
+}
 
   // ==========
   // Game Over
