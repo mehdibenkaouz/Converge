@@ -1584,34 +1584,25 @@ document.getElementById("btn-logout")?.addEventListener("click", async () => {
 
 
 async function logout() {
-  // Se hai un endpoint /logout è meglio chiamarlo:
- try {
-
-    await apiFetch("/api/logout", { method: "POST" });
-
-  } catch (_) {
-
-    // fallback legacy (may 405 on static hosting)
-
-    try { await apiFetch("/logout", { method: "POST" }); } catch (_) {}
-
-  }
+  // Logout "sicuro": non dipende dal server (evita 405 / Failed to fetch),
+  // ma se hai l’endpoint, lo chiamiamo comunque best-effort.
+  try { await apiFetch("/api/logout", { method: "POST" }); } catch (_) {}
 
   clearTokens();
   clearNickname();
+
   try { bgm.pause(); } catch(_) {}
   bgmStarted = false;
 
-
-  // Chiudi overlay aperti
   hideHint();
-  closeAccount();
+  try { closeAccount(); } catch (_) {}
+  try { closeGameOver(); } catch (_) {}
 
-  // Mostra overlay login
   loginOverlay.classList.remove("hidden");
+  toastMsg("Logout");
 
-  // Aggiorna UI "guest"
   refreshUserUI().catch(() => {});
+  updateUserBadge();
 }
 
 
@@ -2044,18 +2035,41 @@ async function refreshUserUI(){
     loginOverlay.classList.add("hidden");
     startBgm();
 
-    // Try load save
     const loaded = loadSave();
     if (loaded) {
       state = loaded;
-      toastMsg("Partita caricata");
     } else {
       state = newGameState();
     }
 
     attachInput();
-    renderAll(true);
-    saveNow();
+
+    const tilesCount = state && state.tilesById ? Object.keys(state.tilesById).length : 0;
+    const boardOk =
+      Array.isArray(state.board) &&
+      state.board.length === state.N &&
+      state.board.every(r => Array.isArray(r) && r.length === state.N);
+
+    if (!boardOk || tilesCount === 0){
+      // Se il salvataggio è “vuoto” (bug precedente) o hai appena finito un livello,
+      // rigeneriamo in modo coerente usando la pipeline dei livelli.
+      let targetLevel = Math.max(1, Number(state.level) || 1);
+
+      // Se avevi un save ma la board è vuota, in pratica eri “a fine livello”
+      if (loaded && tilesCount === 0) targetLevel += 1;
+
+      // evita mismatch/TDZ legati a snapshot vecchi
+      state.undoSnapshot = null;
+      state.impossible = false;
+      state.impossibleNotified = false;
+
+      startLevel(targetLevel);
+    } else {
+      toastMsg("Partita caricata");
+      renderAll(true);
+      saveNow();
+    }
+
     refreshUserUI().catch(() => {});
     updateUserBadge();
   }
@@ -2808,21 +2822,20 @@ async function refreshUserUI(){
 
 
         btnNew.addEventListener("click", () => {
-          if (isAnimating) return;
-
           hideHint();
 
           if (!confirm("Vuoi iniziare una nuova partita? Il salvataggio attuale verrà sovrascritto.")) return;
 
+          // Nuova partita deve SEMPRE funzionare, anche se un'animazione è rimasta “appesa”.
+          // Cancella animazioni in volo e sblocca subito l'input.
+          MOVE_TOKEN++;
+          isAnimating = false;
+          closeGameOver();
+
           try {
-            // reset totale e coerente
             state = newGameState();
-
-            // IMPORTANTISSIMO: usa la stessa logica dei livelli (gated + render + save)
-            startLevel(1);
-
-            // opzionale: se vuoi anche il toast "Nuova partita"
-            // toastMsg("Nuova partita");
+            startLevel(1); // pipeline unica e coerente (gated + render + save)
+            toastMsg("Nuova partita");
           } catch (e) {
             console.error("NEW GAME ERROR:", e);
             alert("Errore durante Nuova partita: " + (e?.message || e));
@@ -2977,7 +2990,7 @@ async function refreshUserUI(){
     if (!moved){
       toastMsg("Nessuno spostamento");
       saveNow();
-      renderAll(false);
+      renderAll(true);
       updateButtons();
       return;
     }
@@ -3786,9 +3799,6 @@ async function refreshUserUI(){
     state.level = snap.level;
     state.sizeIndex = snap.sizeIndex;
     state.N = snap.N;
-     // Fix legacy saves: keep sizeIndex coherent with N
-
-    if (Array.isArray(SIZES) && SIZES.includes(state.N)) state.sizeIndex = Math.max(0, SIZES.indexOf(state.N));
     state.score = snap.score;
     state.moves = snap.moves;
     state.undoAvailable = snap.undoAvailable;
