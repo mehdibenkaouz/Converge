@@ -2246,17 +2246,18 @@ async function refreshUserUI(){
   const id = (u.id ?? me?.id ?? u.user_id ?? me?.user_id ?? "").toString();
 
   // === IMPORTANT: set user key for per-account local saves ===
+  // Preferisci un identificatore stabile (id/username/nickname dal server).
+  // Se /me non esiste o torna vuoto, NON sovrascrivere una chiave già salvata (es. pk:<credentialId>).
+  const existingKey = (localStorage.getItem("psb_userkey_v1") || "").trim();
   const userKey =
     (id && ("id:" + id)) ||
     (username && ("u:" + username)) ||
     (nickname && ("n:" + nickname)) ||
-    "auth";
+    (existingKey ? existingKey : "auth");
 
   window.currentUserKey = userKey;
   try { localStorage.setItem("psb_userkey_v1", userKey); } catch {}
-
-  
-  // Prefer username for badge and account display
+// Prefer username for badge and account display
   const badgeName = username || nickname || getNickname() || "—";
 
   // Store for badge (re-uses nickname storage key)
@@ -2499,30 +2500,32 @@ async function refreshUserUI(){
   }
 
 
-  function startGame(){
+    function startGame(){
     // Hide login overlay
     loginOverlay.classList.add("hidden");
     startBgm();
 
-    // Try load save
+    // Try load save (scoped per-account)
     const loaded = loadSave();
-    if (loaded) {
+    const loadedOk = !!(loaded && loaded.tilesById && Object.keys(loaded.tilesById).length > 0 && Array.isArray(loaded.board));
+
+    if (loadedOk){
       state = loaded;
       toastMsg("Partita caricata");
     } else {
       state = newGameState();
-      // --- FIX: se non c'è una board valida (primo avvio / reset), avvia Level 1
-      if (!state || !state.tilesById || Object.keys(state.tilesById).length === 0) {
-        state = newGameState();
-        startLevel(1);
-        return;
-      }
-
+      startLevel(1); // genera board + render + save
     }
 
+    // input & UI (sempre)
     attachInput();
-    renderAll(true);
-    saveNow();
+
+    // Se abbiamo caricato un save valido, render/salva qui. Se abbiamo appena fatto startLevel(1) è già ok.
+    if (loadedOk){
+      renderAll(true);
+      saveNow();
+    }
+
     refreshUserUI().catch(() => {});
     updateUserBadge();
   }
@@ -2530,6 +2533,16 @@ async function refreshUserUI(){
   async function passkeyRegister(nickname, referralCode){
     const r1 = await apiPost("/api/passkey_register_begin", { nickname, referralCode });
     const cred = await navigator.credentials.create({ publicKey: pkCreateFromJSON(r1.options) });
+    // Per-salvataggi locali: lega la chiave all'ID della passkey (stabile)
+    try {
+      const pkId = (cred && cred.id) ? String(cred.id) : "";
+      if (pkId){
+        const uk = "pk:" + pkId;
+        window.currentUserKey = uk;
+        localStorage.setItem("psb_userkey_v1", uk);
+      }
+    } catch {}
+
     const r2 = await apiPost("/api/passkey_register_finish", { nickname, credential: credToJSON(cred) });
     setToken(r2.token);
 
@@ -2543,6 +2556,16 @@ async function refreshUserUI(){
   async function passkeyLogin(nicknameOptional){
     const r1 = await apiPost("/api/passkey_login_begin", { nickname: nicknameOptional || "" });
     const cred = await navigator.credentials.get({ publicKey: pkGetFromJSON(r1.options) });
+    // Per-salvataggi locali: lega la chiave all'ID della passkey usata (stabile)
+    try {
+      const pkId = (cred && cred.id) ? String(cred.id) : "";
+      if (pkId){
+        const uk = "pk:" + pkId;
+        window.currentUserKey = uk;
+        localStorage.setItem("psb_userkey_v1", uk);
+      }
+    } catch {}
+
     const r2 = await apiPost("/api/passkey_login_finish", { nickname: nicknameOptional || "", credential: credToJSON(cred) });
     setToken(r2.token);
 
@@ -2557,10 +2580,11 @@ async function refreshUserUI(){
 
   function attachLoginButtons(){
     btnGuestPlay.addEventListener("click", () => {
+      // Forza salvataggi "ospite" separati da quelli autenticati
+      try { window.currentUserKey = "anon"; localStorage.setItem("psb_userkey_v1","anon"); } catch {}
       startGame();
     });
-
-    btnPasskeyRegister.addEventListener("click", async () => {
+btnPasskeyRegister.addEventListener("click", async () => {
       const nickname = loginNickname.value.trim();
       if (!nickname || nickname.length < 3) {
         alert("Inserisci un nickname (min 3 caratteri)");
@@ -3037,6 +3061,7 @@ async function refreshUserUI(){
   }
 
   function updateHUD(){
+    if (!state) return;
     elLevel.textContent = String(state.level);
     elSize.textContent  = `${state.N}×${state.N}`;
     elMoves.textContent = String(state.moves);
@@ -3726,15 +3751,18 @@ async function refreshUserUI(){
   // Hint + Solver (lightweight demo)
   // ==========
   
+  function openHintOverlay(){
+    openHintOverlay();
+    hintOverlay.setAttribute("aria-hidden","false");
+  }
+
   function showHint(){
     if (isAnimating) return;
 
     // già provato impossibile
     if (state.impossible){
       hintText.textContent = "Impossible situation. Use Undo.";
-      hintOverlay.classList.add("show");
-      
-      hintOverlay.setAttribute("aria-hidden","false");
+      openHintOverlay();
       return;
     }
 
@@ -3745,7 +3773,7 @@ async function refreshUserUI(){
       hintText.textContent = cd > 0
         ? `No hints available. Earn one in ${cd} level(s).`
         : "No hints available right now. Complete levels to earn more.";
-      hintOverlay.classList.add("show");
+      openHintOverlay();
       return;
     }
 
@@ -3765,7 +3793,7 @@ async function refreshUserUI(){
       pulseUndoButton();
 
       hintText.textContent = "Impossible situation. Use Undo.";
-      hintOverlay.classList.add("show");
+      openHintOverlay();
       return;
     }
 
@@ -3795,7 +3823,7 @@ async function refreshUserUI(){
     updateButtons();
 
     hintText.textContent = `Recommended direction: ${dirToArrow(dir)}. (Simulation: 1 move)`;
-    hintOverlay.classList.add("show");
+    openHintOverlay();
     requestAnimationFrame(() => requestAnimationFrame(() => renderHintDemo(dir)));
   }
 
@@ -3849,7 +3877,7 @@ async function refreshUserUI(){
 
       // NON consumiamo hint
       hintText.textContent = "Impossible situation. Use Undo.";
-      hintOverlay.classList.add("show");
+      openHintOverlay();
       return;
     }
 
@@ -3869,7 +3897,7 @@ async function refreshUserUI(){
 
     closeHintHeavyPrompt();
     hintText.textContent = `Recommended direction: ${dirToArrow(dir)}. (Simulation: 1 move)`;
-    hintOverlay.classList.add("show");
+    openHintOverlay();
     requestAnimationFrame(() => requestAnimationFrame(() => renderHintDemo(dir)));
   }
 
@@ -3877,6 +3905,8 @@ async function refreshUserUI(){
   function hideHint(){
     if (window.__hintDemoStop) { window.__hintDemoStop();
     window.__hintDemoStop = null; }
+
+    // Evita warning: non mettere aria-hidden su un elemento che contiene ancora il focus
     try {
       if (hintOverlay && hintOverlay.contains(document.activeElement)) {
         document.getElementById("btnHint")?.focus();
@@ -4291,42 +4321,45 @@ async function refreshUserUI(){
     localStorage.setItem(userStorageKey(STORAGE_KEY), JSON.stringify(payload));
   }
 
-function loadSave(){
-  const scopedKey = userStorageKey(STORAGE_KEY);
+    function loadSave(){
+    const scopedKey = userStorageKey(STORAGE_KEY);
 
-  // Prima prova a leggere lo scoped save (per-account)
-  let raw = null;
-  try { raw = localStorage.getItem(scopedKey); } catch {}
+    // Prima prova a leggere lo scoped save (per-account)
+    let raw = null;
+    try { raw = localStorage.getItem(scopedKey); } catch {}
 
-  // MIGRAZIONE: se esiste un vecchio salvataggio globale (guest legacy), spostalo SOLO per guest
-  const logged = !!getAccessToken();
-  let legacy = null;
-  try { legacy = localStorage.getItem(STORAGE_KEY); } catch {}
+    // MIGRAZIONE: se esiste un vecchio salvataggio globale (guest legacy), spostalo SOLO per guest
+    const logged = !!getAccessToken();
+    let legacy = null;
+    try { legacy = localStorage.getItem(STORAGE_KEY); } catch {}
 
-  if (!raw && legacy && !logged){
-    try { localStorage.setItem(scopedKey, legacy); } catch {}
-    try { localStorage.removeItem(STORAGE_KEY); } catch {}
-    raw = legacy;
+    if (!raw && legacy && !logged){
+      try { localStorage.setItem(scopedKey, legacy); } catch {}
+      try { localStorage.removeItem(STORAGE_KEY); } catch {}
+      raw = legacy;
+    }
+
+    if (!raw) return null;
+
+    try{
+      const s = JSON.parse(raw);
+      // basic validation
+      if (!s || typeof s.N !== "number" || !Array.isArray(s.board) || !s.tilesById) return null;
+      const st = newGameState();
+      // merge
+      Object.assign(st, s);
+      // reapply nested structures safely
+      st.board = s.board.map(r=>r.slice());
+      st.tilesById = s.tilesById;
+      st.levelPlan = s.levelPlan || {bestFirstDir:null};
+      st.undoSnapshot = s.undoSnapshot || null;
+      st.impossible = !!s.impossible;
+      return st;
+    } catch {
+      return null;
+    }
   }
 
-  if (!raw) return null;
-
-  try{
-    const s = JSON.parse(raw);
-    // basic validation
-    if (!s || typeof s.N !== "number" || !Array.isArray(s.board) || !s.tilesById) return null;
-    const st = newGameState();
-    Object.assign(st, s);
-    st.board = s.board.map(r=>r.slice());
-    st.tilesById = s.tilesById;
-    st.levelPlan = s.levelPlan || {bestFirstDir:null};
-    st.undoSnapshot = s.undoSnapshot || null;
-    st.impossible = !!s.impossible;
-    return st;
-  } catch {
-    return null;
-  }
-}
 
   // ==========
   // Game Over
@@ -5004,20 +5037,10 @@ function loadSave(){
       <path d="M50 10 L60 38 L90 40 L66 58 L74 88 L50 72 L26 88 L34 58 L10 40 L40 38 Z" fill="rgba(255,255,255,.96)"/>
     </svg>`;
   }
-
   // ==========
-  // First time: if no save, generate board and plan
+  // NOTE: l'inizializzazione partita è gestita da init() / startGame().
+  // Non auto-renderizzare qui: se state è ancora null (prima del login), può causare crash.
   // ==========
-  if (!loadSave()){
-    generateLevelBoard();
-    state.levelPlan.bestFirstDir = computeHintDirectionForCurrentState({maxDepth: 6, timeBudgetMs: 25});
-    saveNow();
-    renderAll(true);
-  } else {
-    // Ensure grid matches loaded size
-    renderAll(true);
-  }
-
 })();
 </script>
 <div id="rewardOverlay" class="reward-overlay hidden" role="dialog" aria-modal="true">
