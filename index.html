@@ -3444,41 +3444,53 @@ btnPasskeyRegister.addEventListener("click", async () => {
         });
 
 
-  // ===== Rewarded +2 hints overlay =====
-    const rewardOverlay = document.getElementById("rewardOverlay");
-    const btnReward2Hints = document.getElementById("btnReward2Hints");
-    const btnRewardWatch = document.getElementById("btnRewardWatch");
-    const btnRewardCancel = document.getElementById("btnRewardCancel");
-    const rewardStatus = document.getElementById("rewardStatus");
+        // Reward overlay bindings (ensure DOM exists)
+        const rewardOverlay = document.getElementById("rewardOverlay");
+        const btnReward2Hints = document.getElementById("btnReward2Hints");
+        const btnRewardWatch = document.getElementById("btnRewardWatch");
+        const btnRewardCancel = document.getElementById("btnRewardCancel");
+        const rewardOverlayStatus = document.getElementById("rewardOverlayStatus");
 
-    function openRewardOverlay(){
-      if (!rewardOverlay) return;
-      rewardOverlay.classList.remove("hidden");
-      rewardOverlay.setAttribute("aria-hidden", "false");
-      // opzionale: reset status
-      if (rewardStatus) rewardStatus.textContent = "";
-    }
+        function openReward(){
+          if (!rewardOverlay) return;
+          rewardOverlay.classList.remove("hidden");
+          rewardOverlay.setAttribute("aria-hidden","false");
+          if (rewardOverlayStatus) rewardOverlayStatus.textContent = "";
+        }
+        function closeReward(){
+          if (!rewardOverlay) return;
+          rewardOverlay.classList.add("hidden");
+          rewardOverlay.setAttribute("aria-hidden","true");
+        }
 
-    function closeRewardOverlay(){
-      if (!rewardOverlay) return;
-      rewardOverlay.classList.add("hidden");
-      rewardOverlay.setAttribute("aria-hidden", "true");
-    }
+        if (btnReward2Hints) btnReward2Hints.addEventListener("click", openReward);
+        if (btnRewardCancel) btnRewardCancel.addEventListener("click", closeReward);
 
-    if (btnReward2Hints) btnReward2Hints.addEventListener("click", openRewardOverlay);
-    if (btnRewardCancel) btnRewardCancel.addEventListener("click", closeRewardOverlay);
+        if (btnRewardWatch) btnRewardWatch.addEventListener("click", async () => {
+          try{
+            btnRewardWatch.disabled = true;
+            if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Caricamento…";
+            const r = await Ads.showRewardedFor2Hints();
+            if (r && r.ok && r.rewarded){
+              if (typeof onRewardedAdCompleted === "function") onRewardedAdCompleted();
+              if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Ok! +2 hint aggiunti.";
+              closeReward();
+            } else {
+              const reason = r?.reason || "no_reward";
+              if (rewardOverlayStatus) rewardOverlayStatus.textContent =
+                (reason === "web_no_ads") ? "Disponibile solo nell’app Android." :
+                (reason === "cooldown") ? "Riprova tra poco." :
+                "Pubblicità non disponibile ora.";
+            }
+          } catch(e){
+            if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Errore: " + (e?.message || e);
+          } finally {
+            btnRewardWatch.disabled = false;
+          }
+        });
 
-    if (btnRewardWatch) btnRewardWatch.addEventListener("click", async () => {
-      try{
-        if (rewardStatus) rewardStatus.textContent = "Caricamento…";
-        // qui in futuro metti l’ads reale
-        await Ads.showRewardedFor2Hints(); // per ora fallback / simulazione
-        if (rewardStatus) rewardStatus.textContent = "Ok! +2 hint aggiunti.";
-        closeRewardOverlay();
-      } catch(e){
-        if (rewardStatus) rewardStatus.textContent = "Errore: " + (e?.message || e);
-      }
-    });
+              
+
   }
 
   const btnAuto = document.getElementById("btnAuto");
