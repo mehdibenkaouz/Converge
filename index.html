@@ -2115,7 +2115,9 @@ function attachAccountButtons(){
 
   if (btnResetProgress) btnResetProgress.addEventListener("click", () => {
     if (!confirm("Vuoi davvero resettare i progressi locali su questo dispositivo?")) return;
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(userStorageKey(STORAGE_KEY));
+    if (!getAccessToken()) localStorage.removeItem(STORAGE_KEY); // solo per guest legacy
+
     state = newGameState();
     startLevel(1);
     toastMsg(t("toast.reset_done") || "Progressi resettati");
@@ -2153,7 +2155,9 @@ function attachAccountButtons(){
       // Cleanup client-side (sempre)
       try { clearTokens(); } catch {}
       try { clearNickname(); } catch {}
-      try { localStorage.removeItem(STORAGE_KEY); } catch {}
+      try { localStorage.removeItem(userStorageKey(STORAGE_KEY)); } catch {}
+      try { localStorage.removeItem(STORAGE_KEY); } catch {} // pulizia legacy
+
 
       // Torna al login in modo deterministico
       try {
@@ -2237,6 +2241,17 @@ async function refreshUserUI(){
   const nickname = (u.nickname || me?.nickname || "").trim();
   const id = (u.id ?? me?.id ?? u.user_id ?? me?.user_id ?? "").toString();
 
+  // === IMPORTANT: set user key for per-account local saves ===
+  const userKey =
+    (id && ("id:" + id)) ||
+    (username && ("u:" + username)) ||
+    (nickname && ("n:" + nickname)) ||
+    "auth";
+
+  window.currentUserKey = userKey;
+  try { localStorage.setItem("psb_userkey_v1", userKey); } catch {}
+
+  
   // Prefer username for badge and account display
   const badgeName = username || nickname || getNickname() || "—";
 
@@ -2465,12 +2480,14 @@ async function refreshUserUI(){
     
     // se ho un token salvato, provo a sincronizzare bonus e partire
     if (getAccessToken()){
-      startGame();
-      refreshUserUI().catch(() => {});
-      // sync bonus in background (non blocca l'avvio)
-      syncBonuses().catch(() => {});
+      (async () => {
+        await refreshUserUI().catch(() => {});
+        startGame();
+        syncBonuses().catch(() => {});
+      })();
       return;
     }
+
 
 
     // altrimenti mostra login
@@ -2549,8 +2566,10 @@ async function refreshUserUI(){
       try{
         // referralCode per ora null (poi lo aggiungiamo se vuoi)
         const referralCode = null;
-        await passkeyRegister(nickname, referralCode);
-        startGame();
+      await passkeyRegister(nickname, referralCode);
+      await refreshUserUI().catch(() => {});
+      startGame();
+
       } catch (e){
         alert("Registrazione passkey fallita: " + (e?.message || e));
       }
@@ -2564,7 +2583,9 @@ async function refreshUserUI(){
 
       try{
         await passkeyLogin(nickname);
+        await refreshUserUI().catch(() => {});
         startGame();
+
       } catch (e){
         console.error("Login passkey fallito:", e);
         if (!String(e?.message || "").includes("credential not found")) {
@@ -4261,10 +4282,12 @@ async function refreshUserUI(){
       // MIGRAZIONE: se esiste un vecchio salvataggio globale, spostalo sullo user corrente
       const legacy = localStorage.getItem(STORAGE_KEY);
       const scopedKey = userStorageKey(STORAGE_KEY);
-      if (legacy && !localStorage.getItem(scopedKey)) {
+      // migra legacy SOLO se sei guest (non loggato), altrimenti rischi di “sporcare” altri account
+      const logged = !!getAccessToken();
+      if (!raw && legacy && !logged) {
         localStorage.setItem(scopedKey, legacy);
-        // opzionale: pulisci il vecchio per evitare cross-account leakage
-        // localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(STORAGE_KEY);
+        raw = legacy;
       }
 
     const raw = localStorage.getItem(scopedKey);
