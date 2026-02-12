@@ -2873,6 +2873,12 @@ btnPasskeyRegister.addEventListener("click", async () => {
     try{
       await apiPost("/api/score_submit", { score });
     }catch(_){
+        if (String(e?.message || "").includes("HTTP_401")) {
+          // token non valido: riallinea lo stato (guest)
+          clearTokens?.();
+          // opzionale: aggiorna UI login
+          refreshUserUI?.();
+        }
       // ignora: rete assente ecc.
     }
   }
