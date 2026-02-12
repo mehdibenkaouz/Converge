@@ -1624,7 +1624,7 @@
   <div class="app">
     <div class="topbar">
       <div class="title">
-        <h1>Converge 2.0</h1>
+        <h1>Converge 3.0</h1>
         <div class="userbadge" id="userBadge" style="display:none;">
           Username: <strong id="userNickname"></strong>
         </div>
@@ -2425,6 +2425,9 @@ async function refreshUserUI(){
   let lastToastAt = 0;
 
   // ===== Performance tuning (mobile default) =====
+  let LAST_CELL_W = 0;
+  let LAST_CELL_H = 0;
+
   const IS_COARSE = matchMedia("(pointer: coarse)").matches;
 
   // su mobile attiva lowgfx automaticamente (puoi poi fare un toggle nelle impostazioni)
@@ -3298,6 +3301,8 @@ btnPasskeyRegister.addEventListener("click", async () => {
     const innerH = rect.height - innerPad*2;
     const cellW = (innerW - gap*(N-1)) / N;
     const cellH = (innerH - gap*(N-1)) / N;
+    LAST_CELL_W = cellW;
+    LAST_CELL_H = cellH;
 
     // Ensure DOM nodes exist for tiles
     const existing = new Map();
@@ -4483,85 +4488,89 @@ btnPasskeyRegister.addEventListener("click", async () => {
 
 
 
+
   // ==========
   // Break animation (FAST)
   // ==========
   function playBreakAnimation(idsToRemove){
     const nodes = Array.from(elTiles.children);
-    const idSet = new Set(Array.from(idsToRemove).map(Number));
+    const idArr = Array.from(idsToRemove).map(Number);
+    const idSet = new Set(idArr);
+    const total = idSet.size;
+    if (!total) return;
 
-    // leggi una sola volta (layout read)
-    const parentRect = elBoard.getBoundingClientRect();
+    // === Particle budget: evita esplosioni quando rompi tanti tile ===
+    const low = document.documentElement.classList.contains("lowgfx");
 
-    // crea tutto in memoria e appendi una sola volta
+    // budget totale per "evento break" (NON per tile)
+    const TOTAL_BUDGET = low ? 36 : 72;
+
+    // quante particelle per tile in base al numero di tile rotti
+    const perTile = Math.max(0, Math.floor(TOTAL_BUDGET / total));
+    const particles = Math.max(0, Math.min(BREAK_PARTICLES, perTile));
+
+    // se sono troppi tile, niente layer per-ogni-tile (puoi anche lasciarlo così: particles diventa 1-2)
+    // se vuoi ancora più "safe", metti: if (total > 12) particles = 0;
+
     const frag = document.createDocumentFragment();
 
     for (const n of nodes){
       const id = Number(n.dataset.id);
       if (!idSet.has(id)) continue;
 
-      // IMPORTANTISSIMO: leggi rect PRIMA di scrivere classi (evita forced reflow)
-      const rect = n.getBoundingClientRect();
+      // NIENTE getBoundingClientRect(): usiamo le CSS vars che già setti in render
+      const x = parseFloat(n.style.getPropertyValue("--x")) || 0;
+      const y = parseFloat(n.style.getPropertyValue("--y")) || 0;
+      const w = parseFloat(n.style.getPropertyValue("--w")) || LAST_CELL_W || 0;
+      const h = parseFloat(n.style.getPropertyValue("--h")) || LAST_CELL_H || 0;
 
-      const cx = rect.left - parentRect.left + rect.width/2;
-      const cy = rect.top  - parentRect.top  + rect.height/2;
+      const cx = x + w/2;
+      const cy = y + h/2;
 
-      // ora scrivi (style write)
+      // scrittura (no layout-read prima)
       n.classList.add("fadeout");
 
-      // layer particelle
+      // particelle: se particles == 0, resta solo fadeout (super fluido)
+      if (particles <= 0) continue;
+
       const starLayer = document.createElement("div");
       starLayer.className = "stars play";
       starLayer.style.left = `${cx}px`;
       starLayer.style.top  = `${cy}px`;
 
-      const particles = document.documentElement.classList.contains("lowgfx")
-        ? Math.max(5, Math.floor(BREAK_PARTICLES * 0.75))
-        : BREAK_PARTICLES;
-
       for (let i = 0; i < particles; i++){
         const s = document.createElement("div");
         s.className = "star";
+        s.style.left = "0px";
+        s.style.top  = "0px";
 
-        // esplosione: angolo + raggio
-        const a  = Math.random() * Math.PI * 2;
-        const r  = 14 + Math.random() * 36;
-        const up = -8 - Math.random() * 14;
+        const a = Math.random() * Math.PI * 2;
+        const r = 18 + Math.random() * 42;
+        const up = -10 - Math.random() * 18;
 
         const dx = Math.cos(a) * r;
         const dy = Math.sin(a) * r + up;
 
         s.style.setProperty("--dx", `${dx}px`);
         s.style.setProperty("--dy", `${dy}px`);
+        s.style.setProperty("--rot", `${randFloat(-180, 180)}deg`);
+        s.style.setProperty("--sc", `${randFloat(0.65, 1.25)}`);
+        s.style.animationDelay = `${Math.random() * 60}ms`;
 
-        // micro-variazioni
-        s.style.setProperty("--rot", `${randFloat(-160, 160)}deg`);
-        s.style.setProperty("--sc",  `${randFloat(0.75, 1.25)}`);
-        s.style.animationDelay = `${Math.random() * 55}ms`;
-
-        // varia anche la size (WOW senza peso)
-        const size = document.documentElement.classList.contains("lowgfx")
-          ? (5 + Math.random()*3)
-          : (6 + Math.random()*5);
-
-        s.style.width  = `${size}px`;
-        s.style.height = `${size}px`;
-
+        s.innerHTML = starSVG();
         starLayer.appendChild(s);
       }
 
       frag.appendChild(starLayer);
     }
 
-    // append unico (molto più fluido)
-    elBoard.appendChild(frag);
+    if (frag.childNodes.length) elBoard.appendChild(frag);
 
-    // cleanup
+    // cleanup unico (evita N timeout per tile)
     setTimeout(() => {
       elBoard.querySelectorAll(".stars.play").forEach(x => x.remove());
     }, 420);
 
-    // pulizia classi tile
     setTimeout(() => {
       const nodes2 = Array.from(elTiles.children);
       for (const n of nodes2) n.classList.remove("fadeout","prebreak");
