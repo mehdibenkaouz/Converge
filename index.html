@@ -488,6 +488,16 @@
     transform: translate(var(--x), var(--y)) scale(.88);
     filter: blur(1px);
   }
+  /* ===== MASS BREAK PERFORMANCE (mobile) ===== */
+  html.massbreak .tile.prebreak{
+    animation: none !important;
+    filter: none !important;
+    box-shadow: var(--tile-shadow) !important; /* niente mega glow */
+  }
+
+  html.massbreak .tile.fadeout{
+    filter: none !important; /* il blur su 20 tile inchioda molti telefoni */
+  }
 
   .small{
     font-size: 13px;
@@ -4473,14 +4483,23 @@ btnPasskeyRegister.addEventListener("click", async () => {
   waitForSize();
 }
 
-  function markPreBreak(idsToRemove){
-    const idSet = new Set(Array.from(idsToRemove).map(Number));
-    const nodes = Array.from(elTiles.children);
-    for (const n of nodes){
-      const id = Number(n.dataset.id);
-      if (idSet.has(id)) n.classList.add("prebreak");
-    }
+function markPreBreak(idsToRemove){
+  const arr = Array.from(idsToRemove).map(Number);
+  const total = arr.length;
+  if (!total) return;
+
+  const low = document.documentElement.classList.contains("lowgfx");
+
+  // Se rompe tanti tile insieme: niente prebreak (è costoso su mobile)
+  if (low || total > 5) return;
+
+  const idSet = new Set(arr);
+  const nodes = Array.from(elTiles.children);
+  for (const n of nodes){
+    const id = Number(n.dataset.id);
+    if (idSet.has(id)) n.classList.add("prebreak");
   }
+}
 
 
 
@@ -4498,6 +4517,15 @@ btnPasskeyRegister.addEventListener("click", async () => {
     const idSet = new Set(idArr);
     const total = idSet.size;
     if (!total) return;
+    // === MASS BREAK: se rompo tanti tile insieme, tolgo effetti pesanti per non laggare ===
+    const mass = total > 5;
+    if (mass){
+      const root = document.documentElement;
+      root.classList.add("massbreak");
+      clearTimeout(window.__massbreakTO);
+      window.__massbreakTO = setTimeout(() => root.classList.remove("massbreak"), 260);
+    }
+
 
     // === Particle budget: evita esplosioni quando rompi tanti tile ===
     const low = document.documentElement.classList.contains("lowgfx");
@@ -4572,9 +4600,13 @@ btnPasskeyRegister.addEventListener("click", async () => {
     }, 420);
 
     setTimeout(() => {
-      const nodes2 = Array.from(elTiles.children);
-      for (const n of nodes2) n.classList.remove("fadeout","prebreak");
+      for (const n of nodes){
+        const id = Number(n.dataset.id);
+        if (!idSet.has(id)) continue;
+        n.classList.remove("fadeout","prebreak");
+      }
     }, 260);
+
   }
 
 
