@@ -134,6 +134,14 @@
     100%{ transform: translate(-2%, -1%) rotate(6deg) scale(1.14); }
   }
 
+  /* mobile performance: niente aurora animata */
+  html.lowgfx body::before,
+  html.lowgfx body::after{
+    animation: none !important;
+    filter: blur(32px) saturate(120%);
+    opacity: .45;
+  }
+
   /* Subtle grain */
   .app::before{
     content:"";
@@ -757,15 +765,45 @@
     *{ scroll-behavior: auto !important; transition: none !important; }
   }
 
-  .star {
-  transform: translate(0,0) scale(1);
-  animation: star-pop max(calc(0.42s / var(--anim-fx)), 0.06s) ease-out forwards;
+  /* ===== Particles (FAST) ===== */
+  .stars{
+    position:absolute;
+    width:1px;
+    height:1px;
+    pointer-events:none;
+    contain: layout paint;
+    transform: translate3d(0,0,0);
   }
 
-  @keyframes star-pop {
-    from { opacity: 1; transform: translate(0,0) scale(1) rotate(0deg); }
-    to   { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(var(--sc)) rotate(var(--rot)); }
-}
+  .star{
+    position:absolute;
+    left:0;
+    top:0;
+
+    /* spark leggero (niente SVG) */
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.95);
+
+    /* glow leggero (mobile-friendly) */
+    box-shadow: 0 0 10px rgba(124,245,197,.25);
+
+    will-change: transform, opacity;
+    transform: translate3d(0,0,0) scale(1);
+    animation: star-pop max(calc(0.42s / var(--anim-fx)), 0.06s) cubic-bezier(.16,.84,.26,1) forwards;
+  }
+
+  /* modalità lowgfx: glow quasi nullo */
+  html.lowgfx .star{
+    box-shadow: 0 0 6px rgba(124,245,197,.18);
+  }
+
+  @keyframes star-pop{
+    from{ opacity:1; transform: translate3d(0,0,0) scale(1) rotate(0deg); }
+    to  { opacity:0; transform: translate3d(var(--dx), var(--dy), 0) scale(var(--sc)) rotate(var(--rot)); }
+  }
+
 
 
 
@@ -2328,6 +2366,15 @@ async function refreshUserUI(){
   let isAnimating = false;
   let MOVE_TOKEN = 0; // used to cancel in-flight animations when instant mode is enabled
   let lastToastAt = 0;
+
+  // ===== Performance tuning (mobile default) =====
+  const IS_COARSE = matchMedia("(pointer: coarse)").matches;
+
+  // su mobile attiva lowgfx automaticamente (puoi poi fare un toggle nelle impostazioni)
+  if (IS_COARSE) document.documentElement.classList.add("lowgfx");
+
+  // particelle: mobile meno, desktop di più
+  const BREAK_PARTICLES = IS_COARSE ? 7 : 14;
 
   let stalloShown = false;
 
@@ -4370,45 +4417,55 @@ btnPasskeyRegister.addEventListener("click", async () => {
   }
 
 
+
+
+
+
+
   // ==========
-  // Break animation
+  // Break animation (FAST)
   // ==========
   function playBreakAnimation(idsToRemove){
-    // Fade tiles + spawn stars
     const nodes = Array.from(elTiles.children);
     const idSet = new Set(Array.from(idsToRemove).map(Number));
+
+    // leggi una sola volta (layout read)
+    const parentRect = elBoard.getBoundingClientRect();
+
+    // crea tutto in memoria e appendi una sola volta
+    const frag = document.createDocumentFragment();
 
     for (const n of nodes){
       const id = Number(n.dataset.id);
       if (!idSet.has(id)) continue;
+
+      // IMPORTANTISSIMO: leggi rect PRIMA di scrivere classi (evita forced reflow)
+      const rect = n.getBoundingClientRect();
+
+      const cx = rect.left - parentRect.left + rect.width/2;
+      const cy = rect.top  - parentRect.top  + rect.height/2;
+
+      // ora scrivi (style write)
       n.classList.add("fadeout");
 
-      // create star burst overlay
+      // layer particelle
       const starLayer = document.createElement("div");
       starLayer.className = "stars play";
-
-      // 6 stars
-      const rect = n.getBoundingClientRect();
-      const parentRect = elBoard.getBoundingClientRect();
-      const cx = rect.left - parentRect.left + rect.width/2;
-      const cy = rect.top - parentRect.top + rect.height/2;
-
-      starLayer.style.position = "absolute";
       starLayer.style.left = `${cx}px`;
       starLayer.style.top  = `${cy}px`;
-      starLayer.style.width = "1px";
-      starLayer.style.height = "1px";
 
-      for (let i = 0; i < 14; i++) { // più particelle = più WOW
+      const particles = document.documentElement.classList.contains("lowgfx")
+        ? Math.max(5, Math.floor(BREAK_PARTICLES * 0.75))
+        : BREAK_PARTICLES;
+
+      for (let i = 0; i < particles; i++){
         const s = document.createElement("div");
         s.className = "star";
-        s.style.left = "0px";
-        s.style.top = "0px";
 
-        // esplosione: angolo + raggio (distribuzione circolare)
-        const a = Math.random() * Math.PI * 2;
-        const r = 18 + Math.random() * 42;     // ampiezza esplosione
-        const up = -10 - Math.random() * 18;   // leggero bias verso l'alto (facoltativo)
+        // esplosione: angolo + raggio
+        const a  = Math.random() * Math.PI * 2;
+        const r  = 14 + Math.random() * 36;
+        const up = -8 - Math.random() * 14;
 
         const dx = Math.cos(a) * r;
         const dy = Math.sin(a) * r + up;
@@ -4416,25 +4473,40 @@ btnPasskeyRegister.addEventListener("click", async () => {
         s.style.setProperty("--dx", `${dx}px`);
         s.style.setProperty("--dy", `${dy}px`);
 
-        // variazioni per rendere “vivo”
-        s.style.setProperty("--rot", `${randFloat(-180, 180)}deg`);
-        s.style.setProperty("--sc", `${randFloat(0.65, 1.25)}`);
-        s.style.animationDelay = `${Math.random() * 60}ms`;
+        // micro-variazioni
+        s.style.setProperty("--rot", `${randFloat(-160, 160)}deg`);
+        s.style.setProperty("--sc",  `${randFloat(0.75, 1.25)}`);
+        s.style.animationDelay = `${Math.random() * 55}ms`;
 
-        s.innerHTML = starSVG();
+        // varia anche la size (WOW senza peso)
+        const size = document.documentElement.classList.contains("lowgfx")
+          ? (5 + Math.random()*3)
+          : (6 + Math.random()*5);
+
+        s.style.width  = `${size}px`;
+        s.style.height = `${size}px`;
+
         starLayer.appendChild(s);
       }
 
-      elBoard.appendChild(starLayer);
-      setTimeout(() => starLayer.remove(), 420);
+      frag.appendChild(starLayer);
     }
 
-    // Remove fade class from surviving tiles after animation
+    // append unico (molto più fluido)
+    elBoard.appendChild(frag);
+
+    // cleanup
+    setTimeout(() => {
+      elBoard.querySelectorAll(".stars.play").forEach(x => x.remove());
+    }, 420);
+
+    // pulizia classi tile
     setTimeout(() => {
       const nodes2 = Array.from(elTiles.children);
       for (const n of nodes2) n.classList.remove("fadeout","prebreak");
     }, 260);
   }
+
 
   // ==========
   // Save / Load
