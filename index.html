@@ -1166,6 +1166,12 @@
       "confirm.reset_progress":"Vuoi azzerare i progressi locali su questo dispositivo?",
       "confirm.delete_account":"Sei sicuro? Tutti i dati associati al tuo account saranno eliminati. Azione irreversibile.",
       "stallo":"STALLO! PREMERE UNDO",
+      "toast.reset_done":"Progressi resettati",
+      "welcome.bonus_hints":"Ecco i tuoi hint di benvenuto:",
+      "btn.haptics_on":"Vibrazione: ON",
+      "btn.haptics_off":"Vibrazione: OFF",
+
+
     },
     en: {
       "label.level":"Level",
@@ -1200,6 +1206,12 @@
       "confirm.reset_progress":"Reset local progress on this device?",
       "confirm.delete_account":"Are you sure? All data linked to your account will be deleted. This cannot be undone.",
       "stallo":"STALLED! PRESS UNDO",
+      "toast.reset_done":"Progress reset",
+      "welcome.bonus_hints":"Here are your welcome hints:",
+      "btn.haptics_on":"Haptics: ON",
+      "btn.haptics_off":"Haptics: OFF",
+
+
     },
     fr: {
       "label.level":"Niveau",
@@ -1234,6 +1246,12 @@
       "confirm.reset_progress":"Réinitialiser les progrès locaux sur cet appareil ?",
       "confirm.delete_account":"Êtes-vous sûr ? Toutes les données seront supprimées. Action irréversible.",
       "stallo":"BLOQUÉ ! APPUYEZ SUR ANNULER",
+      "toast.reset_done":"Progrès réinitialisés",
+      "welcome.bonus_hints":"Voici tes indices de bienvenue :",
+      "btn.haptics_on":"Vibrations : ON",
+      "btn.haptics_off":"Vibrations : OFF",
+
+
     },
     de: {
       "label.level":"Level",
@@ -1268,6 +1286,12 @@
       "confirm.reset_progress":"Lokalen Fortschritt auf diesem Gerät zurücksetzen?",
       "confirm.delete_account":"Bist du sicher? Alle Kontodaten werden gelöscht. Nicht rückgängig machbar.",
       "stallo":"BLOCKIERT! DRÜCKE RÜCKGÄNGIG",
+      "toast.reset_done":"Fortschritt zurückgesetzt",
+      "welcome.bonus_hints":"Hier sind deine Willkommens-Hinweise:",
+      "btn.haptics_on":"Vibration: AN",
+      "btn.haptics_off":"Vibration: AUS",
+
+
     },
     es: {
       "label.level":"Nivel",
@@ -1302,6 +1326,12 @@
       "confirm.reset_progress":"¿Reiniciar el progreso local en este dispositivo?",
       "confirm.delete_account":"¿Seguro? Se eliminarán todos los datos de tu cuenta. Acción irreversible.",
       "stallo":"¡BLOQUEADO! PULSA DESHACER",
+      "toast.reset_done":"Progreso reiniciado",
+      "welcome.bonus_hints":"Aquí están tus pistas de bienvenida:",
+      "btn.haptics_on":"Vibración: ON",
+      "btn.haptics_off":"Vibración: OFF",
+
+
     },
     ru: {
       "label.level":"Уровень",
@@ -1336,6 +1366,12 @@
       "confirm.reset_progress":"Сбросить локальный прогресс на этом устройстве?",
       "confirm.delete_account":"Вы уверены? Все данные аккаунта будут удалены. Это необратимо.",
       "stallo":"ЗАСТРЯЛО! НАЖМИТЕ ОТМЕНУ",
+      "toast.reset_done":"Прогресс сброшен",
+      "welcome.bonus_hints":"Вот ваши приветственные подсказки:",
+      "btn.haptics_on":"Вибрация: ВКЛ",
+      "btn.haptics_off":"Вибрация: ВЫКЛ",
+
+
     },
     ja: {
       "label.level":"レベル",
@@ -1370,6 +1406,12 @@
       "confirm.reset_progress":"この端末のローカル進捗をリセットしますか？",
       "confirm.delete_account":"本当によろしいですか？アカウントのデータはすべて削除されます。元に戻せません。",
       "stallo":"詰み！ UNDO を押して",
+      "toast.reset_done":"進捗をリセットしました",
+      "welcome.bonus_hints":"ウェルカムヒントはこちら：",
+      "btn.haptics_on":"バイブ: ON",
+      "btn.haptics_off":"バイブ: OFF",
+
+
     },
     ar: {
       "label.level":"المستوى",
@@ -1404,6 +1446,12 @@
       "confirm.reset_progress":"هل تريد إعادة ضبط التقدم المحلي على هذا الجهاز؟",
       "confirm.delete_account":"هل أنت متأكد؟ سيتم حذف كل بيانات الحساب. إجراء غير قابل للتراجع.",
       "stallo":"عالق! اضغط تراجع",
+      "toast.reset_done":"تمت إعادة ضبط التقدم",
+      "welcome.bonus_hints":"هذه تلميحات الترحيب الخاصة بك:",
+      "btn.haptics_on":"الاهتزاز: تشغيل",
+      "btn.haptics_off":"الاهتزاز: إيقاف",
+
+
     },
     zh: {
       "label.level":"关卡",
@@ -1438,6 +1486,12 @@
       "confirm.reset_progress":"重置本设备的本地进度？",
       "confirm.delete_account":"确定吗？账户相关数据将被删除，且不可恢复。",
       "stallo":"卡住了！请按撤销",
+      "toast.reset_done":"进度已重置",
+      "welcome.bonus_hints":"这是你的欢迎提示：",
+      "btn.haptics_on":"震动：开",
+      "btn.haptics_off":"震动：关",
+
+
     }
   };
 
@@ -1668,6 +1722,8 @@
           </div>
             <div>
                 <button id="btnMusic" data-i18n="btn.music_on">Music: ON</button>
+                <button id="btnHaptics" data-i18n="btn.haptics_on" style="width:220px;">Haptics: ON</button>
+
             </div>
           <div class="row">
             <div>
@@ -2260,14 +2316,15 @@ function attachAccountButtons(){
 function openAccount(){
   if (!accountOverlay) return;
   refreshUserUI().catch(() => {});
-  updateMusicButton();
   accountOverlay.classList.add("show");
+  syncHapticsButton();
   accountOverlay.setAttribute("aria-hidden","false");
 }
 
 function closeAccount(){
   if (!accountOverlay) return;
   accountOverlay.classList.remove("show");
+  syncHapticsButton();
   accountOverlay.setAttribute("aria-hidden","true");
 }
 
@@ -2556,6 +2613,8 @@ async function refreshUserUI(){
   const animSpeedInput = document.getElementById("animSpeed");
   const btnMusic = document.getElementById("btnMusic");
   btnMusic?.addEventListener("click", toggleBgm);
+  const btnHaptics = document.getElementById("btnHaptics");
+  btnHaptics?.addEventListener("click", toggleHaptics);
   const animSpeedVal   = document.getElementById("animSpeedVal");
   const instantModeInput = document.getElementById("instantMode");
   const relaxModeInput = document.getElementById("relaxMode");
@@ -5037,15 +5096,35 @@ btnPasskeyRegister.addEventListener("click", async () => {
   function haptic(pattern){
     try{
       if (!navigator.vibrate) return;
-      // opzionale: rispetta un toggle utente
       if (localStorage.getItem("haptics_off") === "1") return;
       navigator.vibrate(pattern);
     } catch (_) {}
   }
 
-  // pattern pronti
-  const HAPTIC_BREAK = [10];        // leggero
-  const HAPTIC_ERROR = [20, 30, 20]; // "nope"
+  const HAPTIC_BREAK = [10];
+  const HAPTIC_ERROR = [20, 30, 20];
+
+  function isHapticsOn(){
+    return localStorage.getItem("haptics_off") !== "1";
+  }
+
+  function syncHapticsButton(){
+    const btn = document.getElementById("btnHaptics");
+    if (!btn) return;
+    const key = isHapticsOn() ? "btn.haptics_on" : "btn.haptics_off";
+    btn.setAttribute("data-i18n", key);
+
+    // aggiorna il testo subito anche se applyI18n non c’è
+    if (typeof t === "function") btn.textContent = t(key);
+  }
+
+
+  function toggleHaptics(){
+    const off = localStorage.getItem("haptics_off") === "1";
+    localStorage.setItem("haptics_off", off ? "0" : "1");
+    syncHapticsButton();
+    if (!off) haptic([10]); // preview quando attivi
+  }
 
   function randFloat(a,b){
     return a + Math.random()*(b-a);
