@@ -3721,9 +3721,11 @@ btnPasskeyRegister.addEventListener("click", async () => {
         if (token !== MOVE_TOKEN){ isAnimating = false; updateButtons(); return; }
       }
 
+      haptic(idsToRemove.size >= 8 ? [12, 20, 12] : HAPTIC_BREAK);
+
       // 2) rottura vera e propria (fade + stelle)
       playBreakAnimation(idsToRemove);
-
+      
       // In instant mode: nessuna attesa, rimozione immediata
       if (!instant){
         await sleep(15);
@@ -5030,6 +5032,20 @@ btnPasskeyRegister.addEventListener("click", async () => {
     const r = Math.random();
     return a + Math.floor(r * (b-a+1));
   }
+
+  // ===== Haptics (mobile) =====
+  function haptic(pattern){
+    try{
+      if (!navigator.vibrate) return;
+      // opzionale: rispetta un toggle utente
+      if (localStorage.getItem("haptics_off") === "1") return;
+      navigator.vibrate(pattern);
+    } catch (_) {}
+  }
+
+  // pattern pronti
+  const HAPTIC_BREAK = [10];        // leggero
+  const HAPTIC_ERROR = [20, 30, 20]; // "nope"
 
   function randFloat(a,b){
     return a + Math.random()*(b-a);
