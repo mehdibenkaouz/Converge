@@ -2252,14 +2252,64 @@ function userStorageKey(baseKey){
   return baseKey + ":" + uk;
 }
 
+let __uiDialogResolve = null;
+
+function uiDialogOpen({ title="Converge", msg="", mode="alert" }){
+  const ov = document.getElementById("uiDialogOverlay");
+  const elT = document.getElementById("uiDialogTitle");
+  const elM = document.getElementById("uiDialogMsg");
+  const btnX = document.getElementById("uiDialogX");
+  const btnOk = document.getElementById("uiDialogOk");
+  const btnCancel = document.getElementById("uiDialogCancel");
+  if (!ov || !elT || !elM || !btnOk || !btnCancel || !btnX) {
+    // fallback brutale (non dovrebbe mai servire)
+    if (mode === "confirm") return Promise.resolve(confirm(String(msg)));
+    alert(String(msg));
+    return Promise.resolve(true);
+  }
+
+  elT.textContent = title;
+  elM.textContent = msg;
+
+  const isConfirm = (mode === "confirm");
+  btnCancel.style.display = isConfirm ? "" : "none";
+  btnOk.textContent = isConfirm ? "Conferma" : "OK";
+
+  ov.classList.add("show");
+  ov.setAttribute("aria-hidden","false");
+
+  const close = (val) => {
+    ov.classList.remove("show");
+    ov.setAttribute("aria-hidden","true");
+    const r = __uiDialogResolve;
+    __uiDialogResolve = null;
+    if (r) r(val);
+  };
+
+  // pulizia handlers
+  btnOk.onclick = () => close(true);
+  btnCancel.onclick = () => close(false);
+  btnX.onclick = () => close(false);
+  ov.onclick = (e) => { if (e.target === ov) close(false); };
+
+  return new Promise(resolve => { __uiDialogResolve = resolve; });
+}
+
+function uiAlert(msg, title="Converge"){
+  return uiDialogOpen({ title, msg: String(msg), mode:"alert" });
+}
+
+function uiConfirm(msg, title="Converge"){
+  return uiDialogOpen({ title, msg: String(msg), mode:"confirm" });
+}
 
 function attachAccountButtons(){
   if (btnAccount) btnAccount.addEventListener("click", openAccount);
   if (btnCloseAccount) btnCloseAccount.addEventListener("click", closeAccount);
   if (btnAccountLogout) btnAccountLogout.addEventListener("click", () => { logout(); closeAccount(); });
 
-  if (btnResetProgress) btnResetProgress.addEventListener("click", () => {
-    if (!confirm("Vuoi davvero resettare i progressi locali su questo dispositivo?")) return;
+  if (btnResetProgress) btnResetProgress.addEventListener("click", async () => {
+    if (!(await uiConfirm("Vuoi davvero resettare i progressi locali su questo dispositivo?"))) return;
     localStorage.removeItem(userStorageKey(STORAGE_KEY));
     if (!getAccessToken()) localStorage.removeItem(STORAGE_KEY); // solo per guest legacy
 
@@ -2279,7 +2329,7 @@ function attachAccountButtons(){
       ? "Sei sicuro?\n\nTutti i dati associati al tuo account saranno eliminati.\nAzione irreversibile."
       : "ATTENZIONE:\n\nQuesta azione SIMULA l'eliminazione dell'account.\nNessun dato verrà cancellato dal server.\n\nVuoi continuare?";
 
-    if (!confirm(msg)) return;
+    if (!(await uiConfirm(msg))) return;
 
     btnDeleteAccount.disabled = true;
 
@@ -2830,7 +2880,7 @@ async function refreshUserUI(){
 btnPasskeyRegister.addEventListener("click", async () => {
       const nickname = loginNickname.value.trim();
       if (!nickname || nickname.length < 3) {
-        alert("Inserisci un nickname (min 3 caratteri)");
+        await uiAlert("Login passkey fallito: " + (e?.message || e));
         return;
       }
 
@@ -5542,6 +5592,22 @@ function markPreBreak(idsToRemove){
 
   });
 </script>
+
+<div id="uiDialogOverlay" class="modal-overlay" aria-hidden="true">
+  <div class="modal" style="max-width:520px;">
+    <header>
+      <h2 id="uiDialogTitle">Converge</h2>
+      <button id="uiDialogX" class="btn secondary">✕</button>
+    </header>
+    <div class="content">
+      <div id="uiDialogMsg" style="opacity:.92; line-height:1.35;"></div>
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:14px;">
+        <button id="uiDialogCancel" class="btn secondary">Annulla</button>
+        <button id="uiDialogOk" class="btn">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
