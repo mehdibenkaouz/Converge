@@ -1155,7 +1155,7 @@
       "note.instant":"Nessuna attesa: puoi scorrere anche mentre gli effetti sono in corso (l'animazione può essere tagliata).",
       "label.relax":"Relax mode",
       "note.relax":"Solo griglie 3×3 / 5×5. Niente 7×7 o 10×10 (non cambia il punteggio, solo la difficoltà).",
-      "label.user_id":"User ID 2.0",
+      "label.user_id":"User ID 2.1",
       "label.language":"Lingua",
       "btn.logout":"Logout",
       "btn.reset_progress":"Reset progressi",
@@ -4510,7 +4510,7 @@ btnPasskeyRegister.addEventListener("click", async () => {
     const particles = Math.max(0, Math.min(BREAK_PARTICLES, perTile));
 
     // se sono troppi tile, niente layer per-ogni-tile (puoi anche lasciarlo così: particles diventa 1-2)
-    // se vuoi ancora più "safe", metti: if (total > 12) particles = 0;
+    if (total > 12) particles = 0;
 
     const frag = document.createDocumentFragment();
 
