@@ -483,6 +483,17 @@
     65%{ transform: translate(var(--x), var(--y)) scale(1.02) rotate(-1deg); }
     100%{ transform: translate(var(--x), var(--y)) scale(1); }
   }
+    /* prebreak "lite" (mobile/lowgfx): solo transform, niente filter/box-shadow */
+  .tile.prebreakLite{
+    animation: prebreakLite var(--anim-prebreak) ease-in-out;
+  }
+  @keyframes prebreakLite{
+    0%{   transform: translate(var(--x), var(--y)) scale(1); }
+    35%{  transform: translate(var(--x), var(--y)) scale(1.05) rotate(1deg); }
+    65%{  transform: translate(var(--x), var(--y)) scale(1.01) rotate(-1deg); }
+    100%{ transform: translate(var(--x), var(--y)) scale(1); }
+  }
+
   .tile.fadeout{
     opacity:0;
     transform: translate(var(--x), var(--y)) scale(.88);
@@ -494,6 +505,10 @@
     filter: none !important;
     box-shadow: var(--tile-shadow) !important; /* niente mega glow */
   }
+  html.massbreak .tile.prebreakLite{
+    animation: none !important;
+  }
+
 
   html.massbreak .tile.fadeout{
     filter: none !important; /* il blur su 20 tile inchioda molti telefoni */
@@ -1165,7 +1180,7 @@
       "note.instant":"Nessuna attesa: puoi scorrere anche mentre gli effetti sono in corso (l'animazione può essere tagliata).",
       "label.relax":"Relax mode",
       "note.relax":"Solo griglie 3×3 / 5×5. Niente 7×7 o 10×10 (non cambia il punteggio, solo la difficoltà).",
-      "label.user_id":"User ID 2.3",
+      "label.user_id":"User ID 1.0",
       "label.language":"Lingua",
       "btn.logout":"Logout",
       "btn.reset_progress":"Reset progressi",
@@ -2634,7 +2649,14 @@ async function refreshUserUI(){
 
   
   // FX (stelline) a velocità costante
-  document.documentElement.style.setProperty("--anim-fx", 1);
+  function applyFxSpeed(){
+    // In manual a velocità normali resta “bella” e costante.
+    // In AUTO o quando vai veloce, accelera l’FX così non si accumula e non lagga.
+    const fx = (typeof AUTO_MODE !== "undefined" && AUTO_MODE) || GAME_SPEED >= 1.6 ? GAME_SPEED : 1;
+    document.documentElement.style.setProperty("--anim-fx", fx);
+  }
+  applyFxSpeed();
+
 
   // Carica impostazioni UI salvate (velocità + modalità istantanea)
   const savedUI = loadUiSettings();
@@ -2660,6 +2682,7 @@ async function refreshUserUI(){
       const v = clamp(parseFloat(animSpeedInput.value) || 1, 0.5, 5.0);
       if (animSpeedVal) animSpeedVal.textContent = v.toFixed(1) + "×";
       setGameSpeed(v);
+      applyFxSpeed();
       persistUI();
     });
   }
@@ -3628,6 +3651,7 @@ btnPasskeyRegister.addEventListener("click", async () => {
 
       // START
       AUTO_MODE = true;
+      applyFxSpeed();
       autoStop = false;
       btnAuto.classList.add("active");
       toastMsg("AUTO: ON");
@@ -3657,7 +3681,17 @@ btnPasskeyRegister.addEventListener("click", async () => {
           // esegui la mossa (usa la tua funzione reale: doMove / applyMove / swipeMove etc.)
           // Cerca nel file la funzione che viene chiamata quando fai swipe.
           if (typeof doMove === "function"){
-            await doMove(pick.dir);
+            
+              try {
+              await doMove(pick.dir);
+            } catch (e) {
+              console.error("AUTO stopped:", e);
+              bigToast("AUTO: errore animazione", 1200);
+              AUTO_MODE = false;
+              autoStop = true;
+              break;
+            }
+
           } else if (typeof performMove === "function"){
             await performMove(pick.dir);
           } else {
@@ -4490,14 +4524,19 @@ function markPreBreak(idsToRemove){
 
   const low = document.documentElement.classList.contains("lowgfx");
 
-  // Se rompe tanti tile insieme: niente prebreak (è costoso su mobile)
-  if (low || total > 5) return;
+  // Se rompe tanti tile insieme: niente prebreak (troppo spam)
+  if (total > 5) return;
+
+  // In lowgfx usiamo una versione "lite" (solo transform)
+  const cls = low ? "prebreakLite" : "prebreak";
+
 
   const idSet = new Set(arr);
   const nodes = Array.from(elTiles.children);
   for (const n of nodes){
     const id = Number(n.dataset.id);
-    if (idSet.has(id)) n.classList.add("prebreak");
+    if (idSet.has(id)) n.classList.add(cls);
+
   }
 }
 
@@ -4535,10 +4574,10 @@ function markPreBreak(idsToRemove){
 
     // quante particelle per tile in base al numero di tile rotti
     const perTile = Math.max(0, Math.floor(TOTAL_BUDGET / total));
-    const particles = Math.max(0, Math.min(BREAK_PARTICLES, perTile));
+    const particles = (total > 12)
+      ? 0
+      : Math.max(0, Math.min(BREAK_PARTICLES, perTile));
 
-    // se sono troppi tile, niente layer per-ogni-tile (puoi anche lasciarlo così: particles diventa 1-2)
-    if (total > 12) particles = 0;
 
     const frag = document.createDocumentFragment();
 
@@ -4585,7 +4624,8 @@ function markPreBreak(idsToRemove){
         s.style.setProperty("--sc", `${randFloat(0.65, 1.25)}`);
         s.style.animationDelay = `${Math.random() * 60}ms`;
 
-        s.innerHTML = starSVG();
+        // s.innerHTML = starSVG();  // <-- NO: troppo pesante su mobile
+
         starLayer.appendChild(s);
       }
 
@@ -5271,6 +5311,7 @@ function markPreBreak(idsToRemove){
   function exitAutoTutorial({silent=false} = {}){
     // spegne e ripristina
     AUTO_MODE = false;
+    applyFxSpeed();
     autoStop = true;
 
     const btnAuto = document.getElementById("btnAuto");
