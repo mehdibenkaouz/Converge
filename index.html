@@ -1594,6 +1594,16 @@ html.lowgfx .app::after{
     animation: spin 30s linear infinite;
   }
 
+  #privacyOverlay{
+    z-index: 99999;
+  }
+
+
+  #privacyOverlay .modal { overflow: hidden; }
+  #privacyOverlay .content { flex: 1; min-height: 0; padding: 0 !important; }
+  #privacyFrame { width: 100%; height: 100%; display: block; border: 0; }
+
+
 </style>
 </head>
 
@@ -2523,7 +2533,7 @@ html.lowgfx .app::after{
           <button id="btnDeleteAccount" class="danger" data-i18n="btn.delete_account">Elimina account</button>
         </div>
 
-        <a style="display:block; margin-top:10px; text-align:center; color: white; " href="/privacy.html" target="_blank">Privacy Policy</a>
+        <a style="display:block; margin-top:10px; text-align:center; color: white; " id="linkPrivacy" href="#">Privacy Policy</a>
 
       </div>
     </div>
@@ -2834,9 +2844,14 @@ async function doLogin(username, password){
 }
 
 
-document.getElementById("btn-logout")?.addEventListener("click", async () => {
-  await logout();
-});
+  document.getElementById("btn-logout")?.addEventListener("click", async () => {
+    await logout();
+  });
+
+  document.getElementById("linkPrivacy")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    openPrivacy();
+  });
 
 
 async function logout() {
@@ -4274,6 +4289,7 @@ btnPasskeyRegister.addEventListener("click", async () => {
     });
   }
 
+
   function attachButtons(){
   
 
@@ -4436,6 +4452,53 @@ btnPasskeyRegister.addEventListener("click", async () => {
               
 
   }
+
+
+
+  function openPrivacy(){
+    const ov = document.getElementById("privacyOverlay");
+    if (!ov) return;
+    ov.classList.remove("hidden");
+    ov.classList.add("show");
+  }
+
+  function closePrivacy(){
+    const ov = document.getElementById("privacyOverlay");
+    if (!ov) return;
+    ov.classList.add("hidden");
+    ov.classList.remove("show");
+  }
+
+  document.addEventListener("click", (e) => {
+    const t = e.target;
+
+    // click sulla X
+    if (t && (t.id === "btnClosePrivacy" || t.closest?.("#btnClosePrivacy"))) {
+      e.preventDefault();
+      e.stopPropagation();
+      closePrivacy();
+      return;
+    }
+
+    // click fuori dal modal (sullo sfondo overlay)
+    const ov = document.getElementById("privacyOverlay");
+    if (ov && !ov.classList.contains("hidden") && t === ov) {
+      closePrivacy();
+    }
+  });
+  // listeners
+  document.getElementById("btnClosePrivacy")?.addEventListener("click", closePrivacy);
+
+  // chiudi cliccando fuori dalla card
+  document.getElementById("privacyOverlay")?.addEventListener("click", (e) => {
+    if (e.target && e.target.id === "privacyOverlay") closePrivacy();
+  });
+
+  // ESC per chiudere
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closePrivacy();
+  });
+
 
   const btnAuto = document.getElementById("btnAuto");
 
@@ -6346,5 +6409,25 @@ function markPreBreak(idsToRemove){
     </div>
   </div>
 </div>
+
+<!-- PRIVACY OVERLAY -->
+<div id="privacyOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Privacy Policy">
+  <div class="modal" style="width:min(820px, 96vw); height:min(80vh, 760px); display:flex; flex-direction:column;">
+    <header>
+      <h2>Privacy Policy</h2>
+      <button id="btnClosePrivacy" type="button" aria-label="Close" title="Close">✕</button>
+    </header>
+
+    <div class="content" style="padding:0; flex:1; min-height: 50vh;">
+      <iframe
+        id="privacyFrame"
+        src="privacy.html"
+        style="border:0; width:100%; height:100%; border-radius: 0 0 26px 26px;"
+        title="Privacy Policy"
+      ></iframe>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
