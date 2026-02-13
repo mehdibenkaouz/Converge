@@ -4145,6 +4145,28 @@ btnPasskeyRegister.addEventListener("click", async () => {
   function attachInput(){
     let startX=0, startY=0;
     let active = false;
+    // ===== SAFETY: evita swipe fantasma su TWA (active bloccato) =====
+    const cancelGesture = () => { active = false; };
+
+    // Se parte un touch e poi viene "cancellato" dal sistema (molto comune su mobile/TWA)
+    elBoard.addEventListener("touchcancel", cancelGesture, { passive: true });
+
+    // Se l'app perde focus / va in background / cambia visibilità
+    window.addEventListener("blur", cancelGesture, { passive: true });
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) cancelGesture();
+    }, { passive: true });
+
+    // Qualsiasi tap/click FUORI dalla board deve annullare una gesture rimasta appesa
+    document.addEventListener("mousedown", (e) => {
+      if (!elBoard.contains(e.target)) cancelGesture();
+    }, true);
+
+    document.addEventListener("touchstart", (e) => {
+      const t = e.target;
+      if (t && !elBoard.contains(t)) cancelGesture();
+    }, { capture: true, passive: true });
+
 
     const THRESH_BASE = 18;
     const THRESH = () => Math.max(10, THRESH_BASE - Math.floor((GAME_SPEED - 1) * 2));
