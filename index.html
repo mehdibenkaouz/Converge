@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -84,7 +84,10 @@
     display:flex;
     align-items:center;
     justify-content:center;
-    padding: clamp(12px, 2.2vw, 22px);
+    padding-top: max(clamp(12px, 2.2vw, 22px), env(safe-area-inset-top));
+    padding-left: max(clamp(12px, 2.2vw, 22px), env(safe-area-inset-left));
+    padding-right: max(clamp(12px, 2.2vw, 22px), env(safe-area-inset-right));
+    padding-bottom: max(clamp(12px, 2.2vw, 22px), env(safe-area-inset-bottom));
     overscroll-behavior:none;
     touch-action:none;
     -webkit-font-smoothing: antialiased;
@@ -2270,6 +2273,7 @@ html.lowgfx .app::after{
 
 
 <body>
+
 <div class="app">
     <div class="topbar">
       <div class="topbar-head">
