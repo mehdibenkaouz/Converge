@@ -1717,6 +1717,8 @@ html.lowgfx .app::after{
       "login.guest":"Gioca senza account",
       "login.note":"Nota: su alcuni dispositivi il nickname può essere opzionale per il login (discoverable passkeys).",
       "label.best_score":"Punteggio più alto",
+      "Ads1":"Hai esaurito gli hint?",
+      "Ads2":"Guarda un annuncio per ottenere 2 hint extra :)",
     },
     en: {
       "label.level":"Level",
@@ -1774,7 +1776,8 @@ html.lowgfx .app::after{
       "login.guest":"Play as guest",
       "login.note":"Note: on some devices nickname can be optional (discoverable passkeys).",
       "label.best_score":"Highest score",
-
+      "Ads1":"Out of hints?",
+      "Ads2":"Watch an ad to get 2 extra hints :)",
     },
     fr: {
       "label.level":"Niveau",
@@ -1831,7 +1834,8 @@ html.lowgfx .app::after{
       "login.passkey_register":"Créer une passkey (sans mot de passe)",
       "login.guest":"Jouer en tant qu’invité",
       "login.note":"Note : sur certains appareils, le pseudo peut être optionnel pour la connexion (passkeys découvrables).",
-   
+      "Ads1":"Plus d’indices ?",
+      "Ads2":"Regardez une publicité pour obtenir 2 indices supplémentaires :)",
    
     },
     de: {
@@ -1890,6 +1894,8 @@ html.lowgfx .app::after{
       "login.guest":"Als Gast spielen",
       "login.note":"Hinweis: Auf einigen Geräten kann der Nickname für die Anmeldung optional sein (discoverable passkeys).",
       "label.best_score":"Höchste Punktzahl",
+      "Ads1":"Keine Hinweise mehr?",
+      "Ads2":"Schau dir eine Werbung an, um 2 zusätzliche Hinweise zu erhalten :)",
     },
     es: {
       "label.level":"Nivel",
@@ -1947,6 +1953,8 @@ html.lowgfx .app::after{
       "login.guest":"Jugar sin cuenta",
       "login.note":"Nota: en algunos dispositivos el apodo puede ser opcional para iniciar sesión (discoverable passkeys).",
       "label.best_score":"Puntuación más alta",
+      "Ads1":"¿Sin pistas?",
+      "Ads2":"Mira un anuncio para obtener 2 pistas extra :)",
     },
     ru: {
       "label.level":"Уровень",
@@ -2004,6 +2012,8 @@ html.lowgfx .app::after{
       "login.guest":"Играть без аккаунта",
       "login.note":"Примечание: на некоторых устройствах ник может быть необязательным для входа (discoverable passkeys).",
       "label.best_score":"Лучший счёт",
+      "Ads1":"Закончились подсказки?",
+      "Ads2":"Посмотри рекламу, чтобы получить 2 дополнительные подсказки :)",
         
     },
     ja: {
@@ -2062,6 +2072,8 @@ html.lowgfx .app::after{
       "login.guest":"ゲストとしてプレイ",
       "login.note":"注: 一部のデバイスでは、ニックネームはログインにオプション（発見可能なパスキー）です。",
       "label.best_score":"最高スコア",
+      "Ads1":"ヒントがなくなりましたか？",
+      "Ads2":"広告を見て、2つの追加ヒントを獲得しましょう :)",
       
     },
     ar: {
@@ -2120,6 +2132,8 @@ html.lowgfx .app::after{
       "login.guest":"اللعب كضيف",
       "login.note":"ملاحظة: في بعض الأجهزة قد يكون الاسم المستعار اختياريًا (Passkeys قابلة للاكتشاف).",
       "label.best_score":"أعلى نقاط",
+      "Ads1":"نفدت التلميحات؟",
+      "Ads2":"شاهد إعلانًا للحصول على 2 تلميحات إضافية :)",
 
     },
     zh: {
@@ -2178,6 +2192,8 @@ html.lowgfx .app::after{
       "login.guest":"以游客身份玩",
       "login.note":"注：在某些设备上，昵称对于登录可能是可选的（可发现的Passkeys）。",
       "label.best_score":"最高分",
+      "Ads1":"提示用完了？",
+      "Ads2":"观看广告以获得2个额外提示 :)",
   } };
 
   const LANG_KEY = "psb_lang_v1";
@@ -6371,7 +6387,7 @@ function markPreBreak(idsToRemove){
 </script>
 <div id="rewardOverlay" class="reward-overlay hidden" role="dialog" aria-modal="true">
   <div class="reward-card">
-    <div class="reward-title">Hai finito gli hint</div>
+    <div class="reward-title" data-i18n="Ads1">Hai finito gli hint</div>
     <div class="reward-text">Guarda una pubblicità (pochi secondi) e ottieni <b>+2 hint</b>.</div>
     <div class="reward-actions">
       <button id="btnRewardWatch" class="btn">Guarda</button>
