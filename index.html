@@ -20,40 +20,45 @@
 <script>
 (function(){
   const params = new URLSearchParams(location.search);
-  const hasApp = params.get("app") === "1";
+  const hasAppParam = params.get("app") === "1";
 
-  // se non c'è app=1, prova UNA volta a reindirizzare a /?app=1
-  if (!hasApp) {
-    const tried = sessionStorage.getItem("__tried_app_param") === "1";
-    if (!tried) {
-      sessionStorage.setItem("__tried_app_param", "1");
-      params.set("app", "1");
-      const qs = params.toString();
-      location.replace(location.pathname + "?" + qs + location.hash);
-      return;
-    }
+  // TWA/PWA di solito risultano "standalone" o "fullscreen"
+  const isStandalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.matchMedia("(display-mode: fullscreen)").matches ||
+    window.matchMedia("(display-mode: minimal-ui)").matches ||
+    (navigator.standalone === true);
+
+  // Se siamo in standalone, marchiamo "ok, è app"
+  if (isStandalone) {
+    localStorage.setItem("__converge_official", "1");
   }
 
-  // se siamo qui: o c'è app=1, o abbiamo già provato e non ha funzionato -> reset flag
-  if (hasApp) {
-    sessionStorage.removeItem("__tried_app_param");
+  const isOfficial = localStorage.getItem("__converge_official") === "1";
+
+  // Se è app (TWA), assicuriamoci che app=1 ci sia SEMPRE (così non ricadi nel bug)
+  if (isOfficial && !hasAppParam) {
+    params.set("app", "1");
+    location.replace(location.pathname + "?" + params.toString() + location.hash);
     return;
   }
 
-  // blocco definitivo (browser web)
-  document.documentElement.innerHTML = `
-    <style>
-      body{
-        margin:0;height:100vh;display:flex;align-items:center;justify-content:center;
-        background:#0b0c16;color:#e6e6e6;font-family:system-ui;text-align:center;padding:20px;
-      }
-      a{color:#8ab4ff;text-decoration:none;}
-    </style>
-    <div>
-      <h2>Converge is available only in the official app.</h2>
-      <p>Please download the app from Google Play.</p>
-    </div>
-  `;
+  // Se NON è app, blocca (web normale)
+  if (!isOfficial) {
+    document.documentElement.innerHTML = `
+      <style>
+        body{
+          margin:0;height:100vh;display:flex;align-items:center;justify-content:center;
+          background:#0b0c16;color:#e6e6e6;font-family:system-ui;text-align:center;padding:20px;
+        }
+        a{color:#8ab4ff;text-decoration:none;}
+      </style>
+      <div>
+        <h2>Converge is available only in the official app.</h2>
+        <p>Please download the app from Google Play.</p>
+      </div>
+    `;
+  }
 })();
 </script>
 
