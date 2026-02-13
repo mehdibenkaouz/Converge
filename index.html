@@ -13,9 +13,8 @@
   <meta name="theme-color" content="#050611">
 
 <title>Converge</title>
-  <style>
-
-  :root{
+<style>
+:root{
     /* ===== Converge “WOW” theme (premium + playful) ===== */
     --bg-0:#050611;           /* deep space */
     --bg-1:#071b2d;           /* ocean night */
@@ -98,7 +97,7 @@
   }
 
   /* Animated aurora blobs */
-  body::before,
+
   body::after{
     content:"";
     position: fixed;
@@ -110,13 +109,16 @@
     transform: translate3d(0,0,0);
     will-change: transform;
     mix-blend-mode: screen;
+    
   }
+  
   body::before{
     background:
       radial-gradient(closest-side at 25% 35%, rgba(124,245,197,.55), transparent 60%),
       radial-gradient(closest-side at 75% 30%, rgba(124,170,245,.45), transparent 62%),
       radial-gradient(closest-side at 55% 75%, rgba(245,124,215,.42), transparent 60%);
-    animation: auroraA 14s ease-in-out infinite alternate;
+    animation: auroraA 10s ease-in-out infinite alternate;
+    
   }
   body::after{
     background:
@@ -162,51 +164,65 @@
     z-index:2;
   }
 
+.app > *{
+  position: relative;
+  z-index: 1;
+}
+
+
+/* ===== Ultra thin radial lasers with glow ===== */
+.app::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:240vmax;
+  height:240vmax;
+  transform: translate(-50%, -50%) rotate(0deg);
+  transform-origin:center;
+
+  pointer-events:none;
+  z-index:0;
+
+  /* Layer 1: ultra thin sharp lines */
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      rgba(255, 255, 255, 0.185) 0deg 0.6deg,
+      transparent 0.6deg 14deg
+    );
+
+  mix-blend-mode: screen;
+  opacity:.65;
+
+  animation: laserSpin 370s linear infinite;
+
+  will-change: transform;
+  backface-visibility:hidden;
+}
+
+@keyframes laserSpin{
+  0%   { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+
+
+
   /* ===== Topbar (premium glass) ===== */
   .topbar{
     display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap: 14px;
+    flex-direction:column;
+    align-items:stretch;
+    gap: 12px;
     padding: 14px 16px;
     border-radius: var(--radius-xl);
     position:relative;
-    background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.06));
-    border: 1px solid rgba(255,255,255,.14);
-    box-shadow: var(--shadow-soft);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: transparent;
+    border: 0px solid rgba(255,255,255,.14);
     overflow:hidden;
   }
 
-
-  /* Gradient border shine */
-  .topbar::before{
-    content:"";
-    position:absolute;
-    inset:-2px;
-    border-radius: inherit;
-    padding: 2px;
-    background: conic-gradient(from 180deg, rgba(124,245,197,.0), rgba(124,245,197,.45), rgba(124,170,245,.35), rgba(245,124,215,.35), rgba(124,245,197,.45), rgba(124,245,197,.0));
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    /* Standard (supporto parziale) */
-    mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    mask-composite: exclude;
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity:.55;
-    filter: blur(.2px);
-    animation: spinBorder 9s linear infinite;
-    pointer-events:none;
-  }
-  @keyframes spinBorder{
-    0%{ transform: rotate(0deg); }
-    100%{ transform: rotate(360deg); }
-  }
 
   .title{
     display:flex;
@@ -218,8 +234,8 @@
     margin:0;
     font-family: "Baloo 2", "Sora", ui-sans-serif, system-ui;
     font-weight: 800;
-    letter-spacing: .4px;
-    font-size: clamp(22px, 2.4vw, 34px);
+    letter-spacing: .3px;
+    font-size: clamp(37px, 1.2vw, 20px);
     line-height: 1;
     background: linear-gradient(90deg, rgba(124,245,197,.95), rgba(124,170,245,.95), rgba(245,124,215,.92));
     -webkit-background-clip:text;
@@ -251,10 +267,10 @@
     gap: 10px;
   }
   .iconbtn{
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    border: 1px solid rgba(255,255,255,.14);
+    width: 50px;
+    height: 50px;
+    border-radius: 30px;
+    border: 0px solid rgba(255,255,255,.14);
     background:
       radial-gradient(120% 120% at 20% 20%, rgba(255,255,255,.20), rgba(255,255,255,.06)),
       rgba(0,0,0,.18);
@@ -265,10 +281,178 @@
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     user-select:none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 18px;
+    line-height: 1;
   }
   .iconbtn:hover{ transform: translateY(-1px); filter: brightness(1.05); }
   .iconbtn:active{ transform: translateY(0px) scale(.98); box-shadow: 0 8px 18px rgba(0,0,0,.30); }
   .iconbtn:focus-visible{ outline: none; box-shadow: var(--shadow-soft), var(--ring); }
+  /* --- Mobile header layout blocks --- */
+  .iconbtn{
+    padding: 0;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .topbar-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap: 12px;
+  }
+  .topbar-icons{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    flex-shrink:0;
+  }
+
+  .hud{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .hud-reward,
+  .reward-status,
+  .hud-size{
+    grid-column: span 3;
+  }
+
+  .hud-card{
+    padding: 10px 12px;
+    border-radius: 18px;
+    background: rgba(0,0,0,.22);
+    border: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 12px 22px rgba(0,0,0,.25);
+    display:flex;
+    align-items:baseline;
+    gap: 10px;
+    min-height: 44px;
+  }
+  .hud-label{
+    font-weight: 900;
+    font-size: 12px;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    opacity: .85;
+  }
+  .hud-value{
+    font-weight: 900;
+    font-size: 18px;
+  }
+
+  .hud-reward{
+    min-height: 44px;
+    border-radius: 18px;
+    padding: 10px 12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap: 10px;
+  }
+
+
+
+  .hud-btn:active,
+  .iconbtn:active{
+    transform: scale(.92);
+  }
+
+  .topbar-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap: 10px;
+    justify-content:flex-end;
+    align-items:center;
+  }
+
+  .reward-status{
+    width: 100%;
+    margin-top: 2px;
+  }
+
+  .levelbar{ display:none; }
+
+  @media (max-width: 520px){
+    .sub{ display:none; }
+
+    .title{
+      min-width: 0;
+      align-items:flex-start;
+      text-align:left;
+    }
+
+    .topbar-actions{ display:none; }
+
+    /* HUD grid like the mock */
+    .hud{
+      display:grid;
+      grid-template-columns: 1fr 1fr auto;
+      grid-template-areas:
+        "score best reward"
+        "score moves reward";
+      align-items:stretch;
+    }
+    .hud-score{ grid-area: score; }
+    .hud-best{ grid-area: best; }
+    .hud-moves{ grid-area: moves; }
+    .hud-reward{ grid-area: reward; }
+
+    .hud-size{ display:none; }
+
+    .hud-card{
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+      text-align:center;
+      gap: 6px;
+    }
+    .hud-score .hud-value{ font-size: 32px; }
+    .hud-best  .hud-value{ font-size: 26px; }
+    .hud-moves .hud-value{ font-size: 24px; }
+
+    .hud-reward{
+      flex-direction:column;
+      gap: 6px;
+      padding: 10px 10px;
+    }
+    .hud-reward-ico{ font-size: 28px; }
+    .hud-reward-txt{ font-size: 18px; font-weight: 900; }
+
+    /* Bottom level bar */
+    .levelbar{
+      display:flex;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 6;
+      padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
+      background: rgba(0,0,0,.55);
+      border-top: 1px solid rgba(255,255,255,.14);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      align-items:center;
+      justify-content:space-between;
+      text-transform: uppercase;
+      font-weight: 900;
+      letter-spacing: 1px;
+    }
+    .levelbar span{ font-size: 22px; opacity: .92; }
+    .levelbar strong{ font-size: 28px; }
+
+    .app{ padding-bottom: 84px; }
+  }
 
   .stats{
     display:flex;
@@ -307,16 +491,15 @@
     font-weight: 800;
     letter-spacing: .25px;
     border-radius: 14px;
-    border: 1px solid rgba(255,255,255,.14);
+    border: 0px solid rgba(255,255,255,.14);
     padding: 10px 14px;
     cursor:pointer;
     color: rgba(255,255,255,.92);
-    background:
-      radial-gradient(140% 130% at 20% 20%, rgba(255,255,255,.22), rgba(255,255,255,.06)),
-      linear-gradient(180deg, rgba(124,245,197,.25), rgba(124,170,245,.14));
+    background: transparent;
     box-shadow: 0 14px 28px rgba(0,0,0,.35);
     transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
     user-select:none;
+
   }
   button:hover{ transform: translateY(-1px); filter: brightness(1.06); }
   button:active{ transform: translateY(0px) scale(.98); box-shadow: 0 9px 18px rgba(0,0,0,.28); }
@@ -591,6 +774,10 @@
     font-family: "Baloo 2", "Sora", ui-sans-serif;
     font-weight: 800;
     letter-spacing: .3px;
+    flex: 1;
+    min-width: 0;
+
+
   }
   .modal header button{
     padding: 8px 12px;
@@ -783,6 +970,83 @@
     .title{ align-items: center; text-align: center; }
     .userbadge{ margin: 0 auto; }
   }
+
+  @media (max-width: 420px){
+      /* app più stretta e centrata */
+      .app{
+        width: min(420px, 100%);
+        margin: 0 auto;
+      }
+
+      .topbar{
+        padding: 12px 12px;
+        gap: 10px;
+      }
+
+      /* ⚙️ in alto a destra */
+      .userbox{
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        z-index: 3;
+      }
+
+      /* lascia spazio a destra per non sovrapporre il titolo con ⚙️ */
+      .title{
+        align-items: center;
+        text-align: center;
+        padding-right: 54px; /* ≈ larghezza icona */
+        padding-left: 54px;  /* simmetria estetica */
+      }
+
+      /* pills più compatti */
+      .stats{
+        gap: 8px;
+      }
+      .pill{
+        padding: 8px 10px;
+        font-size: 12px;
+      }
+
+      /* pulsanti: riga compatta (icona + 2 bottoni), poi AD a tutta larghezza */
+      .btns{
+        width: 100%;
+        display: grid;
+        grid-template-columns: 44px 1fr 1fr;
+        gap: 10px;
+        justify-content: stretch;
+        align-items: center;
+      }
+
+      #btnUndo{
+        width: 50px;
+        height: 50px;
+      }
+
+      #btnAuto, #btnNew{
+        width: 100%;
+      }
+
+      #btnReward2Hints{
+        grid-column: 1 / -1;
+        width: 100%;
+      }
+
+      #rewardOverlayStatus{
+        grid-column: 1 / -1;
+        margin-top: -2px;
+        text-align: center;
+      }
+
+      /* Hint (lampadina) compatto in basso a sinistra */
+      .hint-btn-wrap{
+        align-self: flex-start;
+      }
+      #btnHint{
+        width: 44px;
+        height: 44px;
+      }
+    }
 
   @media (prefers-reduced-motion: reduce){
     body::before, body::after,
@@ -1151,6 +1415,127 @@
   .hidden{ display:none !important; }
 
 
+  /* =========================================================
+     HUD layout fix (mobile-first, 3-col with right stack)
+     - Keeps logic intact (same IDs), only layout.
+     ========================================================= */
+
+  /* Desktop / wide */
+  .hud{
+    display:grid;
+    gap:10px;
+    align-items:stretch;
+    grid-template-columns: repeat(4, minmax(88px, 1fr)) auto;
+    grid-template-areas:
+      "score best moves size right"
+      "status status status status status";
+  }
+  .hud-score{ grid-area: score; }
+  .hud-best{  grid-area: best; }
+  .hud-moves{ grid-area: moves; }
+  .hud-size{  grid-area: size; }
+  .hud-right{
+    grid-area: right;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    align-items:stretch;
+    justify-content:space-between;
+  }
+  .reward-status{
+    grid-area: status;
+    grid-column: auto;
+  }
+  .hud-size{ grid-column:auto; }
+
+  .hud-btn{
+    width:100px;
+    height:auto;
+    border-radius:18px;
+    display:grid;
+    place-items:center;
+  }
+  .hud-icon{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    display:block;
+    pointer-events:none;
+  }
+
+  .iconbtn img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    display:block;
+    pointer-events:none;
+  }
+
+  /* Mobile */
+  @media (max-width: 520px){
+    .hud{
+      grid-template-columns: 1fr 1fr auto;
+      grid-template-areas:
+        "score moves right"
+        "best  size  right"
+        "status status status";
+    }
+
+    .hud-right{
+      width:58px;
+    }
+
+    .hud-card{
+      flex-direction:column;
+      justify-content:center;
+      align-items:center;
+      text-align:center;
+      gap:6px;
+      min-height:56px;
+      padding:10px 10px;
+    }
+
+    .hud-score .hud-value{ font-size: 30px; line-height: 1; }
+    .hud-best  .hud-value{ font-size: 22px; line-height: 1; }
+    .hud-moves .hud-value{ font-size: 22px; line-height: 1; }
+    .hud-size  .hud-value{ font-size: 20px; line-height: 1; }
+
+    .hud-size{ display:flex; }
+    .hud-btn{
+      width:58px;
+      height:58px;
+      border-radius:18px;
+    }
+    .hud-icon{ width:64%; height:64%; }
+  }
+
+  /* ===== RTL fixes (Arabic) ===== */
+  html[dir="rtl"] .modal header{
+    flex-direction: row-reverse;
+  }
+
+  html[dir="rtl"] .modal header h2{
+    text-align: right;
+  }
+
+  /* Il contenuto dinamico dell’hint (spesso in EN) deve restare leggibile e non “uscire” */
+  html[dir="rtl"] #hintOverlay #hintText{
+    direction: ltr;
+    unicode-bidi: plaintext;
+    text-align: left;
+  }
+
+  /* La mini-board è un layout “tecnico”: meglio LTR per centrare e non invertire */
+  html[dir="rtl"] #hintOverlay #hintCanvasWrap{
+    direction: ltr;
+  }
+
+  /* La nota invece deve seguire la lingua (quindi RTL in arabo) */
+  html[dir="rtl"] #hintOverlay .hint-note{
+    direction: rtl;
+    text-align: center;
+  }
+
 </style>
 </head>
 
@@ -1205,6 +1590,15 @@
       "passkey.register_failed":"Registrazione passkey fallita",
       "passkey.login_failed":"Login passkey fallito",
       "error.new_game":"Errore durante Nuova partita",
+      "hint.title":"Hint — mossa suggerita",
+      "hint.recharge":"L’hint si ricarica ogni 3 livelli.",
+      "login.title":"Accedi al gioco",
+      "login.nickname_ph":"Nickname (min 3 caratteri)",
+      "login.passkey_login":"Accedi con impronta / Face ID",
+      "login.passkey_register":"Crea passkey (senza password)",
+      "login.guest":"Gioca senza account",
+      "login.note":"Nota: su alcuni dispositivi il nickname può essere opzionale per il login (discoverable passkeys).",
+      "label.best_score":"Punteggio più alto",
     },
     en: {
       "label.level":"Level",
@@ -1253,6 +1647,15 @@
       "passkey.register_failed": "Passkey registration failed",
       "passkey.login_failed": "Passkey login failed",
       "error.new_game": "Error during New Game",
+      "hint.title":"Hint — suggested move",
+      "hint.recharge":"Hints recharge every 3 levels.",
+      "login.title":"Sign in",
+      "login.nickname_ph":"Nickname (min 3 chars)",
+      "login.passkey_login":"Sign in with Touch ID / Face ID",
+      "login.passkey_register":"Create passkey (no password)",
+      "login.guest":"Play as guest",
+      "login.note":"Note: on some devices nickname can be optional (discoverable passkeys).",
+      "label.best_score":"Highest score",
 
     },
     fr: {
@@ -1302,7 +1705,14 @@
       "passkey.register_failed": "Échec de l’enregistrement de la passkey",
       "passkey.login_failed": "Échec de la connexion avec la passkey",
       "error.new_game": "Erreur lors de la nouvelle partie",
-      
+      "hint.title":"Indice — mouvement suggéré",
+      "hint.recharge":"Les indices se recharge tous les 3 niveaux.",
+      "login.title":"Se connecter",
+      "login.nickname_ph":"Pseudo (min 3 caractères)",
+      "login.passkey_login":"Se connecter avec Touch ID / Face ID",
+      "login.passkey_register":"Créer une passkey (sans mot de passe)",
+      "login.guest":"Jouer en tant qu’invité",
+      "login.note":"Note : sur certains appareils, le pseudo peut être optionnel pour la connexion (passkeys découvrables).",
    
    
     },
@@ -1353,7 +1763,15 @@
       "passkey.register_failed": "Passkey-Registrierung fehlgeschlagen",
       "passkey.login_failed": "Passkey-Login fehlgeschlagen",
       "error.new_game": "Fehler beim Starten eines neuen Spiels",
-
+      "hint.title":"Hinweis — vorgeschlagener Zug",
+      "hint.recharge":"Hinweise werden alle 3 Level neu geladen.",
+      "login.title":"Anmelden",
+      "login.nickname_ph":"Nickname (min 3 Zeichen)",
+      "login.passkey_login":"Mit Touch ID / Face ID anmelden",
+      "login.passkey_register":"Passkey erstellen (ohne Passwort)",
+      "login.guest":"Als Gast spielen",
+      "login.note":"Hinweis: Auf einigen Geräten kann der Nickname für die Anmeldung optional sein (discoverable passkeys).",
+      "label.best_score":"Höchste Punktzahl",
     },
     es: {
       "label.level":"Nivel",
@@ -1402,6 +1820,15 @@
       "passkey.register_failed":  "Registro de passkey fallido",
       "passkey.login_failed": "Error de inicio de sesión con passkey",
       "error.new_game": "Error durante Nueva partida",
+      "hint.title":"Pista — movimiento sugerido",
+      "hint.recharge":"Las pistas se recargan cada 3 niveles.",
+      "login.title":"Iniciar sesión",
+      "login.nickname_ph":"Apodo (mín 3 caracteres)",
+      "login.passkey_login":"Iniciar sesión con Touch ID / Face ID",
+      "login.passkey_register":"Crear passkey (sin contraseña)",
+      "login.guest":"Jugar sin cuenta",
+      "login.note":"Nota: en algunos dispositivos el apodo puede ser opcional para iniciar sesión (discoverable passkeys).",
+      "label.best_score":"Puntuación más alta",
     },
     ru: {
       "label.level":"Уровень",
@@ -1450,6 +1877,16 @@
       "passkey.register_failed": "Регистрация passkey не удалась",
       "passkey.login_failed": "Ошибка входа с passkey",
       "error.new_game": "Ошибка при запуске новой игры",
+      "hint.title":"Подсказка — предложенный ход",
+      "hint.recharge":"Подсказки перезаряжаются каждые 3 уровня",
+      "login.title":"Войти в игру",
+      "login.nickname_ph":"Ник (мин 3 символа)",
+      "login.passkey_login":"Войти с помощью Touch ID / Face ID",
+      "login.passkey_register":"Создать passkey (без пароля)",
+      "login.guest":"Играть без аккаунта",
+      "login.note":"Примечание: на некоторых устройствах ник может быть необязательным для входа (discoverable passkeys).",
+      "label.best_score":"Лучший счёт",
+        
     },
     ja: {
       "label.level":"レベル",
@@ -1498,6 +1935,16 @@
       "passkey.register_failed": "パスキーの登録に失敗しました",
       "passkey.login_failed": "パスキーのログインに失敗しました",
       "error.new_game": "新しいゲームの開始中にエラーが発生しました",
+      "hint.title":"ヒント — 提示された手",
+      "hint.recharge":"ヒントは3レベルごとにリセットされます",
+      "login.title":"ゲームにサインイン",
+      "login.nickname_ph":"ニックネーム（3文字以上）",
+      "login.passkey_login":"指紋/Face IDでサインイン",
+      "login.passkey_register":"パスキーを作成（パスワードなし）",
+      "login.guest":"ゲストとしてプレイ",
+      "login.note":"注: 一部のデバイスでは、ニックネームはログインにオプション（発見可能なパスキー）です。",
+      "label.best_score":"最高スコア",
+      
     },
     ar: {
       "label.level":"المستوى",
@@ -1546,6 +1993,16 @@
       "passkey.register_failed": "فشل تسجيل مفتاح المرور",
       "passkey.login_failed": "فشل تسجيل مفتاح المرور",
       "error.new_game": "خطأ أثناء بدء لعبة جديدة",
+      "hint.title":"تلميح — اليد المقترحة",
+      "hint.recharge":"يتم إعادة تحميل التلميحات كل 3 مستويات",
+      "login.title":"تسجيل الدخول",
+      "login.nickname_ph":"الاسم المستعار (3 أحرف على الأقل)",
+      "login.passkey_login":"تسجيل الدخول بالبصمة / Face ID",
+      "login.passkey_register":"إنشاء Passkey (بدون كلمة مرور)",
+      "login.guest":"اللعب كضيف",
+      "login.note":"ملاحظة: في بعض الأجهزة قد يكون الاسم المستعار اختياريًا (Passkeys قابلة للاكتشاف).",
+      "label.best_score":"أعلى نقاط",
+
     },
     zh: {
       "label.level":"关卡",
@@ -1594,6 +2051,15 @@
       "passkey.register_failed": "Passkey注册失败",
       "passkey.login_failed": "通行密钥登录失败",
       "error.new_game": "新游戏时出错",
+      "hint.title":"提示 — 推荐的移动",
+      "hint.recharge":"提示每3级充能一次。",
+      "login.title":"登录游戏",
+      "login.nickname_ph":"昵称（至少3个字符）",
+      "login.passkey_login":"使用指纹/面部ID登录",
+      "login.passkey_register":"创建Passkey（无密码）",
+      "login.guest":"以游客身份玩",
+      "login.note":"注：在某些设备上，昵称对于登录可能是可选的（可发现的Passkeys）。",
+      "label.best_score":"最高分",
   } };
 
   const LANG_KEY = "psb_lang_v1";
@@ -1642,6 +2108,21 @@
       if (!k) return;
       el.textContent = (I18N[l] && I18N[l][k]) || (I18N.it && I18N.it[k]) || el.textContent;
     });
+    // translate placeholders
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+      const k = el.getAttribute("data-i18n-placeholder");
+      if (!k) return;
+      const val = (I18N[l] && I18N[l][k]) || (I18N.it && I18N.it[k]);
+      if (val) el.setAttribute("placeholder", val);
+    });
+
+    // translate titles (optional, but useful)
+    document.querySelectorAll("[data-i18n-title]").forEach(el => {
+      const k = el.getAttribute("data-i18n-title");
+      if (!k) return;
+      const val = (I18N[l] && I18N[l][k]) || (I18N.it && I18N.it[k]);
+      if (val) el.setAttribute("title", val);
+    });
 
     // update dynamic button labels (music)
     if (typeof updateMusicButton === "function") updateMusicButton();
@@ -1668,7 +2149,7 @@
 
     const tr = (k, fb) => (typeof t === "function" ? (t(k) || fb) : fb);
 
-    elT.textContent = title || tr("app.title", "Converge");
+    elT.textContent = title || tr("Converge");
     elM.textContent = String(msg);
     elM.style.whiteSpace = "pre-line";
 
@@ -1781,45 +2262,82 @@
 
 
 <body>
-  <div class="app">
+<div class="app">
     <div class="topbar">
-      <div class="title">
-        <h1>Converge 3.0</h1>
-        <div class="userbadge" id="userBadge" style="display:none;">
-          Username: <strong id="userNickname"></strong>
+      <div class="topbar-head">
+        <div class="title">
+          <h1>Converge</h1>
+          <div class="userbadge" id="userBadge" style="display:none;">
+            Username: <strong id="userNickname"></strong>
+          </div>
+          <div class="sub">Swipe to merge tiles and break the grid</div>
         </div>
-        <div class="sub">Swipe to merge tiles and break the grid</div>
 
+        <div class="topbar-icons">
+          <button id="btnUndo" class="iconbtn" aria-label="Restart">
+
+            <img src="icons/restart.svg" alt="Restart" class="iconimg">
+
+          </button>
+
+          <div class="hint-btn-wrap">
+            <button id="btnHint" class="iconbtn iconbtn-hint" aria-label="Hint" title="Hint">
+              <img src="icons/bulb.svg" alt="Hint" class="iconimg">
+            </button>
+            <span class="hint-badge" id="hintBadge">0</span>
+          </div>
+
+          <button class="iconbtn" id="btnAccount" title="Account / Impostazioni" aria-label="Account">⚙️</button>
+        </div>
       </div>
 
-      <!-- USER BOX (top-left) -->
-      <div class="userbox" id="userbox">
-        <button class="iconbtn" id="btnAccount" title="Account / Impostazioni" aria-label="Account">
-          ⚙️
+      <div class="hud">
+
+        <div class="hud-card hud-score">
+          <div class="hud-label" data-i18n="label.score">Score</div>
+          <div class="hud-value" id="score">0</div>
+        </div>
+
+          <div class="hud-card hud-best">
+            <div class="hud-label" data-i18n="label.best_score">Highest<br>Score</div>
+            <div class="hud-value" id="bestScore">0</div>
+          </div>
+        <div class="hud-card hud-moves">
+          <div class="hud-label" data-i18n="label.moves">Mosse</div>
+          <div class="hud-value" id="moves">2</div>
+        </div>
+
+         <!-- COLONNA 3: bottoni impilati -->
+
+      <div class="hud-right">
+        <button id="btnNew" class="iconbtn" aria-label="New Game">
+            <img src="icons/new.svg" alt="New" class="iconimg">
         </button>
-      </div>
-      <div class="stats">
-        <div class="pill"><span data-i18n="label.level">Livello</span>: <strong id="level">1</strong></div>
-        <div class="pill"><span data-i18n="label.grid">Griglia</span>: <strong id="size">3×3</strong></div>
-        <div class="pill"><span data-i18n="label.moves">Mosse</span>: <strong id="moves">3</strong></div>
-        <div class="pill"><span data-i18n="label.score">Score</span>: <strong id="score">0</strong></div>
-      </div>
-      <div class="btns">
-        <button id="btnUndo" title="Annulla ultima mossa (1 per livello)" data-i18n="btn.undo">Undo</button>
-        <button id="btnAuto" class="pill" data-i18n="btn.auto">TUTORIAL/AUTO</button>
 
-        <button id="btnNew" title="Nuova partita" data-i18n="btn.new">Nuova</button>
+          <button id="btnReward2Hints" class="iconbtn" type="button" aria-label="Hint">
 
+            <img src="icons/bulb.svg" alt="Hint" class="iconimg">
 
-        <button id="btnReward2Hints" class="btn secondary" type="button" data-i18n="btn.ad_hints"> AD +2 hint </button>
-          <div id="rewardOverlayStatus" class="small" style="margin-top:8px; opacity:.85;"></div>
+          </button>
+        <button id="btnAuto" class="pill" >
+            <img src="icons/auto.svg" alt="Hint" class="hud-icon" style="width:50px; height:auto; margin-right:6px; border-radius:0px; filter: drop-shadow(0 0 2px gold);">
 
-      </div>
-              <div class="hint-btn-wrap">
-          <button id="btnHint" data-i18n="btn.hint">Hint</button>
-          <span class="hint-badge" id="hintBadge">0</span>
+        </button>
+              </div>
+
+        <div id="rewardOverlayStatus" class="small reward-status"></div>
+
+        <div class="hud-card hud-size">
+          <div class="hud-label" data-i18n="label.grid">Griglia</div>
+          <div class="hud-value" id="size">3×3</div>
         </div>
+
+      </div>
+
+
+
     </div>
+
 
     <div class="board-wrap">
       <div class="board" id="board">
@@ -1831,6 +2349,10 @@
       <div id="ad-banner-slot" class="ad-banner-slot" aria-label="Advertisement"></div>
 
     </div>
+  </div>
+  <div class="levelbar" aria-label="Level">
+    <span data-i18n="label.level">Livello</span>
+    <strong id="level">1</strong>
   </div>
     <div id="gameOverOverlay" class="gameover hidden">
 
@@ -1959,18 +2481,19 @@
   <div class="modal-overlay" id="hintOverlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true">
       <header>
-        <h2>Hint — mossa suggerita</h2>
-        <button id="btnCloseHint">Chiudi</button>
+        <h2 data-i18n="hint.title">Hint — mossa suggerita</h2>
+        <button id="btnCloseHint" data-i18n="btn.close">Chiudi</button>
       </header>
       <div class="content">
         <div class="hint-board" id="hintCanvasWrap">
           <!-- mini-board generated -->
         </div>
         <p class="hint-text" id="hintText"></p>
-        <div class="small">L’hint si ricarica ogni 3 livelli.</div>
+        <div class="small hint-note" data-i18n="hint.recharge">L’hint si ricarica ogni 3 livelli.</div>
       </div>
     </div>
   </div>
+
 
     <div class="modal-overlay" id="hintHeavyOverlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true">
@@ -2001,26 +2524,41 @@
     </div>
   </div>
 
-    <div class="login-overlay hidden" id="loginOverlay">
+  <div class="login-overlay hidden" id="loginOverlay">
     <div class="login-modal">
-      <h2>Accedi al gioco</h2>
+      <h2 data-i18n="login.title">Sign in</h2>
 
-      <input type="text" id="loginNickname" placeholder="Nickname (min 3 caratteri)" />
+      <input
+        type="text"
+        id="loginNickname"
+        data-i18n-placeholder="login.nickname_ph"
+        placeholder="Nickname (min 3 chars)"
+      />
 
-      <button id="btnPasskeyLogin">Accedi con impronta / Face ID</button>
-      <button id="btnPasskeyRegister" style="background: var(--bg-1); margin-top: 8px;">Crea passkey (senza password)</button>
+      <button id="btnPasskeyLogin" data-i18n="login.passkey_login">Sign in with Touch ID / Face ID</button>
 
-      <button id="btnGuestPlay" style="background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); margin-top: 8px; color: var(--text);">
-        Gioca senza account
+      <button
+        id="btnPasskeyRegister"
+        data-i18n="login.passkey_register"
+        style="background: var(--bg-1); margin-top: 8px;"
+      >
+        Create passkey (no password)
       </button>
 
-      <div class="small" style="margin-top:10px; color: rgba(16,20,24,.6); font-weight:700;">
-        Nota: su alcuni dispositivi il nickname può essere opzionale per il login (discoverable passkeys).
+      <button
+        id="btnGuestPlay"
+        data-i18n="login.guest"
+        style="background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); margin-top: 8px; color: var(--text);"
+      >
+        Play as guest
+      </button>
+
+      <div class="small" data-i18n="login.note" style="margin-top:10px; color: rgba(16,20,24,.6); font-weight:700;">
+        Note: on some devices nickname can be optional (discoverable passkeys).
       </div>
     </div>
+  </div>
 
-
-    </div>
 
 <script>
 let GAME_SPEED = 1;          // 0.5 slow ... 5 fast
@@ -2635,6 +3173,7 @@ async function refreshUserUI(){
   const elSize = document.getElementById("size");
   const elMoves = document.getElementById("moves");
   const elScore = document.getElementById("score");
+  const elBestScore = document.getElementById("bestScore");
 
   const btnUndo = document.getElementById("btnUndo");
   const btnHint = document.getElementById("btnHint");
@@ -2859,6 +3398,7 @@ async function refreshUserUI(){
   init();
 
   function init(){
+    try { Ads?.init?.(); } catch {}
     // i18n boot
     const _lang = getLang();
     applyI18n(_lang);
@@ -3466,6 +4006,12 @@ btnPasskeyRegister.addEventListener("click", async () => {
     elSize.textContent  = `${state.N}×${state.N}`;
     elMoves.textContent = String(state.moves);
     elScore.textContent = String(state.score);
+    // Highest score (persisted)
+    if (elBestScore) {
+      const best = parseInt(localStorage.getItem("psb_best_score") || "0", 10) || 0;
+      elBestScore.textContent = String(best);
+    }
+
   }
 
   function renderGridBase(){
@@ -3681,10 +4227,21 @@ btnPasskeyRegister.addEventListener("click", async () => {
       // undo disponibile?
       if (!state.undoAvailable || !state.undoSnapshot) return;
 
+      // === FIX: Undo non deve MAI "rimborsare" hint usati ===
+      const prevHintCharges  = Number.isFinite(state.hintCharges) ? state.hintCharges : 0;
+      const prevHintCooldown = Number.isFinite(state.hintCooldown) ? state.hintCooldown : 0;
+
       // ripristina snapshot e brucia l'undo
       restoreSnapshot(state.undoSnapshot);
       state.undoAvailable = false;
       state.undoSnapshot = null;
+
+      // applica vincolo: dopo undo gli hint non possono aumentare
+      const afterCharges  = Number.isFinite(state.hintCharges) ? state.hintCharges : 0;
+      const afterCooldown = Number.isFinite(state.hintCooldown) ? state.hintCooldown : 0;
+
+      state.hintCharges  = Math.min(afterCharges, prevHintCharges);
+      state.hintCooldown = Math.max(afterCooldown, prevHintCooldown);
 
       saveNow();
       renderAll(true);
@@ -3693,6 +4250,7 @@ btnPasskeyRegister.addEventListener("click", async () => {
       stalloShown = false;
       stopPulseUndoButton();
     });
+
     
     btnHint.addEventListener("click", () => {
       if (isAnimating) return;
@@ -4856,7 +5414,9 @@ function markPreBreak(idsToRemove){
     const payload = snapshotState();
     // include undo snapshot separately
     payload.undoSnapshot = state.undoSnapshot;
-    localStorage.setItem(userStorageKey(STORAGE_KEY), JSON.stringify(payload));
+    try {
+      localStorage.setItem(userStorageKey(STORAGE_KEY), JSON.stringify(payload));
+    } catch {}
   }
 
     function loadSave(){
@@ -5433,11 +5993,9 @@ function markPreBreak(idsToRemove){
   // se hai un flag tipo `animating` / `isAnimating` / `busy`, usa quello.
   // altrimenti puoi “aspettare” finché non finisce la mossa.
   async function waitNotBusy(){
-    // PROVA a usare il tuo flag reale:
-    while (window.isAnimating || window.animating || window.busy) {
-      await sleep(16);
-    }
+    while (isAnimating) await sleep(16);
   }
+
 
 
   function pulseUndoButton() {
@@ -5631,9 +6189,6 @@ function markPreBreak(idsToRemove){
 
 </div>
 
-<div id="stalloMsg" class="stallo-msg hidden">
-  STALLO! PREMERE UNDO
-</div>
 <script>
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js")
@@ -5709,6 +6264,5 @@ function markPreBreak(idsToRemove){
     </div>
   </div>
 </div>
-
 </body>
 </html>
