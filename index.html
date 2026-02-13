@@ -1547,6 +1547,53 @@ html.lowgfx .app::after{
     text-align: center;
   }
 
+  /* ===== Icon-only transparent buttons ===== */
+  .iconbtn.icononly{
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    border-radius: 14px; /* solo per area clic, ma resta trasparente */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .iconbtn.icononly:hover{
+    transform: translateY(-1px);
+    filter: brightness(1.12);
+  }
+
+  .iconbtn.icononly:active{
+    transform: scale(.92);
+    filter: brightness(1.05);
+  }
+
+  /* uniforma dimensione SVG */
+  .iconbtn.icononly img{
+    width: 85%;
+    height: 85%;
+    object-fit: contain;
+  }
+  #btnAuto.active{
+    filter: drop-shadow(0 0 6px rgba(255,215,0,.55));
+  }
+
+  #btnHint, .iconbtn-hint{
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  #btnAccount{
+    background: transparent !important;
+    box-shadow: none !important;
+    animation: spin 30s linear infinite;
+  }
+
 </style>
 </head>
 
@@ -2286,20 +2333,23 @@ html.lowgfx .app::after{
         </div>
 
         <div class="topbar-icons">
-          <button id="btnUndo" class="iconbtn" aria-label="Restart">
+          <button id="btnUndo" class="iconbtn icononly" aria-label="Undo" title="Undo">
 
             <img src="icons/restart.svg" alt="Restart" class="iconimg">
 
           </button>
 
           <div class="hint-btn-wrap">
-            <button id="btnHint" class="iconbtn iconbtn-hint" aria-label="Hint" title="Hint">
-              <img src="icons/bulb.svg" alt="Hint" class="iconimg">
-            </button>
+              <button id="btnHint" class="iconbtn iconbtn-hint icononly" aria-label="Hint" title="Hint">
+                <img src="icons/bulb.svg" alt="Hint" class="iconimg">
+              </button>
+
             <span class="hint-badge" id="hintBadge">0</span>
           </div>
 
-          <button class="iconbtn" id="btnAccount" title="Account / Impostazioni" aria-label="Account">⚙️</button>
+          <button class="iconbtn" id="btnAccount" title="Account / Impostazioni" aria-label="Account">
+            <img src="icons/settings.svg" alt="Account" class="iconimg">
+          </button>
         </div>
       </div>
 
@@ -2322,19 +2372,19 @@ html.lowgfx .app::after{
          <!-- COLONNA 3: bottoni impilati -->
 
       <div class="hud-right">
-        <button id="btnNew" class="iconbtn" aria-label="New Game">
+        <button id="btnNew" class="iconbtn icononly" aria-label="New Game" title="New Game">
             <img src="icons/new.svg" alt="New" class="iconimg">
         </button>
 
-          <button id="btnReward2Hints" class="iconbtn" type="button" aria-label="Hint">
+          <button id="btnReward2Hints" class="iconbtn iconbtn-hint icononly" aria-label="2Hint" title="2Hint">
 
-            <img src="icons/bulb.svg" alt="Hint" class="iconimg">
+            <img src="icons/bulbads.svg" alt="Hint" class="iconimg">
 
           </button>
-        <button id="btnAuto" class="pill" >
-            <img src="icons/auto.svg" alt="Hint" class="hud-icon" style="width:50px; height:auto; margin-right:6px; border-radius:0px; filter: drop-shadow(0 0 2px gold);">
+              <button id="btnAuto" class="iconbtn icononly" aria-label="Auto" title="Auto">
+                <img src="icons/auto.svg" alt="Auto" class="iconimg">
+              </button>
 
-        </button>
               </div>
 
         <div id="rewardOverlayStatus" class="small reward-status"></div>
@@ -2357,7 +2407,6 @@ html.lowgfx .app::after{
         <div class="tiles-layer" id="tiles"></div>
       </div>
 
-      <button id="btn-logout">Logout</button>
       <div id="ad-banner-slot" class="ad-banner-slot" aria-label="Advertisement"></div>
 
     </div>
@@ -2474,9 +2523,8 @@ html.lowgfx .app::after{
           <button id="btnDeleteAccount" class="danger" data-i18n="btn.delete_account">Elimina account</button>
         </div>
 
-        <div class="small" style="opacity:.85;">
-          <span data-i18n="note.reset_delete">Nota: “Reset progressi” azzera solo i progressi locali su questo device. “Elimina account” richiede endpoint backend (lo facciamo dopo).</span>
-        </div>
+        <a style="display:block; margin-top:10px; text-align:center; color: white; " href="/privacy.html" target="_blank">Privacy Policy</a>
+
       </div>
     </div>
   </div>
