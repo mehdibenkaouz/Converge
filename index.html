@@ -19,28 +19,29 @@
 <title>Converge</title>
 <script>
 (function(){
-  const params = new URLSearchParams(window.location.search);
-  const isApp = params.get("app") === "1";
+  const params = new URLSearchParams(location.search);
+  const hasApp = params.get("app") === "1";
 
-  if(!isApp){
+  // Se siamo dentro un WebView/TWA e manca app=1, auto-aggiungilo
+  const ua = navigator.userAgent || "";
+  const isWebView = ua.includes("wv"); // marker tipico Android WebView/TWA
+
+  if (!hasApp && isWebView) {
+    params.set("app", "1");
+    const qs = params.toString();
+    location.replace(location.pathname + "?" + qs + location.hash);
+    return;
+  }
+
+  // Se NON è app, blocca
+  if (!hasApp) {
     document.documentElement.innerHTML = `
       <style>
         body{
-          margin:0;
-          height:100vh;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          background:#0b0c16;
-          color:#e6e6e6;
-          font-family:system-ui;
-          text-align:center;
-          padding:20px;
+          margin:0;height:100vh;display:flex;align-items:center;justify-content:center;
+          background:#0b0c16;color:#e6e6e6;font-family:system-ui;text-align:center;padding:20px;
         }
-        a{
-          color:#8ab4ff;
-          text-decoration:none;
-        }
+        a{color:#8ab4ff;text-decoration:none;}
       </style>
       <div>
         <h2>Converge is available only in the official app.</h2>
@@ -50,6 +51,7 @@
   }
 })();
 </script>
+
 
 <style>
 :root{
