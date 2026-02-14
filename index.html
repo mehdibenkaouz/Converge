@@ -4126,8 +4126,8 @@ btnPasskeyRegister.addEventListener("click", async () => {
     const triesForN = (N) => {
       if (N <= 3) return 70;
       if (N <= 5) return 60;
-      if (N <= 7) return 30;
-      return 20; // 10x10: meno tentativi, ma ogni tentativo è più “caro”
+      if (N <= 7) return 40;
+      return 26; // 10x10: meno tentativi, ma ogni tentativo è più “caro”
     };
 
     // Gate: accettiamo SOLO se troviamo una soluzione ENTRO movesBudget
