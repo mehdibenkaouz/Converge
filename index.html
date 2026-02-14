@@ -1654,6 +1654,34 @@ html.lowgfx .app::after{
     -webkit-tap-highlight-color: transparent;
   }
 
+  .level-loading{
+    position:fixed; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    background: rgba(11,12,22,0.92);
+    z-index: 99999;
+  }
+  .level-loading.hidden{ display:none; }
+
+  .level-loading-card{
+    padding:18px 20px;
+    border-radius:16px;
+    background: rgba(20,25,40,0.88);
+    border:1px solid rgba(255,255,255,0.08);
+    text-align:center;
+    backdrop-filter: blur(6px);
+  }
+
+  .spinner{
+    width:32px; height:32px;
+    border:3px solid rgba(255,255,255,0.25);
+    border-top-color: rgba(255,255,255,0.9);
+    border-radius:50%;
+    animation: spin 0.8s linear infinite;
+    margin:0 auto 10px;
+  }
+
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
 </style>
 </head>
 
@@ -2613,7 +2641,13 @@ html.lowgfx .app::after{
   <div id="stalloMsg" class="stallo-msg hidden" data-i18n="stallo">STALLO! PREMERE UNDO</div>
 
 
-  
+  <div id="levelLoading" class="level-loading hidden" aria-hidden="true">
+    <div class="level-loading-card">
+      <div class="spinner"></div>
+      <div id="levelLoadingText">Loading…</div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="hintOverlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true">
       <header>
@@ -4812,9 +4846,17 @@ btnPasskeyRegister.addEventListener("click", async () => {
     // Win/lose checks
     if (Object.keys(state.tilesById).length === 0){
       // Level complete
-      if (!instant) await sleep(80);
-      startLevel(state.level + 1);
+      try{
+        showLevelLoading(`Livello ${state.level + 1}...`);
+        await nextFrame();              // IMPORTANTISSIMO: fa “paint” dell’overlay prima del solver
+
+        if (!instant) await sleep(40);  // micro-respiro, opzionale
+        startLevel(state.level + 1);
+      } finally {
+        hideLevelLoading();
+      }
       return;
+
     }
 
     // Dead-end / moves ended
@@ -6149,6 +6191,22 @@ function markPreBreak(idsToRemove){
 
   function sleep(ms){ return new Promise(res => setTimeout(res, ms)); }
   function nextFrame(){ return new Promise(res => requestAnimationFrame(() => res())); }
+
+  const elLevelLoading = document.getElementById("levelLoading");
+  const elLevelLoadingText = document.getElementById("levelLoadingText");
+
+  function showLevelLoading(msg){
+    if (!elLevelLoading) return;
+    if (elLevelLoadingText) elLevelLoadingText.textContent = msg || "Loading…";
+    elLevelLoading.classList.remove("hidden");
+    elLevelLoading.setAttribute("aria-hidden", "false");
+  }
+
+  function hideLevelLoading(){
+    if (!elLevelLoading) return;
+    elLevelLoading.classList.add("hidden");
+    elLevelLoading.setAttribute("aria-hidden", "true");
+  }
 
   function waitTransitions(elements, timeoutMs = 600) {
     return new Promise((resolve) => {
