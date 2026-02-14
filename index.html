@@ -1687,7 +1687,7 @@ html.lowgfx .app::after{
 
 <script>
     
-  // === i18n (IT/EN/FR/DE/ES/RU/JA/AR/ZH) ===
+  // === i18n (IT/EN/FR/DE/ES/RU/JLA/AR/ZH) ===
   const I18N = {
     it: {
       "label.level":"Livello",
@@ -3915,7 +3915,7 @@ btnPasskeyRegister.addEventListener("click", async () => {
   }
 
 
-  function startLevel(nextLevel){
+  async function startLevel(nextLevel){
     stalloShown = false;
     stopPulseUndoButton();
 
@@ -3963,7 +3963,8 @@ btnPasskeyRegister.addEventListener("click", async () => {
     }
 
     // regen board with at least 1 empty, each color >=2
-    generateLevelBoardGated();
+    
+    await generateLevelBoardGated();
 
 
     // compute best first dir as a "plan" (demo-level).
@@ -4082,8 +4083,49 @@ btnPasskeyRegister.addEventListener("click", async () => {
     }
   }
 
+  // ===== Worker solver =====
+  let solverWorker = null;
+  let solverReqId = 1;
+  const solverPending = new Map();
 
-  function generateLevelBoardGated(){
+  function initSolverWorker(){
+    if (solverWorker) return;
+    try{
+      solverWorker = new Worker("solver-worker.js");
+      solverWorker.onmessage = (e) => {
+        const { id, ok, res, err } = e.data || {};
+        const p = solverPending.get(id);
+        if (!p) return;
+        solverPending.delete(id);
+        if (ok) p.resolve(res);
+        else p.reject(new Error(err || "Worker error"));
+      };
+      solverWorker.onerror = (e) => {
+        // fallback: se crasha il worker, lo disattiviamo
+        try{ solverWorker.terminate(); }catch(_){}
+        solverWorker = null;
+        // risolviamo pending come "unknown" per non bloccare tutto
+        for (const [id, p] of solverPending.entries()){
+          p.resolve({status:"unknown", firstDir:null, expanded:0, visited:0});
+          solverPending.delete(id);
+        }
+      };
+    }catch(_){
+      solverWorker = null;
+    }
+  }
+
+  function workerAnalyzeSolvability(snap, movesBudget, opts){
+    if (!solverWorker) return Promise.resolve(null);
+    const id = solverReqId++;
+    return new Promise((resolve, reject) => {
+      solverPending.set(id, {resolve, reject});
+      solverWorker.postMessage({ id, snap, movesBudget, opts });
+    });
+    
+  }
+
+  async function generateLevelBoardGated(){
     const movesBudget = Math.max(0, (state.moves|0));
 
     const uniq = (arr) => {
@@ -4138,10 +4180,26 @@ btnPasskeyRegister.addEventListener("click", async () => {
 
         // Genera board
         generateLevelBoard();
+        // lascia respirare l'UI (soprattutto su TWA)
+        await new Promise(r => setTimeout(r, 0));
 
         // Verifica solvibilità entro mosse attuali
         const snap = snapshotFromState(state);
-        const solv = analyzeSolvabilityForSnapshotWithMoves(snap, movesBudget, solverOptsForN(N));
+        let solv = null;
+
+        // prova worker
+        if (solverWorker){
+          try{
+            solv = await workerAnalyzeSolvability(snap, movesBudget, solverOptsForN(N));
+          }catch(_){
+            solv = null;
+          }
+        }
+
+        // fallback sync (browser che non supporta / worker morto)
+        if (!solv){
+          solv = analyzeSolvabilityForSnapshotWithMoves(snap, movesBudget, solverOptsForN(N));
+        }
 
         if (solv.status === "solved"){
           return true;
@@ -4154,6 +4212,9 @@ btnPasskeyRegister.addEventListener("click", async () => {
     state.N = 3;
     for (let t = 0; t < 200; t++){
       generateLevelBoard();
+      // lascia respirare l'UI (soprattutto su TWA)
+      await new Promise(r => setTimeout(r, 0));
+
       const snap = snapshotFromState(state);
       const solv = analyzeSolvabilityForSnapshotWithMoves(snap, movesBudget, { timeBudgetMs: 220, nodeLimit: 380000 });
       if (solv.status === "solved") return true;
@@ -6482,6 +6543,7 @@ function markPreBreak(idsToRemove){
 
 <script>
   document.addEventListener("DOMContentLoaded", function(){
+    initSolverWorker();
 
     const rewardOverlay = document.getElementById("rewardOverlay");
     const btnReward2Hints = document.getElementById("btnReward2Hints");
