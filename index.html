@@ -1657,7 +1657,7 @@ html.lowgfx .app::after{
   .level-loading{
     position:fixed; inset:0;
     display:flex; align-items:center; justify-content:center;
-    background: rgba(11,12,22,0.92);
+    background: rgba(11, 12, 22, 0.112);
     z-index: 99999;
   }
   .level-loading.hidden{ display:none; }
@@ -1665,7 +1665,7 @@ html.lowgfx .app::after{
   .level-loading-card{
     padding:18px 20px;
     border-radius:16px;
-    background: rgba(20,25,40,0.88);
+    background: rgba(20, 25, 40, 0.236);
     border:1px solid rgba(255,255,255,0.08);
     text-align:center;
     backdrop-filter: blur(6px);
@@ -1673,8 +1673,8 @@ html.lowgfx .app::after{
 
   .spinner{
     width:32px; height:32px;
-    border:3px solid rgba(255,255,255,0.25);
-    border-top-color: rgba(255,255,255,0.9);
+    border:3px solid rgba(255, 255, 255, 0.122);
+    border-top-color: rgba(255, 255, 255, 0.32);
     border-radius:50%;
     animation: spin 0.8s linear infinite;
     margin:0 auto 10px;
@@ -2644,7 +2644,6 @@ html.lowgfx .app::after{
   <div id="levelLoading" class="level-loading hidden" aria-hidden="true">
     <div class="level-loading-card">
       <div class="spinner"></div>
-      <div id="levelLoadingText">Loading…</div>
     </div>
   </div>
 
@@ -6207,6 +6206,9 @@ function markPreBreak(idsToRemove){
     elLevelLoading.classList.add("hidden");
     elLevelLoading.setAttribute("aria-hidden", "true");
   }
+  window.showLevelLoading = showLevelLoading;
+  window.hideLevelLoading = hideLevelLoading;
+
 
   function waitTransitions(elements, timeoutMs = 600) {
     return new Promise((resolve) => {
