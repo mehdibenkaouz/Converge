@@ -2402,28 +2402,29 @@ html.lowgfx .app::after{
 
     async function showRewardedFor2Hints() {
       const now = Date.now();
-      if (rewardedBusy) return { ok: false, reason: "busy" };
-      if (now - lastRewardTs < REWARD_COOLDOWN_MS) return { ok: false, reason: "cooldown" };
+      if (rewardedBusy) return { ok:false, reason:"busy" };
+      if (now - lastRewardTs < REWARD_COOLDOWN_MS) return { ok:false, reason:"cooldown" };
 
       rewardedBusy = true;
-
       try {
-        if (isNativeApp() && typeof window.showRewardedNative === "function") {
-          // Must return { rewarded: true/false }
-          const res = await window.showRewardedNative();
-          if (res && res.rewarded === true) {
-            lastRewardTs = now;
-            return { ok: true, rewarded: true };
-          }
-          return { ok: true, rewarded: false };
-        } else {
-          // Web fallback: no rewarded ads
-          return { ok: false, reason: "web_no_ads" };
-        }
+        // 1) Costruisci return URL (torni qui e aggiungi reward=2 dalla Activity)
+        const returnUrl = location.origin + location.pathname + location.search + location.hash;
+
+        // 2) Segna che stai aspettando un reward (anti-fake via URL manuale)
+        localStorage.setItem("__cv_pending_reward", String(now));
+
+        // 3) Apri la Activity nativa via deep link
+        //    IMPORTANTE: deve matchare l'intent-filter che hai messo nel Manifest
+        const deep = "converge://rewarded?return=" + encodeURIComponent(returnUrl);
+        location.href = deep;
+
+        // Qui non possiamo "attendere": la pagina naviga via deep link
+        return { ok:true, reason:"launched" };
       } finally {
         rewardedBusy = false;
       }
     }
+
 
     return { init, showBanner, hideBanner, showRewardedFor2Hints };
   })();
@@ -2437,6 +2438,32 @@ html.lowgfx .app::after{
       openReward?.();
     });
   })();
+
+  (function consumeRewardFromUrl(){
+    const p = new URLSearchParams(location.search);
+    const reward = p.get("reward");
+    if (!reward) return;
+
+    // accetta solo se c'era un pending recente
+    const ts = parseInt(localStorage.getItem("__cv_pending_reward") || "0", 10);
+    localStorage.removeItem("__cv_pending_reward");
+
+    const age = Date.now() - ts;
+    const MAX_AGE_MS = 5 * 60 * 1000; // 5 min
+
+    if (ts > 0 && age >= 0 && age <= MAX_AGE_MS && reward === "2") {
+      // chiama la tua funzione esistente (già prevista nel codice)
+      if (typeof onRewardedAdCompleted === "function") onRewardedAdCompleted();
+      // opzionale: feedback UI
+      try { console.log("Reward OK: +2 hints"); } catch(e){}
+    }
+    // pulizia URL: togli reward=2 per non poter refreshare e riprenderlo
+    p.delete("reward");
+    const newQs = p.toString();
+    const newUrl = location.pathname + (newQs ? ("?" + newQs) : "") + location.hash;
+    history.replaceState({}, "", newUrl);
+  })();
+
 </script>
 
 
