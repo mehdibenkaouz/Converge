@@ -3111,7 +3111,7 @@ function attachAccountButtons(){
     if (!getAccessToken()) localStorage.removeItem(STORAGE_KEY); // solo per guest legacy
 
     state = newGameState();
-    startLevel(1);
+    void startLevel(1);
     toastMsg(t("toast.reset_done") || "Progressi resettati");
     toastMsg("Progressi locali resettati");
     renderAll(true);
@@ -3622,7 +3622,7 @@ async function refreshUserUI(){
       toastMsg("Partita caricata");
     } else {
       state = newGameState();
-      startLevel(1); // genera board + render + save
+      void startLevel(1); // genera board + render + save
     }
 
     // input & UI (sempre)
@@ -4538,7 +4538,7 @@ btnPasskeyRegister.addEventListener("click", async () => {
             state = newGameState();
 
             // IMPORTANTISSIMO: usa la stessa logica dei livelli (gated + render + save)
-            startLevel(1);
+            void startLevel(1);
 
             // opzionale: se vuoi anche il toast "Nuova partita"
             // toastMsg(t("toast.new_game"));
@@ -4911,7 +4911,7 @@ btnPasskeyRegister.addEventListener("click", async () => {
         await nextFrame();              // IMPORTANTISSIMO: fa “paint” dell’overlay prima del solver
 
         if (!instant) await sleep(40);  // micro-respiro, opzionale
-        startLevel(state.level + 1);
+        await startLevel(state.level + 1);
       } finally {
         hideLevelLoading();
       }
@@ -6352,7 +6352,7 @@ function markPreBreak(idsToRemove){
 
     // genera subito il livello 1 (IMPORTANTE: AUTO_MODE deve già essere true,
     // così startLevel non salva su storage)
-    startLevel(1);
+    void startLevel(1);
   }
 
   function exitAutoTutorial({silent=false} = {}){
