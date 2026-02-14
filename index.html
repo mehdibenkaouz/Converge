@@ -1665,8 +1665,8 @@ html.lowgfx .app::after{
   .level-loading-card{
     padding:18px 20px;
     border-radius:16px;
-    background: rgba(20, 25, 40, 0.236);
-    border:1px solid rgba(255,255,255,0.08);
+    background: transparent;
+    border: 0px;
     text-align:center;
     backdrop-filter: blur(6px);
   }
@@ -1747,6 +1747,8 @@ html.lowgfx .app::after{
       "label.best_score":"Punteggio più alto",
       "Ads1":"Hai esaurito gli hint?",
       "Ads2":"Guarda un annuncio per ottenere 2 hint extra :)",
+      "Congratulations!":"Complimenti! Hai completato il livello",
+      "prepare":"Calcolo il prossimo livello...",
     },
     en: {
       "label.level":"Level",
@@ -1806,6 +1808,8 @@ html.lowgfx .app::after{
       "label.best_score":"Highest score",
       "Ads1":"Out of hints?",
       "Ads2":"Watch an ad to get 2 extra hints :)",
+      "Congratulations!": "Congratulations! You completed the level",
+      "prepare":"Calculating next level...",
     },
     fr: {
       "label.level":"Niveau",
@@ -1864,7 +1868,8 @@ html.lowgfx .app::after{
       "login.note":"Note : sur certains appareils, le pseudo peut être optionnel pour la connexion (passkeys découvrables).",
       "Ads1":"Plus d’indices ?",
       "Ads2":"Regardez une publicité pour obtenir 2 indices supplémentaires :)",
-   
+      "Congratulations!":"Félicitations ! Vous avez terminé le niveau.",
+      "prepare":"Calcul en cours du prochain niveau...",
     },
     de: {
       "label.level":"Level",
@@ -1924,6 +1929,8 @@ html.lowgfx .app::after{
       "label.best_score":"Höchste Punktzahl",
       "Ads1":"Keine Hinweise mehr?",
       "Ads2":"Schau dir eine Werbung an, um 2 zusätzliche Hinweise zu erhalten :)",
+      "Congratulations!": "Herzlichen Glückwunsch, du hast das Level abgeschlossen.",
+      "prepare": "Ich berechne das nächste Level.",
     },
     es: {
       "label.level":"Nivel",
@@ -1983,6 +1990,8 @@ html.lowgfx .app::after{
       "label.best_score":"Puntuación más alta",
       "Ads1":"¿Sin pistas?",
       "Ads2":"Mira un anuncio para obtener 2 pistas extra :)",
+      "Congratulations!": "¡Felicidades! Completaste el nivel",
+      "prepare": "Calculando el siguiente nivel...",
     },
     ru: {
       "label.level":"Уровень",
@@ -2042,7 +2051,9 @@ html.lowgfx .app::after{
       "label.best_score":"Лучший счёт",
       "Ads1":"Закончились подсказки?",
       "Ads2":"Посмотри рекламу, чтобы получить 2 дополнительные подсказки :)",
-        
+
+      "Congratulations!": "Поздравляем! Вы прошли уровень",
+      "prepare": "Рассчитываем следующий уровень...",
     },
     ja: {
       "label.level":"レベル",
@@ -2102,7 +2113,9 @@ html.lowgfx .app::after{
       "label.best_score":"最高スコア",
       "Ads1":"ヒントがなくなりましたか？",
       "Ads2":"広告を見て、2つの追加ヒントを獲得しましょう :)",
-      
+
+      "Congratulations!": "おめでとうございます！レベルをクリアしました",
+      "prepare": "次のレベルを計算中…",
     },
     ar: {
       "label.level":"المستوى",
@@ -2162,7 +2175,8 @@ html.lowgfx .app::after{
       "label.best_score":"أعلى نقاط",
       "Ads1":"نفدت التلميحات؟",
       "Ads2":"شاهد إعلانًا للحصول على 2 تلميحات إضافية :)",
-
+      "Congratulations!": "تهانينا! لقد أكملت المستوى",
+      "prepare": "...جارٍ حساب المستوى التالي",
     },
     zh: {
       "label.level":"关卡",
@@ -2222,6 +2236,9 @@ html.lowgfx .app::after{
       "label.best_score":"最高分",
       "Ads1":"提示用完了？",
       "Ads2":"观看广告以获得2个额外提示 :)",
+
+      "Congratulations!": "恭喜！您已完成此關卡。",
+      "prepare": "正在計算下一關…"
   } };
 
   const LANG_KEY = "psb_lang_v1";
@@ -2641,11 +2658,15 @@ html.lowgfx .app::after{
   <div id="stalloMsg" class="stallo-msg hidden" data-i18n="stallo">STALLO! PREMERE UNDO</div>
 
 
-  <div id="levelLoading" class="level-loading hidden" aria-hidden="true">
+  <div id="levelLoading" class="level-loading hidden" aria-hidden="true" data-mode="celebrate">
     <div class="level-loading-card">
-      <div class="spinner"></div>
+      <img src="icons/yippee.gif" alt="Auto" class="iconimg">
+      <div class="level-loading-title" id="levelLoadingTitle" data-i18n="Congratulations!">LIVELLO COMPLETATO!</div>
+      <div class="level-loading-text" id="levelLoadingText" data-i18n="prepare">Preparando livello super difficile</div>
+      <div class="spinner" id="levelLoadingSpinner" aria-hidden="true"></div>
     </div>
   </div>
+
 
   <div class="modal-overlay" id="hintOverlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true">
@@ -3569,7 +3590,12 @@ async function refreshUserUI(){
   // ==========
   // Boot
   // ==========
-  init();
+  // IMPORTANT: aspetta che il DOM sia completo (serve per overlay che stanno a fine pagina: rewardOverlay, offlineOverlay, ecc.)
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
+  } else {
+    init();
+  }
 
   function init(){
     try { Ads?.init?.(); } catch {}
@@ -4451,7 +4477,7 @@ btnPasskeyRegister.addEventListener("click", async () => {
 
 
   function attachButtons(){
-  
+    
 
     btnGameOverUndo?.addEventListener("click", () => {
       if (btnGameOverUndo.disabled) return;
@@ -4477,6 +4503,7 @@ btnPasskeyRegister.addEventListener("click", async () => {
     // =========================
 
     btnUndo.addEventListener("click", () => {
+
       if (isAnimating) return;
 
       // chiudi eventuale overlay hint prima di modificare lo stato
@@ -6509,7 +6536,7 @@ function markPreBreak(idsToRemove){
 <div id="rewardOverlay" class="reward-overlay hidden" role="dialog" aria-modal="true">
   <div class="reward-card">
     <div class="reward-title" data-i18n="Ads1">Hai finito gli hint</div>
-    <div class="reward-text">Guarda una pubblicità (pochi secondi) e ottieni <b>+2 hint</b>.</div>
+    <div class="reward-text" data-i18n="Ads2">Guarda una pubblicità (pochi secondi) e ottieni <b>+2 hint</b>.</div>
     <div class="reward-actions">
       <button id="btnRewardWatch" class="btn">Guarda</button>
       <button id="btnRewardCancel" class="btn secondary">Annulla</button>
@@ -6541,46 +6568,65 @@ function markPreBreak(idsToRemove){
     </div>
   </div>
 
-<script>
-  document.addEventListener("DOMContentLoaded", function(){
-    initSolverWorker();
 
-    const rewardOverlay = document.getElementById("rewardOverlay");
-    const btnReward2Hints = document.getElementById("btnReward2Hints");
-    const btnRewardWatch = document.getElementById("btnRewardWatch");
-    const btnRewardCancel = document.getElementById("btnRewardCancel");
-    const rewardOverlayStatus = document.getElementById("rewardOverlayStatus");
+  <script>
+document.addEventListener("DOMContentLoaded", function () {
+  const rewardOverlay   = document.getElementById("rewardOverlay");
+  const btnReward2Hints = document.getElementById("btnReward2Hints");
+  const btnRewardWatch  = document.getElementById("btnRewardWatch");
+  const btnRewardCancel = document.getElementById("btnRewardCancel");
+  const rewardStatusEl  = document.getElementById("rewardStatus");
 
-    function openReward(){
-      rewardOverlay?.classList.remove("hidden");
-      rewardOverlay?.setAttribute("aria-hidden","false");
+  if (!rewardOverlay || !btnReward2Hints || !btnRewardWatch || !btnRewardCancel) return;
+
+  // evita doppi listener se lo script viene incluso 2 volte o init riattacca
+  if (btnReward2Hints.dataset.boundReward === "1") return;
+  btnReward2Hints.dataset.boundReward = "1";
+
+  const setStatus = (txt) => { if (rewardStatusEl) rewardStatusEl.textContent = txt || ""; };
+
+  function openReward(){
+    rewardOverlay.classList.remove("hidden");
+    rewardOverlay.setAttribute("aria-hidden","false");
+    setStatus("");
+  }
+
+  function closeReward(){
+    rewardOverlay.classList.add("hidden");
+    rewardOverlay.setAttribute("aria-hidden","true");
+    setStatus("");
+  }
+
+  btnReward2Hints.addEventListener("click", openReward);
+  btnRewardCancel.addEventListener("click", closeReward);
+
+  btnRewardWatch.addEventListener("click", async () => {
+    setStatus("Caricamento…");
+
+    if (!window.Ads || typeof Ads.showRewardedFor2Hints !== "function") {
+      setStatus("Pubblicità non disponibile.");
+      return;
     }
 
-    function closeReward(){
-      rewardOverlay?.classList.add("hidden");
-      rewardOverlay?.setAttribute("aria-hidden","true");
-    }
-
-    btnReward2Hints?.addEventListener("click", openReward);
-    btnRewardCancel?.addEventListener("click", closeReward);
-
-    btnRewardWatch?.addEventListener("click", async () => {
-      if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Caricamento…";
-      try{
-        const r = await Ads.showRewardedFor2Hints();
-        if (r && r.ok && r.rewarded){
-          if (typeof onRewardedAdCompleted === "function") onRewardedAdCompleted();
-          closeReward();
-        } else {
-          rewardOverlayStatus.textContent = "Pubblicità non disponibile.";
-        }
-      } catch(e){
-        rewardOverlayStatus.textContent = "Errore.";
+    btnRewardWatch.disabled = true;
+    try{
+      const r = await Ads.showRewardedFor2Hints();
+      if (r && r.ok && r.rewarded){
+        if (typeof onRewardedAdCompleted === "function") onRewardedAdCompleted();
+        closeReward();
+      } else {
+        setStatus("Pubblicità non disponibile.");
       }
-    });
-
+    } catch(e){
+      setStatus("Errore.");
+      console.warn("Rewarded ad error:", e);
+    } finally {
+      btnRewardWatch.disabled = false;
+    }
   });
+});
 </script>
+
 
 <div id="uiDialogOverlay" class="modal-overlay" aria-hidden="true">
   <div class="modal" style="max-width:520px;">
