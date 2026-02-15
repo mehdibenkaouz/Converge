@@ -2446,25 +2446,27 @@ html.lowgfx .app::after{
     const reward = p.get("reward");
     if (!reward) return;
 
-    // accetta solo se c'era un pending recente
     const ts = parseInt(localStorage.getItem("__cv_pending_reward") || "0", 10);
-    localStorage.removeItem("__cv_pending_reward");
-
     const age = Date.now() - ts;
-    const MAX_AGE_MS = 5 * 60 * 1000; // 5 min
+    const MAX_AGE_MS = 5 * 60 * 1000;
 
-    if (ts > 0 && age >= 0 && age <= MAX_AGE_MS && reward === "2") {
-      // chiama la tua funzione esistente (già prevista nel codice)
+    const ok = (ts > 0 && age >= 0 && age <= MAX_AGE_MS && reward === "2");
+
+    if (ok) {
+      localStorage.removeItem("__cv_pending_reward");
       if (typeof onRewardedAdCompleted === "function") onRewardedAdCompleted();
-      // opzionale: feedback UI
       try { console.log("Reward OK: +2 hints"); } catch(e){}
+    } else {
+      // NON rimuovere il pending qui: meglio lasciarlo che bruciarlo per un return rotto
+      try { console.warn("Reward ignored", {reward, ts, age}); } catch(e){}
     }
-    // pulizia URL: togli reward=2 per non poter refreshare e riprenderlo
+
     p.delete("reward");
     const newQs = p.toString();
     const newUrl = location.pathname + (newQs ? ("?" + newQs) : "") + location.hash;
     history.replaceState({}, "", newUrl);
   })();
+
 
 </script>
 
