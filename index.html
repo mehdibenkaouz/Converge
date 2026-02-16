@@ -3475,11 +3475,18 @@ async function refreshUserUI(){
       btnRewardWatch.disabled = true;
       if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Caricamento…";
 
-      const r = await Ads.showRewardedFor2Hints();
       if (r?.ok && r?.reason === "launched") {
-        if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Annuncio in apertura…";
-        return; // NON mostrare “no ads” qui
+        // ✅ chiudi SUBITO l’overlay: il reward arriverà al rientro via ?reward=2
+        closeReward();
+
+        // opzionale: feedback fuori overlay (se vuoi)
+        if (rewardTopStatus) {
+          rewardTopStatus.textContent = "Annuncio in corso…";
+          setTimeout(() => { rewardTopStatus.textContent = ""; }, 4000);
+        }
+        return;
       }
+
 
       if (r && r.ok && r.rewarded) {
         // +2 hint: usa la tua funzione esistente
