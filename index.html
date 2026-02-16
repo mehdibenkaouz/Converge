@@ -2461,6 +2461,9 @@ html.lowgfx .app::after{
       try { console.warn("Reward ignored", {reward, ts, age}); } catch(e){}
     }
 
+    // ✅ chiudi overlay reward quando torni dall'ad (reward ok o no)
+    try { if (typeof closeReward === "function") closeReward(); } catch(e){}
+
     p.delete("reward");
     const newQs = p.toString();
     const newUrl = location.pathname + (newQs ? ("?" + newQs) : "") + location.hash;
