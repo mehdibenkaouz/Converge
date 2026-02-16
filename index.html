@@ -2369,38 +2369,7 @@ html.lowgfx .app::after{
 
   // === end i18n ===
 
-(function consumeRewardNow(){
-  try {
-    const u = new URL(location.href);
-    const r = u.searchParams.get("reward");
-    if (!r) return;
 
-    const n = parseInt(r, 10) || 0;
-    console.log("[REWARD] found reward=", r, "parsed=", n, "url=", location.href);
-
-    if (n > 0) {
-      // --- QUI devi chiamare la tua logica reale di "aggiungi hint" ---
-      // Esempio A: se gli hint stanno in localStorage come numero
-      const key = "hints"; // <-- METTI la tua chiave vera se diversa
-      const cur = parseInt(localStorage.getItem(key) || "0", 10) || 0;
-      localStorage.setItem(key, String(cur + n));
-      console.log("[REWARD] applied ->", cur, "+", n, "=", cur + n);
-
-      // Esempio B: se hai una funzione già esistente
-      // if (typeof addHints === "function") addHints(n);
-    }
-
-    // togli reward dall'URL per non ri-applicarlo
-    u.searchParams.delete("reward");
-    history.replaceState(null, "", u.pathname + (u.searchParams.toString() ? "?" + u.searchParams.toString() : "") + u.hash);
-    console.log("[REWARD] cleaned url ->", location.href);
-
-    // se hai un refresh UI, chiamalo qui
-    // if (typeof renderHud === "function") renderHud();
-  } catch (e) {
-    console.warn("[REWARD] error", e);
-  }
-})();
 
   // === ADS ABSTRACTION (works on Web = no-op, works on APK once we wire AdMob) ===
   const Ads = (() => {
@@ -2730,7 +2699,7 @@ document.addEventListener("visibilitychange", () => {
           </div>
 
                   <div class="row">
-            <div class="k" >Version 1.1.1 pre-release</div>
+            <div class="k" >Version 1.0.2 pre-release</div>
             <div class="v" id="accUserId">—</div>
           </div>
         </div>
@@ -2859,7 +2828,6 @@ document.addEventListener("visibilitychange", () => {
       console.log("[REWARD] detected reward=", r, "href=", url.href);
 
       if (r === "2") {
-        const key = "hints"; // <-- METTI QUI LA TUA CHIAVE REALE se diversa
         const cur = parseInt(localStorage.getItem(key) || "0", 10);
         const next = cur + 2;
         localStorage.setItem(key, String(next));
@@ -4515,7 +4483,7 @@ btnPasskeyRegister.addEventListener("click", async () => {
 
 
   function onRewardedAdCompleted(){
-    state.hintCharges += 2;
+    state.hintCharges = (state.hintCharges || 0) + 2;
     updateHintBadge();
     saveNow();
   }
