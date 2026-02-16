@@ -2479,8 +2479,17 @@ html.lowgfx .app::after{
   const reward = p.get("reward");
   if (!reward) return;
 
+  // ✅ se l'app non è ancora inizializzata, bufferizza e esci
+  if (typeof window.state === "undefined" ||
+      typeof window.saveNow !== "function" ||
+      typeof window.updateHintBadge !== "function") {
+    try { localStorage.setItem("__cv_reward_buffer", reward); } catch(e){}
+    return;
+  }
+
   const ts = parseInt(localStorage.getItem("__cv_pending_reward") || "0", 10);
   const age = Date.now() - ts;
+
   const MAX_AGE_MS = 5 * 60 * 1000;
 
   const ok = (ts > 0 && age >= 0 && age <= MAX_AGE_MS && reward === "2");
@@ -2721,7 +2730,7 @@ document.addEventListener("visibilitychange", () => {
           </div>
 
                   <div class="row">
-            <div class="k" >Version 1.1.0 pre-release</div>
+            <div class="k" >Version 1.1.1 pre-release</div>
             <div class="v" id="accUserId">—</div>
           </div>
         </div>
@@ -2839,6 +2848,46 @@ document.addEventListener("visibilitychange", () => {
 
 
 <script>
+
+(function () {
+  function applyRewardFromUrl() {
+    try {
+      const url = new URL(window.location.href);
+      const r = url.searchParams.get("reward");
+      if (!r) return false;
+
+      console.log("[REWARD] detected reward=", r, "href=", url.href);
+
+      if (r === "2") {
+        const key = "hints"; // <-- METTI QUI LA TUA CHIAVE REALE se diversa
+        const cur = parseInt(localStorage.getItem(key) || "0", 10);
+        const next = cur + 2;
+        localStorage.setItem(key, String(next));
+        console.log("[REWARD] hints:", cur, "->", next);
+
+        // TODO: se hai una funzione che aggiorna HUD/UI chiamala qui
+        // updateHudHints?.();  oppure renderHud(); ecc.
+      }
+
+      // rimuovi reward per evitare doppio accredito
+      url.searchParams.delete("reward");
+      history.replaceState({}, "", url.toString());
+      return true;
+    } catch (e) {
+      console.log("[REWARD] error", e);
+      return false;
+    }
+  }
+
+  // 1) subito
+  applyRewardFromUrl();
+
+  // 2) quando torni dall’ad
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) applyRewardFromUrl();
+  });
+})();
+
 let GAME_SPEED = 1;          // 0.5 slow ... 5 fast
 let INSTANT_MODE = false;    // true => no waits / no move blocking
 let RELAX_MODE = false;      // true => only 3x3/5x5 levels
@@ -3134,6 +3183,8 @@ async function syncBonuses() {
     }
   }
 
+
+  
   localStorage.setItem("welcome_claimed_device", "1");
 
   // messaggio benvenuto (no popup)
@@ -5846,6 +5897,20 @@ function markPreBreak(idsToRemove){
       localStorage.setItem(userStorageKey(STORAGE_KEY), JSON.stringify(payload));
     } catch {}
   }
+  // === APPLY BUFFERED REWARD (AFTER INIT IS READY) ===
+  try {
+    const rb = localStorage.getItem("__cv_reward_buffer");
+    if (rb) {
+      localStorage.removeItem("__cv_reward_buffer");
+      const add = (rb === "2") ? 2 : 0;
+      if (add) {
+        state.hintCharges = (state.hintCharges || 0) + add;
+        saveNow();
+        updateHintBadge();
+      }
+    }
+  } catch(e){}
+
 
     function loadSave(){
     const scopedKey = userStorageKey(STORAGE_KEY);
