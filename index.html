@@ -3551,25 +3551,7 @@ async function refreshUserUI(){
 
   btnRewardCancel?.addEventListener("click", closeReward);
 
-  // btnRewardWatch?.addEventListener("click", async () => {
-  //   btnRewardWatch.disabled = true;
-  //   rewardStatus.textContent = "";
 
-  //   // Qui chiamiamo la rewarded (web fallback: dirà "Disponibile nell’app")
-  //   const r = await Ads.showRewardedFor2Hints();
-
-  //   if (r.ok && r.rewarded) {
-  //     window.addHints?.(2);   // usa la funzione che aumenta state.hintCharges
-  //     updateButtons();
-  //     closeReward();
-  //   } else {
-  //     if (r.reason === "web_no_ads") rewardStatus.textContent = "Disponibile nell’app Android.";
-  //     else if (r.reason === "cooldown") rewardStatus.textContent = "Riprova tra poco.";
-  //     else rewardStatus.textContent = "Pubblicità non disponibile ora.";
-  //   }
-
-  //   btnRewardWatch.disabled = false;
-  // });
 
   const loginOverlay = document.getElementById("loginOverlay");
   const btnPasskeyLogin = document.getElementById("btnPasskeyLogin");
@@ -6642,63 +6624,7 @@ function markPreBreak(idsToRemove){
   </div>
 
 
-  <!-- <script>
-document.addEventListener("DOMContentLoaded", function () {
-  const rewardOverlay   = document.getElementById("rewardOverlay");
-  const btnReward2Hints = document.getElementById("btnReward2Hints");
-  const btnRewardWatch  = document.getElementById("btnRewardWatch");
-  const btnRewardCancel = document.getElementById("btnRewardCancel");
-  const rewardStatusEl  = document.getElementById("rewardStatus");
 
-  if (!rewardOverlay || !btnReward2Hints || !btnRewardWatch || !btnRewardCancel) return;
-
-  // evita doppi listener se lo script viene incluso 2 volte o init riattacca
-  if (btnReward2Hints.dataset.boundReward === "1") return;
-  btnReward2Hints.dataset.boundReward = "1";
-
-  const setStatus = (txt) => { if (rewardStatusEl) rewardStatusEl.textContent = txt || ""; };
-
-  function openReward(){
-    rewardOverlay.classList.remove("hidden");
-    rewardOverlay.setAttribute("aria-hidden","false");
-    setStatus("");
-  }
-
-  function closeReward(){
-    rewardOverlay.classList.add("hidden");
-    rewardOverlay.setAttribute("aria-hidden","true");
-    setStatus("");
-  }
-
-  btnReward2Hints.addEventListener("click", openReward);
-  btnRewardCancel.addEventListener("click", closeReward);
-
-  btnRewardWatch.addEventListener("click", async () => {
-    setStatus("Caricamento…");
-
-    if (!window.Ads || typeof Ads.showRewardedFor2Hints !== "function") {
-      setStatus("Pubblicità non disponibile.");
-      return;
-    }
-
-    btnRewardWatch.disabled = true;
-    try{
-      const r = await Ads.showRewardedFor2Hints();
-      if (r && r.ok && r.rewarded){
-        if (typeof onRewardedAdCompleted === "function") onRewardedAdCompleted();
-        closeReward();
-      } else {
-        setStatus("Pubblicità non disponibile.");
-      }
-    } catch(e){
-      setStatus("Errore.");
-      console.warn("Rewarded ad error:", e);
-    } finally {
-      btnRewardWatch.disabled = false;
-    }
-  });
-});
-</script> -->
 
 
 <div id="uiDialogOverlay" class="modal-overlay" aria-hidden="true">
