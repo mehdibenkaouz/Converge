@@ -11,8 +11,8 @@
   ],
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
-    "RP_ID": "convergegame.org",
-    "ORIGIN": "https://convergegame.org/",
+    "RP_ID": "converge-mqh.pages.dev",
+    "ORIGIN": "https://converge-mqh.pages.dev/",
     "RP_NAME": "Converge Game"
   }
 }
