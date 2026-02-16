@@ -2441,34 +2441,44 @@ html.lowgfx .app::after{
     });
   })();
 
-  (function consumeRewardFromUrl(){
-    const p = new URLSearchParams(location.search);
-    const reward = p.get("reward");
-    if (!reward) return;
+  function consumeRewardFromUrl(){
+  const p = new URLSearchParams(location.search);
+  const reward = p.get("reward");
+  if (!reward) return;
 
-    const ts = parseInt(localStorage.getItem("__cv_pending_reward") || "0", 10);
-    const age = Date.now() - ts;
-    const MAX_AGE_MS = 5 * 60 * 1000;
+  const ts = parseInt(localStorage.getItem("__cv_pending_reward") || "0", 10);
+  const age = Date.now() - ts;
+  const MAX_AGE_MS = 5 * 60 * 1000;
 
-    const ok = (ts > 0 && age >= 0 && age <= MAX_AGE_MS && reward === "2");
+  const ok = (ts > 0 && age >= 0 && age <= MAX_AGE_MS && reward === "2");
 
-    if (ok) {
-      localStorage.removeItem("__cv_pending_reward");
-      if (typeof onRewardedAdCompleted === "function") onRewardedAdCompleted();
-      try { console.log("Reward OK: +2 hints"); } catch(e){}
-    } else {
-      // NON rimuovere il pending qui: meglio lasciarlo che bruciarlo per un return rotto
-      try { console.warn("Reward ignored", {reward, ts, age}); } catch(e){}
-    }
+  if (ok) {
+    localStorage.removeItem("__cv_pending_reward");
+    if (typeof onRewardedAdCompleted === "function") onRewardedAdCompleted();
+    try { console.log("Reward OK: +2 hints"); } catch(e){}
+  } else {
+    try { console.warn("Reward ignored", {reward, ts, age}); } catch(e){}
+  }
 
-    // ✅ chiudi overlay reward quando torni dall'ad (reward ok o no)
-    try { if (typeof closeReward === "function") closeReward(); } catch(e){}
+  // Chiudi overlay reward: subito se esiste, altrimenti appena DOM è pronto
+  const tryClose = () => { try { if (typeof closeReward === "function") closeReward(); } catch(e){} };
+  tryClose();
+  document.addEventListener("DOMContentLoaded", tryClose, { once:true });
 
-    p.delete("reward");
-    const newQs = p.toString();
-    const newUrl = location.pathname + (newQs ? ("?" + newQs) : "") + location.hash;
-    history.replaceState({}, "", newUrl);
-  })();
+  // pulizia reward dall’URL
+  p.delete("reward");
+  const newQs = p.toString();
+  const newUrl = location.pathname + (newQs ? ("?" + newQs) : "") + location.hash;
+  history.replaceState({}, "", newUrl);
+}
+
+// 1) subito
+consumeRewardFromUrl();
+// 2) anche quando torni in foreground / rientro senza reload completo
+window.addEventListener("pageshow", consumeRewardFromUrl);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) consumeRewardFromUrl();
+});
 
 
 </script>
@@ -4662,28 +4672,35 @@ btnPasskeyRegister.addEventListener("click", async () => {
         if (btnReward2Hints) btnReward2Hints.addEventListener("click", openReward);
         if (btnRewardCancel) btnRewardCancel.addEventListener("click", closeReward);
 
-        if (btnRewardWatch) btnRewardWatch.addEventListener("click", async () => {
-          try{
+        if (btnRewardWatch) btnRewardWatch.addEventListener("click", () => {
+          try {
             btnRewardWatch.disabled = true;
-            if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Caricamento…";
-            const r = await Ads.showRewardedFor2Hints();
-            if (r && r.ok && r.rewarded){
-              if (typeof onRewardedAdCompleted === "function") onRewardedAdCompleted();
-              if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Ok! +2 hint aggiunti.";
-              closeReward();
-            } else {
-              const reason = r?.reason || "no_reward";
-              if (rewardOverlayStatus) rewardOverlayStatus.textContent =
-                (reason === "web_no_ads") ? "Disponibile solo nell’app Android." :
-                (reason === "cooldown") ? "Riprova tra poco." :
-                "Pubblicità non disponibile ora.";
-            }
-          } catch(e){
+            if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Apro l’annuncio…";
+
+            // Avvia il flusso rewarded: NON aspettare esito qui.
+            // L’esito arriverà al rientro via ?reward=2 e verrà consumato da consumeRewardFromUrl().
+
+            // (1) marca pending PRIMA di uscire
+            try { localStorage.setItem("__cv_pending_reward", String(Date.now())); } catch(e){}
+
+            // (2) costruisci returnUrl pulito (senza reward vecchio)
+            let returnUrl = location.href;
+            try {
+              const u = new URL(location.href);
+              u.searchParams.delete("reward");
+              returnUrl = u.toString();
+            } catch(e){}
+
+            // (3) deep link (con / per match intent-filter pathPrefix="/")
+            const deep = "converge://rewarded/?return=" + encodeURIComponent(returnUrl);
+            window.location.href = deep;
+
+          } catch (e) {
             if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Errore: " + (e?.message || e);
-          } finally {
             btnRewardWatch.disabled = false;
           }
         });
+
 
               
 
