@@ -2444,44 +2444,43 @@ html.lowgfx .app::after{
   })();
 
   function consumeRewardFromUrl(){
-  const p = new URLSearchParams(location.search);
-  const reward = p.get("reward");
-  if (!reward) return;
+    const p = new URLSearchParams(location.search);
+    const reward = p.get("reward");
+    if (!reward) return;
 
-  // ✅ se l'app non è ancora inizializzata, bufferizza e esci
-  if (typeof window.state === "undefined" ||
-      typeof window.saveNow !== "function" ||
-      typeof window.updateHintBadge !== "function") {
-    try { localStorage.setItem("__cv_reward_buffer", reward); } catch(e){}
-    return;
+    // ✅ se l'app non è ancora inizializzata, bufferizza e esci
+    if (!state || typeof saveNow !== "function" || typeof updateHintBadge !== "function") {
+
+      try { localStorage.setItem("__cv_reward_buffer", reward); } catch(e){}
+      return;
+    }
+
+    const ts = parseInt(localStorage.getItem("__cv_pending_reward") || "0", 10);
+    const age = Date.now() - ts;
+
+    const MAX_AGE_MS = 5 * 60 * 1000;
+
+    const ok = (ts > 0 && age >= 0 && age <= MAX_AGE_MS && reward === "2");
+
+    if (ok) {
+      localStorage.removeItem("__cv_pending_reward");
+      if (typeof onRewardedAdCompleted === "function") onRewardedAdCompleted();
+      try { console.log("Reward OK: +2 hints"); } catch(e){}
+    } else {
+      try { console.warn("Reward ignored", {reward, ts, age}); } catch(e){}
+    }
+
+    // Chiudi overlay reward: subito se esiste, altrimenti appena DOM è pronto
+    const tryClose = () => { try { if (typeof closeReward === "function") closeReward(); } catch(e){} };
+    tryClose();
+    document.addEventListener("DOMContentLoaded", tryClose, { once:true });
+
+    // pulizia reward dall’URL
+    p.delete("reward");
+    const newQs = p.toString();
+    const newUrl = location.pathname + (newQs ? ("?" + newQs) : "") + location.hash;
+    history.replaceState({}, "", newUrl);
   }
-
-  const ts = parseInt(localStorage.getItem("__cv_pending_reward") || "0", 10);
-  const age = Date.now() - ts;
-
-  const MAX_AGE_MS = 5 * 60 * 1000;
-
-  const ok = (ts > 0 && age >= 0 && age <= MAX_AGE_MS && reward === "2");
-
-  if (ok) {
-    localStorage.removeItem("__cv_pending_reward");
-    if (typeof onRewardedAdCompleted === "function") onRewardedAdCompleted();
-    try { console.log("Reward OK: +2 hints"); } catch(e){}
-  } else {
-    try { console.warn("Reward ignored", {reward, ts, age}); } catch(e){}
-  }
-
-  // Chiudi overlay reward: subito se esiste, altrimenti appena DOM è pronto
-  const tryClose = () => { try { if (typeof closeReward === "function") closeReward(); } catch(e){} };
-  tryClose();
-  document.addEventListener("DOMContentLoaded", tryClose, { once:true });
-
-  // pulizia reward dall’URL
-  p.delete("reward");
-  const newQs = p.toString();
-  const newUrl = location.pathname + (newQs ? ("?" + newQs) : "") + location.hash;
-  history.replaceState({}, "", newUrl);
-}
 
 // 1) subito
 consumeRewardFromUrl();
@@ -3741,6 +3740,7 @@ async function refreshUserUI(){
 
     // Try load save (scoped per-account)
     const loaded = loadSave();
+    applyRewardBufferIfAny();
     const loadedOk = !!(loaded && loaded.tilesById && Object.keys(loaded.tilesById).length > 0 && Array.isArray(loaded.board));
 
     if (loadedOk){
@@ -5866,18 +5866,27 @@ function markPreBreak(idsToRemove){
     } catch {}
   }
   // === APPLY BUFFERED REWARD (AFTER INIT IS READY) ===
-  try {
-    const rb = localStorage.getItem("__cv_reward_buffer");
-    if (rb) {
+  function applyRewardBufferIfAny() {
+    try {
+      const rb = localStorage.getItem("__cv_reward_buffer");
+      if (!rb) return;
+
+      // Se lo stato non è pronto, non consumare il buffer ora
+      if (!state) return;
+
       localStorage.removeItem("__cv_reward_buffer");
+
       const add = (rb === "2") ? 2 : 0;
-      if (add) {
-        state.hintCharges = (state.hintCharges || 0) + add;
-        saveNow();
-        updateHintBadge();
-      }
-    }
-  } catch(e){}
+      if (!add) return;
+
+      state.hintCharges = (state.hintCharges || 0) + add;
+
+      saveNow();
+      updateHintBadge();
+      if (typeof updateButtons === "function") updateButtons();
+    } catch(e) {}
+  }
+
 
 
     function loadSave(){
