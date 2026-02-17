@@ -1397,6 +1397,13 @@ html.lowgfx .app::after{
     color: #fff;
   }
 
+  #btnGameOverSkipAd{
+    background: #1933c4;
+    color: #ad3f3f;
+  }
+
+
+
   .stallo-msg {
     position: fixed;
     inset: 0;                 /* copre tutto lo schermo */
@@ -2755,8 +2762,8 @@ document.addEventListener("visibilitychange", () => {
       <!-- BARRA AZIONI SEPARATA -->
       <div class="gameover-bar">
         <button id="btnGameOverUndo" class="btn">Undo</button>
-        <button id="btnGameOverSkipAd" class="btn">Salta livello (Ad)</button>
         <button id="btnGameOverClose" class="btn secondary">Play Again</button>
+        <button id="btnGameOverSkipAd" class="btn"> Skip Level (Ad)</button>
       </div>
 
     </div>
@@ -6822,6 +6829,11 @@ function markPreBreak(idsToRemove){
     }catch(_){}
 
   }
+
+
+
+
+
 
   // ==========
   // SVGs
