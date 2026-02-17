@@ -5305,7 +5305,8 @@ btnPasskeyRegister.addEventListener("click", async () => {
     if (Object.keys(state.tilesById).length === 0){
       // Level complete
       try{
-        showLevelLoading(`Livello ${state.level + 1}...`);
+        showLevelLoading(`${t('prepare')}  ${state.level + 1}...`);
+
         await nextFrame();              // IMPORTANTISSIMO: fa “paint” dell’overlay prima del solver
 
         if (!instant) await sleep(40);  // micro-respiro, opzionale
