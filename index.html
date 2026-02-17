@@ -5267,14 +5267,16 @@ btnPasskeyRegister.addEventListener("click", async () => {
       state.score += gained;
       state.moves += gained;
 
-      // Check for new local best score and submit if logged in
-      try {
-        const prevBest = parseInt(localStorage.getItem('psb_best_score') || '0', 10) || 0;
-        if (state.score > prevBest) {
-          localStorage.setItem('psb_best_score', String(state.score));
-          submitHighScoreIfLoggedIn(state.score);
-        }
-      } catch (e) { /* ignore storage errors */ }
+      // ⚠️ IMPORTANT: In AUTO_MODE (tutorial/auto-play) we must NOT update the persisted high score.
+      if (!AUTO_MODE) {
+        try {
+          const prevBest = parseInt(localStorage.getItem('psb_best_score') || '0', 10) || 0;
+          if (state.score > prevBest) {
+            localStorage.setItem('psb_best_score', String(state.score));
+            submitHighScoreIfLoggedIn(state.score);
+          }
+        } catch (e) { /* ignore storage errors */ }
+      }
 
       if (!instant){
         // Allow fade
