@@ -3602,17 +3602,50 @@ async function refreshUserUI(){
   // Rewarded Ad: salta livello (usato dal Game Over)
   window.skipLevelFromAd = async function skipLevelFromAd() {
     if (!state) return false;
+
     try { if (typeof closeGameOver === "function") closeGameOver(); } catch(_) {}
+
     try {
-      // passa al livello successivo senza resettare le mosse (startLevel garantisce min 3 mosse)
-      await startLevel((state.level || 1) + 1);
+      // ✅ NON cambiare livello / score / moves: rigenera solo la configurazione
+      const curLevel = (state.level || 1);
+
+      // reset di stati “di livello” (come fa startLevel, ma senza incrementare level)
+      try { stalloShown = false; } catch(_) {}
+      try { stopPulseUndoButton(); } catch(_) {}
+
+      // Se sei in game-over e moves==0, rigenerare senza mosse sarebbe inutile.
+      // Qui NON aumentiamo le mosse: lasciamo invariato.
+      // Se vuoi che l'ad ti dia "continue" anche a 0 mosse, dimmelo e facciamo +3 solo in quel caso.
+      // state.moves = state.moves;
+
+      // eventualmente aggiorna N e sizeIndex in base al livello corrente e alle mosse correnti
+      try {
+        state.N = pickGridSizeForLevelConsideringMoves(curLevel, state.moves);
+        state.sizeIndex = Math.max(0, SIZES.indexOf(state.N));
+      } catch(_) {}
+
+      state.undoAvailable = true;
+      state.undoSnapshot = null;
+      state.impossible = false;
+
+      // rigenera board + ricalcola hint plan + render
+      await generateLevelBoardGated();
+      try {
+        if (!state.levelPlan) state.levelPlan = {};
+        state.levelPlan.bestFirstDir = computeHintDirectionForCurrentState({maxDepth: 6, timeBudgetMs: 25});
+      } catch(_) {}
+
+      try { saveNow(); } catch(_) {}
+      try { renderAll(true); } catch(_) {}
+
+      try { toastMsg(`Livello ${curLevel} rigenerato`); } catch(_) {}
+
       return true;
     } catch (e) {
       console.warn("skipLevelFromAd failed:", e);
       return false;
     }
   };
-
 
 
   let isAnimating = false;
