@@ -1400,7 +1400,7 @@ html.lowgfx .app::after{
   }
 
   #btnGameOverSkipAd{
-    background: #000000c1;
+    background: #611d1df2;
     color: #ffffff;
   }
 
@@ -4643,7 +4643,7 @@ btnPasskeyRegister.addEventListener("click", async () => {
     if (!gameOverOverlay) return;
 
     const txt = document.getElementById("gameOverText");
-    if (txt) txt.textContent = reason ? String(reason) : "Mosse finite.";
+    if (txt) txt.textContent = reason ? String(reason) : t("mosse.finite");
 
     gameOverOverlay.classList.remove("hidden");
     gameOverOverlay.classList.add("show");
@@ -5162,7 +5162,7 @@ btnPasskeyRegister.addEventListener("click", async () => {
 
     if (state.moves <= 0) {
       state.moves = 0;          // clamp
-      gameOver("Mosse finite");    
+      gameOver(t("mosse.finite"));    
       updateButtons?.();        // se esiste (altrimenti rimuovi questa riga)
       return;                   // FONDAMENTALE: stop totale
     }
