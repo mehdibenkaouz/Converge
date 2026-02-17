@@ -1684,6 +1684,20 @@ html.lowgfx .app::after{
 
   @keyframes spin{ to{ transform: rotate(360deg); } }
 
+  .reward-cooldown{
+    min-height: 14px;
+    font-size: 12px;
+    opacity: .75;
+    text-align: center;
+    margin-top: 4px;
+    user-select: none;
+    pointer-events: none;
+  }
+  #btnReward2Hints:disabled{
+    opacity: .45;
+    filter: grayscale(1);
+  }
+
 </style>
 </head>
 
@@ -2370,6 +2384,42 @@ html.lowgfx .app::after{
   // === end i18n ===
 
 
+  // === Reward button cooldown (30s after ad closes) ===
+  const CV_REWARD_CD_MS  = 30 * 1000;
+  const CV_REWARD_CD_KEY = "__cv_reward_cooldown_until";
+  let __cvRewardCdTimer = null;
+
+  function cvRewardCooldownTick() {
+    const btn = document.getElementById("btnReward2Hints");
+    const txt = document.getElementById("rewardCooldownText");
+    if (!btn || !txt) return; // DOM not ready yet
+
+    const until = parseInt(localStorage.getItem(CV_REWARD_CD_KEY) || "0", 10);
+    const left = until - Date.now();
+
+    if (!until || left <= 0) {
+      btn.disabled = false;
+      txt.textContent = "";
+      try { localStorage.removeItem(CV_REWARD_CD_KEY); } catch(e){}
+      if (__cvRewardCdTimer) { clearTimeout(__cvRewardCdTimer); __cvRewardCdTimer = null; }
+      return;
+    }
+
+    btn.disabled = true;
+    txt.textContent = `Disponibile tra ${Math.ceil(left / 1000)}s`;
+    __cvRewardCdTimer = setTimeout(cvRewardCooldownTick, 250);
+  }
+
+  function startRewardCooldown(ms = CV_REWARD_CD_MS) {
+    try { localStorage.setItem(CV_REWARD_CD_KEY, String(Date.now() + ms)); } catch(e){}
+    cvRewardCooldownTick();
+  }
+
+  // resume when page becomes ready/visible
+  document.addEventListener("DOMContentLoaded", cvRewardCooldownTick);
+  window.addEventListener("pageshow", cvRewardCooldownTick);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) cvRewardCooldownTick(); });
+
 
   // === ADS ABSTRACTION (works on Web = no-op, works on APK once we wire AdMob) ===
   const Ads = (() => {
@@ -2462,6 +2512,7 @@ function consumeRewardFromUrl(){
     if (reward === "2" && ok) {
       // Buffer (vale sia per reload, sia se il game non è ancora pronto)
       try { localStorage.setItem("__cv_reward_buffer", "2"); } catch(e){}
+      
       try { localStorage.removeItem("__cv_pending_reward"); } catch(e){}
 
       // Se il game è già vivo (ritorno senza reload), prova ad applicare subito.
@@ -2482,7 +2533,7 @@ function consumeRewardFromUrl(){
     const tryClose = () => { try { if (typeof window.closeReward === "function") window.closeReward(); } catch(e){} };
     tryClose();
     document.addEventListener("DOMContentLoaded", tryClose, { once:true });
-
+    try { startRewardCooldown(); } catch(e){}  
     // Pulisci reward dall’URL (sempre)
     url.searchParams.delete("reward");
     history.replaceState({}, "", url.toString());
@@ -2563,6 +2614,8 @@ document.addEventListener("visibilitychange", () => {
             <img src="icons/bulbads.svg" alt="Hint" class="iconimg">
 
           </button>
+          <div id="rewardCooldownText" class="reward-cooldown" aria-live="polite"></div>
+
               <button id="btnAuto" class="iconbtn icononly" aria-label="Auto" title="Auto">
                 <img src="icons/auto.svg" alt="Auto" class="iconimg">
               </button>
