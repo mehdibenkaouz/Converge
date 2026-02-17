@@ -2463,11 +2463,27 @@ html.lowgfx .app::after{
     const ok = (ts > 0 && age >= 0 && age <= MAX_AGE_MS && reward === "2");
 
     if (ok) {
+      // Se la logica principale non è pronta, bufferizzo il reward e lo applico dopo
+      try {
+        if (typeof onRewardedAdCompleted === "function") {
+          onRewardedAdCompleted(); // applica subito se possibile
+        } else {
+          localStorage.setItem("__cv_reward_buffer", reward); // "2"
+        }
+      } catch(e) {
+        try { localStorage.setItem("__cv_reward_buffer", reward); } catch(_) {}
+      }
+
       localStorage.removeItem("__cv_pending_reward");
-      if (typeof onRewardedAdCompleted === "function") onRewardedAdCompleted();
-      try { console.log("Reward OK: +2 hints"); } catch(e){}
-    } else {
-      try { console.warn("Reward ignored", {reward, ts, age}); } catch(e){}
+
+      // rimuovi reward dall'URL
+      try {
+        const url = new URL(location.href);
+        url.searchParams.delete("reward");
+        history.replaceState({}, "", url.toString());
+      } catch(e) {}
+
+      return reward;
     }
 
     // Chiudi overlay reward: subito se esiste, altrimenti appena DOM è pronto
@@ -3238,6 +3254,17 @@ function attachAccountButtons(){
     if (!getAccessToken()) localStorage.removeItem(STORAGE_KEY); // solo per guest legacy
 
     state = newGameState();
+    // Applica reward bufferizzato (se presente)
+    try {
+      const rb = localStorage.getItem("__cv_reward_buffer");
+      if (rb === "2") {
+        localStorage.removeItem("__cv_reward_buffer");
+        state.hintCharges = (state.hintCharges || 0) + 2;
+      }
+    } catch(e) {}
+    try { updateHintBadge(); } catch(e) {}
+    try { saveNow(); } catch(e) {}
+
     void startLevel(1);
     toastMsg(t("toast.reset_done") || "Progressi resettati");
     toastMsg("Progressi locali resettati");
@@ -3745,9 +3772,31 @@ async function refreshUserUI(){
 
     if (loadedOk){
       state = loaded;
+      // Applica reward bufferizzato (se presente)
+      try {
+        const rb = localStorage.getItem("__cv_reward_buffer");
+        if (rb === "2") {
+          localStorage.removeItem("__cv_reward_buffer");
+          state.hintCharges = (state.hintCharges || 0) + 2;
+        }
+      } catch(e) {}
+      try { updateHintBadge(); } catch(e) {}
+      try { saveNow(); } catch(e) {}
+
       toastMsg("Partita caricata");
     } else {
       state = newGameState();
+            // Applica reward bufferizzato (se presente)
+      try {
+        const rb = localStorage.getItem("__cv_reward_buffer");
+        if (rb === "2") {
+          localStorage.removeItem("__cv_reward_buffer");
+          state.hintCharges = (state.hintCharges || 0) + 2;
+        }
+      } catch(e) {}
+      try { updateHintBadge(); } catch(e) {}
+      try { saveNow(); } catch(e) {}
+
       void startLevel(1); // genera board + render + save
     }
 
@@ -4590,6 +4639,17 @@ btnPasskeyRegister.addEventListener("click", async () => {
 
       // ricomincia partita
       state = newGameState();
+          // Applica reward bufferizzato (se presente)
+      try {
+        const rb = localStorage.getItem("__cv_reward_buffer");
+        if (rb === "2") {
+          localStorage.removeItem("__cv_reward_buffer");
+          state.hintCharges = (state.hintCharges || 0) + 2;
+        }
+      } catch(e) {}
+      try { updateHintBadge(); } catch(e) {}
+      try { saveNow(); } catch(e) {}
+
       generateLevelBoard();
       state.levelPlan.bestFirstDir =
         computeHintDirectionForCurrentState({ maxDepth: 6, timeBudgetMs: 25 });
@@ -4663,6 +4723,17 @@ btnPasskeyRegister.addEventListener("click", async () => {
           try {
             // reset totale e coerente
             state = newGameState();
+                // Applica reward bufferizzato (se presente)
+              try {
+                const rb = localStorage.getItem("__cv_reward_buffer");
+                if (rb === "2") {
+                  localStorage.removeItem("__cv_reward_buffer");
+                  state.hintCharges = (state.hintCharges || 0) + 2;
+                }
+              } catch(e) {}
+              try { updateHintBadge(); } catch(e) {}
+              try { saveNow(); } catch(e) {}
+
 
             // IMPORTANTISSIMO: usa la stessa logica dei livelli (gated + render + save)
             void startLevel(1);
