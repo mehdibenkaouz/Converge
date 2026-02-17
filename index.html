@@ -3622,6 +3622,16 @@ async function refreshUserUI(){
 
       // eventualmente aggiorna N e sizeIndex in base al livello corrente e alle mosse correnti
       try {
+        // ✅ ripristina le mosse di inizio livello (non quelle rimaste a 0)
+        if (Number.isFinite(state.levelStartMoves)) {
+          state.moves = state.levelStartMoves;
+        } else {
+          // fallback se per qualche motivo manca
+          state.moves = Math.max(state.moves, 3);
+          if (RELAX_MODE) state.moves = Math.max(state.moves, 5);
+          state.levelStartMoves = state.moves;
+        }
+
         state.N = pickGridSizeForLevelConsideringMoves(curLevel, state.moves);
         state.sizeIndex = Math.max(0, SIZES.indexOf(state.N));
       } catch(_) {}
@@ -4261,6 +4271,9 @@ btnPasskeyRegister.addEventListener("click", async () => {
     // Garantiamo solo un minimo per evitare soft-lock a 0.
     state.moves = Math.max(state.moves, 3);
     if (RELAX_MODE) state.moves = Math.max(state.moves, 5);
+    // ✅ snapshot mosse all'inizio del livello (per skip/continue)
+    state.levelStartMoves = state.moves;
+
     state.N = pickGridSizeForLevelConsideringMoves(nextLevel, state.moves);
     // Sync sizeIndex <-> N per evitare mismatch 5x5 vs 3x3
     state.sizeIndex = Math.max(0, SIZES.indexOf(state.N));
