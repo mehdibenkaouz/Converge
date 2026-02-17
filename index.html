@@ -1363,7 +1363,7 @@ html.lowgfx .app::after{
   }
 
   /* stile bottoni (se non hai già classi btn) */
-  #btnGameOverUndo, #btnGameOverClose{
+  #btnGameOverUndo, #btnGameOverSkipAd, #btnGameOverClose{
     padding: 30px 53px;
     border-radius: 12px;
     border: 0;
@@ -2502,8 +2502,32 @@ html.lowgfx .app::after{
       // }
     }
 
+    async function showRewardedForSkipLevel() {
+      const now = Date.now();
+      if (rewardedBusy) return { ok:false, reason:"busy" };
+      if (now - lastRewardTs < REWARD_COOLDOWN_MS) return { ok:false, reason:"cooldown" };
 
-    return { init, showBanner, hideBanner, showRewardedFor2Hints };
+      rewardedBusy = true;
+      try {
+        // returnUrl include rw_action=skip così al rientro sappiamo che non sono +2 hint
+        const u = new URL(location.href);
+        u.searchParams.set("rw_action", "skip");
+        const returnUrl = u.toString();
+
+        localStorage.setItem("__cv_pending_reward", String(now));
+        lastRewardTs = now;
+
+        const deep = "converge://rewarded/?return=" + encodeURIComponent(returnUrl);
+        location.href = deep;
+
+        return { ok:true, reason:"launched" };
+      } finally {
+        setTimeout(() => { rewardedBusy = false; }, 5000);
+      }
+    }
+
+
+    return { init, showBanner, hideBanner, showRewardedFor2Hints, showRewardedForSkipLevel };
   })();
 
   // === UI HOOK: Reward button gives +2 hints only if rewarded ===
@@ -2524,6 +2548,7 @@ function consumeRewardFromUrl(){
   try {
     const url = new URL(location.href);
     const reward = url.searchParams.get("reward");
+    const action = url.searchParams.get("rw_action") || "";
     const rwReason = url.searchParams.get("rw_reason") || "";
     const rwCode   = url.searchParams.get("rw_code") || "";
     let cdMs = CV_REWARD_CD_MS;
@@ -2574,6 +2599,7 @@ function consumeRewardFromUrl(){
     url.searchParams.delete("reward");
     url.searchParams.delete("rw_reason");
     
+    url.searchParams.delete("rw_action");
     url.searchParams.delete("rw_code");
     url.searchParams.delete("rw_msg");
 
@@ -2714,6 +2740,7 @@ document.addEventListener("visibilitychange", () => {
       <div class="gameover-bar">
         <button id="btnGameOverUndo" class="btn">Undo</button>
         <button id="btnGameOverClose" class="btn secondary">Play Again</button>
+        <button id="btnGameOverSkipAd" class="btn">Skip Level (Ad)</button>
       </div>
 
     </div>
@@ -3549,6 +3576,21 @@ async function refreshUserUI(){
     return true;
   };
 
+  // Rewarded Ad: salta livello (usato dal Game Over)
+  window.skipLevelFromAd = async function skipLevelFromAd() {
+    if (!state) return false;
+    try { if (typeof closeGameOver === "function") closeGameOver(); } catch(_) {}
+    try {
+      // passa al livello successivo senza resettare le mosse (startLevel garantisce min 3 mosse)
+      await startLevel((state.level || 1) + 1);
+      return true;
+    } catch (e) {
+      console.warn("skipLevelFromAd failed:", e);
+      return false;
+    }
+  };
+
+
   let isAnimating = false;
   let MOVE_TOKEN = 0; // used to cancel in-flight animations when instant mode is enabled
   let lastToastAt = 0;
@@ -3595,6 +3637,7 @@ async function refreshUserUI(){
   const gameOverOverlay = document.getElementById("gameOverOverlay");
   const btnGameOverUndo = document.getElementById("btnGameOverUndo");
   const btnGameOverClose = document.getElementById("btnGameOverClose");
+  const btnGameOverSkipAd = document.getElementById("btnGameOverSkipAd");
   const hintBadge = document.getElementById("hintBadge");
 
   function updateHintBadge(){
@@ -4666,10 +4709,27 @@ btnPasskeyRegister.addEventListener("click", async () => {
     
 
     btnGameOverUndo?.addEventListener("click", () => {
-      if (btnGameOverUndo.disabled) return;
-      closeGameOver();
-      btnUndo.click(); // riusa la logica Undo normale
+          if (btnGameOverUndo.disabled) return;
+          closeGameOver();
+          btnUndo.click(); // riusa la logica Undo normale
+        });
+      
+        btnGameOverSkipAd?.addEventListener("click", async () => {
+      // Disponibile solo nell’APK ufficiale (TWA)
+      const isOfficial = localStorage.getItem("__converge_official") === "1";
+      if (!isOfficial) { try { toastMsg("Disponibile solo nell’app."); } catch(_) {} return; }
+
+      const res = await Ads?.showRewardedForSkipLevel?.();
+      if (!res?.ok) {
+        const r = res?.reason || "unknown";
+        try {
+          if (r === "cooldown") toastMsg("Aspetta un attimo…");
+          else if (r === "busy") toastMsg("Pubblicità già in avvio…");
+          else toastMsg("Pubblicità non disponibile.");
+        } catch(_) {}
+      }
     });
+
 
     btnGameOverClose?.addEventListener("click", () => {
       closeGameOver();
@@ -5976,6 +6036,15 @@ function markPreBreak(idsToRemove){
   // === APPLY BUFFERED REWARD (AFTER INIT IS READY) ===
   function applyRewardBufferIfAny() {
     try {
+      const sb = localStorage.getItem("__cv_skip_buffer");
+      if (sb) {
+        if (!state) return;
+        localStorage.removeItem("__cv_skip_buffer");
+        if (typeof window.skipLevelFromAd === "function") {
+          window.skipLevelFromAd();
+        }
+      }
+
       const rb = localStorage.getItem("__cv_reward_buffer");
       if (!rb) return;
 
