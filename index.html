@@ -3389,6 +3389,9 @@ function attachAccountButtons(){
     if (!(await uiConfirm(t("account.reset_your_progress")))) return;
     localStorage.removeItem(userStorageKey(STORAGE_KEY));
     if (!getAccessToken()) localStorage.removeItem(STORAGE_KEY); // solo per guest legacy
+      // Reset best score
+      try { localStorage.removeItem('psb_best_score'); } catch(e) {}
+
 
     state = newGameState();
     // Applica reward bufferizzato (se presente)
