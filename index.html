@@ -2419,7 +2419,7 @@ html.lowgfx .app::after{
 
         // 3) Apri la Activity nativa via deep link
         //    IMPORTANTE: deve matchare l'intent-filter che hai messo nel Manifest
-        const deep = "converge://rewarded?return=" + encodeURIComponent(returnUrl);
+        const deep = "converge://rewarded/?return=" + encodeURIComponent(returnUrl);
         location.href = deep;
 
         // Qui non possiamo "attendere": la pagina naviga via deep link
@@ -3548,47 +3548,7 @@ async function refreshUserUI(){
   btnReward2Hints?.addEventListener("click", openReward);
   btnRewardCancel?.addEventListener("click", closeReward);
 
-  btnRewardWatch?.addEventListener("click", async () => {
-    try{
-      btnRewardWatch.disabled = true;
-      if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Caricamento…";
 
-      if (r?.ok && r?.reason === "launched") {
-        // ✅ chiudi SUBITO l’overlay: il reward arriverà al rientro via ?reward=2
-        closeReward();
-
-        // opzionale: feedback fuori overlay (se vuoi)
-        if (rewardTopStatus) {
-          rewardTopStatus.textContent = "Annuncio in corso…";
-          setTimeout(() => { rewardTopStatus.textContent = ""; }, 4000);
-        }
-        return;
-      }
-
-
-      if (r && r.ok && r.rewarded) {
-        // +2 hint: usa la tua funzione esistente
-        if (typeof onRewardedAdCompleted === "function" && state) onRewardedAdCompleted();
-        if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Ok! +2 hint aggiunti.";
-        closeReward();
-      } else {
-        const reason = r?.reason || "no_reward";
-        if (reason === "web_no_ads") {
-          if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Disponibile solo nell’app Android.";
-        } else if (reason === "cooldown") {
-          if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Riprova tra poco.";
-        } else if (reason === "busy") {
-          if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Attendi…";
-        } else {
-          if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Pubblicità non disponibile ora.";
-        }
-      }
-    } catch(e){
-      if (rewardOverlayStatus) rewardOverlayStatus.textContent = "Errore: " + (e?.message || e);
-    } finally {
-      if (btnRewardWatch) btnRewardWatch.disabled = false;
-    }
-  });
 
   const rewardStatus = document.getElementById("rewardStatus");
   // ===== Offline overlay (solo UI; il gioco resta online-only) =====
@@ -3617,11 +3577,7 @@ async function refreshUserUI(){
 
 
 
-  function openReward(){
-    if (!rewardOverlay) return;
-    rewardStatus.textContent = "";
-    rewardOverlay.classList.remove("hidden");
-  }
+
   function closeReward(){
     if (!rewardOverlay) return;
     rewardOverlay.classList.add("hidden");
@@ -3782,8 +3738,8 @@ async function refreshUserUI(){
       } catch(e) {}
       try { updateHintBadge(); } catch(e) {}
       try { saveNow(); } catch(e) {}
-
       toastMsg("Partita caricata");
+
     } else {
       state = newGameState();
             // Applica reward bufferizzato (se presente)
