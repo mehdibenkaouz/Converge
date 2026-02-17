@@ -2502,6 +2502,9 @@ html.lowgfx .app::after{
       // }
     }
 
+
+    
+
     async function showRewardedForSkipLevel() {
       const now = Date.now();
       if (rewardedBusy) return { ok:false, reason:"busy" };
@@ -2526,8 +2529,7 @@ html.lowgfx .app::after{
       }
     }
 
-
-    return { init, showBanner, hideBanner, showRewardedFor2Hints, showRewardedForSkipLevel };
+return { init, showBanner, hideBanner, showRewardedFor2Hints, showRewardedForSkipLevel };
   })();
 
   // === UI HOOK: Reward button gives +2 hints only if rewarded ===
@@ -2562,22 +2564,37 @@ function consumeRewardFromUrl(){
     const ok = (ts > 0 && age >= 0 && age <= MAX_AGE_MS);
 
     if (reward === "2" && ok) {
-      // Buffer (vale sia per reload, sia se il game non è ancora pronto)
-      try { localStorage.setItem("__cv_reward_buffer", "2"); } catch(e){}
-      
-      try { localStorage.removeItem("__cv_pending_reward"); } catch(e){}
+      if (action === "skip") {
+        // ✅ Skip-level reward (Game Over): buffer + applica quando possibile
+        try { localStorage.setItem("__cv_skip_buffer", "1"); } catch(e){}
+        try { localStorage.removeItem("__cv_pending_reward"); } catch(e){}
 
-      // Se il game è già vivo (ritorno senza reload), prova ad applicare subito.
-      // Rimuovi il buffer SOLO se addHints ha applicato davvero.
-      try {
-        if (typeof window.addHints === "function") {
-          const applied = window.addHints(2);
-          if (applied) localStorage.removeItem("__cv_reward_buffer");
-        }
-      } catch(e){}
-      try { cvRewardNoFillReset(); } catch(e){}
-      cdMs = CV_REWARD_CD_MS;
+        try {
+          if (typeof window.skipLevelFromAd === "function") {
+            window.skipLevelFromAd();
+            localStorage.removeItem("__cv_skip_buffer");
+          }
+        } catch(e){}
+        try { cvRewardNoFillReset(); } catch(e){}
+        cdMs = CV_REWARD_CD_MS;
 
+      } else {
+        // ✅ +2 Hint reward: buffer + applica quando possibile
+        try { localStorage.setItem("__cv_reward_buffer", "2"); } catch(e){}
+
+        try { localStorage.removeItem("__cv_pending_reward"); } catch(e){}
+
+        // Se il game è già vivo (ritorno senza reload), prova ad applicare subito.
+        // Rimuovi il buffer SOLO se addHints ha applicato davvero.
+        try {
+          if (typeof window.addHints === "function") {
+            const applied = window.addHints(2);
+            if (applied) localStorage.removeItem("__cv_reward_buffer");
+          }
+        } catch(e){}
+        try { cvRewardNoFillReset(); } catch(e){}
+        cdMs = CV_REWARD_CD_MS;
+      }
     } else {
       // reward=0 o non valido -> pulisci pending
       try {localStorage.removeItem("__cv_pending_reward"); } catch(e){}
@@ -2599,7 +2616,6 @@ function consumeRewardFromUrl(){
     url.searchParams.delete("reward");
     url.searchParams.delete("rw_reason");
     
-    url.searchParams.delete("rw_action");
     url.searchParams.delete("rw_code");
     url.searchParams.delete("rw_msg");
 
@@ -2739,8 +2755,8 @@ document.addEventListener("visibilitychange", () => {
       <!-- BARRA AZIONI SEPARATA -->
       <div class="gameover-bar">
         <button id="btnGameOverUndo" class="btn">Undo</button>
+        <button id="btnGameOverSkipAd" class="btn">Salta livello (Ad)</button>
         <button id="btnGameOverClose" class="btn secondary">Play Again</button>
-        <button id="btnGameOverSkipAd" class="btn">Skip Level (Ad)</button>
       </div>
 
     </div>
@@ -3589,6 +3605,7 @@ async function refreshUserUI(){
       return false;
     }
   };
+
 
 
   let isAnimating = false;
@@ -4709,12 +4726,12 @@ btnPasskeyRegister.addEventListener("click", async () => {
     
 
     btnGameOverUndo?.addEventListener("click", () => {
-          if (btnGameOverUndo.disabled) return;
-          closeGameOver();
-          btnUndo.click(); // riusa la logica Undo normale
-        });
-      
-        btnGameOverSkipAd?.addEventListener("click", async () => {
+      if (btnGameOverUndo.disabled) return;
+      closeGameOver();
+      btnUndo.click(); // riusa la logica Undo normale
+    });
+
+    btnGameOverSkipAd?.addEventListener("click", async () => {
       // Disponibile solo nell’APK ufficiale (TWA)
       const isOfficial = localStorage.getItem("__converge_official") === "1";
       if (!isOfficial) { try { toastMsg("Disponibile solo nell’app."); } catch(_) {} return; }
@@ -4729,7 +4746,6 @@ btnPasskeyRegister.addEventListener("click", async () => {
         } catch(_) {}
       }
     });
-
 
     btnGameOverClose?.addEventListener("click", () => {
       closeGameOver();
