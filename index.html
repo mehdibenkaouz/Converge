@@ -4733,7 +4733,27 @@ btnPasskeyRegister.addEventListener("click", async () => {
 
     btnGameOverSkipAd?.addEventListener("click", async () => {
       // Disponibile solo nell’APK ufficiale (TWA)
-      const isOfficial = localStorage.getItem("__converge_official") === "1";
+
+      const qp = new URLSearchParams(location.search);
+
+      // TWA spesso ha ?app=1, e comunque in “standalone/fullscreen” è molto spesso app/PWA
+      const isStandalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.matchMedia("(display-mode: fullscreen)").matches ||
+        window.matchMedia("(display-mode: minimal-ui)").matches ||
+        (navigator.standalone === true);
+
+      const isOfficial =
+        (localStorage.getItem("__converge_official") === "1") ||
+        (qp.get("app") === "1") ||
+        isStandalone;
+
+      // se lo riconosciamo come app, persistiamolo
+      if (isOfficial) {
+        try { localStorage.setItem("__converge_official", "1"); } catch(e){}
+      }
+
+
       if (!isOfficial) { try { toastMsg("Disponibile solo nell’app."); } catch(_) {} return; }
 
       const res = await Ads?.showRewardedForSkipLevel?.();
