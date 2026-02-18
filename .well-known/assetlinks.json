@@ -4,8 +4,8 @@
     "target": {
       "namespace": "android_app",
       "package_name": "dev.pages.converge_mqh.twa",
-      "sha256_cert_fingerprints": [
-        "CA:E5:D3:4B:E9:52:27:6B:96:58:A8:E0:8C:49:67:A8:53:28:D3:F2:42:44:B5:C2:B0:AB:43:77:7E:38:D2:51"
+      "sha256_cert_fingerprints": 
+        ["1D:62:DA:5D:32:67:ED:9C:4E:FB:E7:F3:4C:8D:F3:7B:6D:C5:3A:7F:27:29:03:86:02:01:E0:24:1C:15:80:5C"
       ]
     }
   }
