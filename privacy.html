@@ -1,43 +1,442 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Privacy Policy</title>
-<style>
-body{
-  max-width:800px;
-  margin:auto;
-  padding:40px;
-  font-family:system-ui;
-  background:#0b0c16;
-  color:#e6e6e6;
-  line-height:1.6;
-}
-a{color:#8ab4ff;}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Converge — Privacy Policy</title>
+
+  <!-- Fonts (coherent with Converge) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg0:#050611;
+      --bg1:#071b2d;
+      --card: rgba(255,255,255,.08);
+      --text:#e9e9ef;
+      --muted: rgba(233,233,239,.78);
+      --line: rgba(255,255,255,.10);
+      --link:#8ab4ff;
+      --accent:#7cf5c5;
+    }
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family: Sora, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 20% 10%, rgba(124,245,197,.10), transparent 60%),
+        radial-gradient(900px 600px at 80% 30%, rgba(138,180,255,.10), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      line-height:1.65;
+    }
+    .wrap{
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 28px 18px 60px;
+    }
+    .card{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .topbar{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+    }
+    h1{
+      font-family: "Baloo 2", system-ui, sans-serif;
+      margin: 0 0 6px;
+      font-size: 34px;
+      letter-spacing:.2px;
+    }
+    .sub{color:var(--muted); margin:0 0 16px; font-size: 14px;}
+    h2{
+      margin: 18px 0 8px;
+      font-size: 18px;
+      letter-spacing:.2px;
+    }
+    p, li{color:var(--text); opacity:.95;}
+    a{color:var(--link); text-decoration:none;}
+    a:hover{text-decoration:underline;}
+    .pill{
+      display:inline-block;
+      padding: 4px 10px;
+      border:1px solid var(--line);
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-right: 6px;
+    }
+    .hr{height:1px; background:var(--line); margin: 14px 0;}
+    .k{
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing:.12em;
+      margin-top: 10px;
+    }
+    .note{
+      border-left: 3px solid rgba(124,245,197,.55);
+      padding: 10px 12px;
+      background: rgba(124,245,197,.06);
+      border-radius: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    details{
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,.04);
+    }
+    summary{
+      cursor:pointer;
+      color: var(--text);
+      font-weight: 600;
+    }
+    code{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;}
+    .lang{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      user-select:none;
+    }
+    .lang label{
+      font-size:12px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      margin-top:4px;
+    }
+    .lang select{
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--line);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 12px;
+      outline: none;
+      cursor:pointer;
+    }
+    .lang select:focus{
+      border-color: rgba(124,245,197,.55);
+      box-shadow: 0 0 0 3px rgba(124,245,197,.12);
+    }
+  </style>
 </head>
+
 <body>
+  <div class="wrap">
+    <div class="card">
 
-<h1>Privacy Policy</h1>
+      <div class="topbar">
+        <div>
+          <h1 id="t_h1">Privacy Policy</h1>
+          <p class="sub" id="t_sub">
+            <span class="pill" id="t_pill_app">App: Converge</span>
+            <span class="pill" id="t_pill_dev">Developer: Mehdi Benkaouz</span>
+            <span class="pill" id="t_pill_date">Last updated: 19 February 2026</span>
+          </p>
+        </div>
 
-<p>This game is free and supported by advertising.</p>
+        <div class="lang" aria-label="Language switcher">
+          <label for="langSel" id="t_lang_label">Language</label>
+          <select id="langSel">
+            <option value="en">English</option>
+            <option value="it">Italiano</option>
+          </select>
+        </div>
+      </div>
 
-<h2>Data Collection</h2>
-<p>The game may collect anonymous usage data and advertising identifiers through third-party services.</p>
+      <p id="t_intro">
+        This page explains how <b>Converge</b> processes data when you use the game (Android/TWA app and web version).
+        If you do not agree with these practices, please do not use the app.
+      </p>
 
-<h2>Advertising</h2>
-<p>We use Google AdMob to display advertisements. AdMob may collect device identifiers and usage data in accordance with Google's Privacy Policy.</p>
+      <div class="hr"></div>
 
-<p>Google Privacy Policy: 
-<a href="https://policies.google.com/privacy" target="_blank">
-https://policies.google.com/privacy
-</a></p>
+      <h2 id="t_h2_1">1) Controller and contact</h2>
+      <p id="t_ctrl">
+        <b>Data controller:</b> Mehdi Benkaouz<br/>
+        <b>Privacy email:</b> <a href="mailto:mehdibenkaouz00@gmail.com">mehdibenkaouz00@gmail.com</a>
+      </p>
 
-<h2>Login and Game Progress</h2>
-<p>If you log in, your game progress may be stored securely to allow you to continue your progress across devices.</p>
+      <h2 id="t_h2_2">2) Data that may be processed</h2>
 
-<h2>Contact</h2>
-<p>If you have questions, contact: mehdibenkaouz00@gmail.com</p>
+      <p class="k" id="t_k_a">A) Data provided by you (if you create an account)</p>
+      <ul>
+        <li id="t_a_1"><b>Username</b> and data required to sign in.</li>
+        <li id="t_a_2"><b>Credentials</b>: if you use passwords, they are handled securely (not stored in plain text). If you use “passkeys”, we only keep the technical information needed for authentication (e.g., public keys).</li>
+      </ul>
+
+      <p class="k" id="t_k_b">B) Game data and progress</p>
+      <ul>
+        <li id="t_b_1"><b>Progress</b>, completed levels, hints/credits, settings (e.g., language, relax mode).</li>
+        <li id="t_b_2">Some of this data may be saved <b>locally</b> on the device/browser (e.g., storage) and, if you log in, may also be saved <b>server-side</b> to sync across devices.</li>
+      </ul>
+
+      <p class="k" id="t_k_c">C) Technical data</p>
+      <ul>
+        <li id="t_c_1"><b>IP</b>, user-agent, date/time and technical logs (needed for security, debugging, abuse prevention and service operation).</li>
+      </ul>
+
+      <p class="k" id="t_k_d">D) Advertising (AdMob)</p>
+      <ul>
+        <li id="t_d_1">The app is supported by ads and may include rewarded ads.</li>
+        <li id="t_d_2">Google AdMob may process advertising identifiers and device signals for ad delivery, frequency capping and measurement.</li>
+      </ul>
+
+      <div class="note" id="t_note">
+        <b>Useful link:</b><br/>
+        Google Privacy Policy:
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">https://policies.google.com/privacy</a>
+      </div>
+
+      <h2 id="t_h2_3">3) Purposes</h2>
+      <ul>
+        <li id="t_p_1"><b>Provide the game</b> and features (login, saving progress, settings).</li>
+        <li id="t_p_2"><b>Security</b>, abuse/fraud prevention, service stability.</li>
+        <li id="t_p_3"><b>Advertising</b> to support the project (AdMob) and, if present, in‑game rewards linked to ads.</li>
+        <li id="t_p_4"><b>Support</b> and responses to user requests (via email).</li>
+      </ul>
+
+      <h2 id="t_h2_4">4) Sharing with third parties</h2>
+      <p id="t_s_intro">We may share/allow processing of certain data with:</p>
+      <ul>
+        <li id="t_s_1"><b>Google AdMob</b> (advertising).</li>
+        <li id="t_s_2"><b>Technical providers</b> used for hosting and delivery of the site/service (e.g., CDN/hosting) which may see technical logs like IP and requests, acting as processors.</li>
+      </ul>
+      <p id="t_s_outro">We do not sell your personal data.</p>
+
+      <h2 id="t_h2_5">5) Retention and deletion</h2>
+      <ul>
+        <li id="t_r_1"><b>Account/progress data</b>: kept as long as your account is active or as needed to provide the service.</li>
+        <li id="t_r_2"><b>Technical logs</b>: kept for a limited time, as needed for security and diagnostics.</li>
+      </ul>
+      <p id="t_del_intro">
+        <b>Account and data deletion:</b><br/>
+        You can request deletion:
+      </p>
+      <ul>
+        <li id="t_del_1"><b>In the app</b> via the “Delete account” option.</li>
+        <li id="t_del_2"><b>Outside the app</b> by emailing <a href="mailto:mehdibenkaouz00@gmail.com">mehdibenkaouz00@gmail.com</a> with subject: <code>Delete my Converge account</code>.</li>
+      </ul>
+
+      <h2 id="t_h2_6">6) Security</h2>
+      <ul>
+        <li id="t_sec_1">We apply reasonable technical and organizational measures to protect data (e.g., encrypted HTTPS transport, access controls, data minimization).</li>
+        <li id="t_sec_2">No system is perfect: if you find vulnerabilities, please report them via email.</li>
+      </ul>
+
+      <h2 id="t_h2_7">7) User choices</h2>
+      <ul>
+        <li id="t_u_1">You may <b>not create an account</b> (if available) and play without synchronization.</li>
+        <li id="t_u_2">You can <b>reset progress</b> or delete local data (uninstall / clear browser storage).</li>
+        <li id="t_u_3">Ad options depend on device settings and Google services.</li>
+      </ul>
+
+      <h2 id="t_h2_8">8) Children</h2>
+      <p id="t_child">
+        The app is not intentionally designed for children under 13. If you are a parent/guardian and believe a child has provided data, contact us for removal.
+      </p>
+
+      <h2 id="t_h2_9">9) Changes to this policy</h2>
+      <p id="t_changes">
+        We may update this page. The “Last updated” date indicates the latest revision.
+      </p>
+
+    </div>
+  </div>
+
+<script>
+(function(){
+  const T = {
+    en: {
+      langLabel: "Language",
+      title: "Privacy Policy",
+      pillApp: "App: Converge",
+      pillDev: "Developer: Mehdi Benkaouz",
+      pillDate: "Last updated: 19 February 2026",
+      intro: "This page explains how <b>Converge</b> processes data when you use the game (Android/TWA app and web version). If you do not agree with these practices, please do not use the app.",
+      h21: "1) Controller and contact",
+      ctrl: "<b>Data controller:</b> Mehdi Benkaouz<br/><b>Privacy email:</b> <a href=\"mailto:mehdibenkaouz00@gmail.com\">mehdibenkaouz00@gmail.com</a>",
+      h22: "2) Data that may be processed",
+      ka: "A) Data provided by you (if you create an account)",
+      a1: "<b>Username</b> and data required to sign in.",
+      a2: "<b>Credentials</b>: if you use passwords, they are handled securely (not stored in plain text). If you use “passkeys”, we only keep the technical information needed for authentication (e.g., public keys).",
+      kb: "B) Game data and progress",
+      b1: "<b>Progress</b>, completed levels, hints/credits, settings (e.g., language, relax mode).",
+      b2: "Some of this data may be saved <b>locally</b> on the device/browser (e.g., storage) and, if you log in, may also be saved <b>server-side</b> to sync across devices.",
+      kc: "C) Technical data",
+      c1: "<b>IP</b>, user-agent, date/time and technical logs (needed for security, debugging, abuse prevention and service operation).",
+      kd: "D) Advertising (AdMob)",
+      d1: "The app is supported by ads and may include rewarded ads.",
+      d2: "Google AdMob may process advertising identifiers and device signals for ad delivery, frequency capping and measurement.",
+      note: "<b>Useful link:</b><br/>Google Privacy Policy: <a href=\"https://policies.google.com/privacy\" target=\"_blank\" rel=\"noopener\">https://policies.google.com/privacy</a>",
+      h23: "3) Purposes",
+      p1: "<b>Provide the game</b> and features (login, saving progress, settings).",
+      p2: "<b>Security</b>, abuse/fraud prevention, service stability.",
+      p3: "<b>Advertising</b> to support the project (AdMob) and, if present, in‑game rewards linked to ads.",
+      p4: "<b>Support</b> and responses to user requests (via email).",
+      h24: "4) Sharing with third parties",
+      sIntro: "We may share/allow processing of certain data with:",
+      s1: "<b>Google AdMob</b> (advertising).",
+      s2: "<b>Technical providers</b> used for hosting and delivery of the site/service (e.g., CDN/hosting) which may see technical logs like IP and requests, acting as processors.",
+      sOutro: "We do not sell your personal data.",
+      h25: "5) Retention and deletion",
+      r1: "<b>Account/progress data</b>: kept as long as your account is active or as needed to provide the service.",
+      r2: "<b>Technical logs</b>: kept for a limited time, as needed for security and diagnostics.",
+      delIntro: "<b>Account and data deletion:</b><br/>You can request deletion:",
+      del1: "<b>In the app</b> via the “Delete account” option.",
+      del2: "<b>Outside the app</b> by emailing <a href=\"mailto:mehdibenkaouz00@gmail.com\">mehdibenkaouz00@gmail.com</a> with subject: <code>Delete my Converge account</code>.",
+      h26: "6) Security",
+      sec1: "We apply reasonable technical and organizational measures to protect data (e.g., encrypted HTTPS transport, access controls, data minimization).",
+      sec2: "No system is perfect: if you find vulnerabilities, please report them via email.",
+      h27: "7) User choices",
+      u1: "You may <b>not create an account</b> (if available) and play without synchronization.",
+      u2: "You can <b>reset progress</b> or delete local data (uninstall / clear browser storage).",
+      u3: "Ad options depend on device settings and Google services.",
+      h28: "8) Children",
+      child: "The app is not intentionally designed for children under 13. If you are a parent/guardian and believe a child has provided data, contact us for removal.",
+      h29: "9) Changes to this policy",
+      changes: "We may update this page. The “Last updated” date indicates the latest revision."
+    },
+    it: {
+      langLabel: "Lingua",
+      title: "Norme sulla privacy",
+      pillApp: "App: Converge",
+      pillDev: "Developer: Mehdi Benkaouz",
+      pillDate: "Ultimo aggiornamento: 19 Febbraio 2026",
+      intro: "Questa pagina descrive come <b>Converge</b> tratta i dati quando usi il gioco (app Android/TWA e versione web). Se non sei d’accordo con queste pratiche, ti consigliamo di non usare l’app.",
+      h21: "1) Titolare e contatti",
+      ctrl: "<b>Titolare del trattamento:</b> Mehdi Benkaouz<br/><b>Email (privacy):</b> <a href=\"mailto:mehdibenkaouz00@gmail.com\">mehdibenkaouz00@gmail.com</a>",
+      h22: "2) Dati che possono essere trattati",
+      ka: "A) Dati forniti da te (se crei un account)",
+      a1: "<b>Username</b> e dati necessari al login.",
+      a2: "<b>Credenziali</b>: se usi password, vengono gestite in modo sicuro (non in chiaro). Se usi meccanismi “passkey”, conserviamo solo informazioni tecniche necessarie all’autenticazione (es. chiavi pubbliche).",
+      kb: "B) Dati di gioco e progresso",
+      b1: "<b>Progressi</b>, livelli completati, hint/crediti, impostazioni (es. lingua, modalità relax).",
+      b2: "Una parte di questi dati può essere salvata <b>in locale</b> sul dispositivo/browser (es. storage) e, se fai login, può essere salvata anche <b>lato server</b> per sincronizzare tra dispositivi.",
+      kc: "C) Dati tecnici",
+      c1: "<b>IP</b>, user-agent, data/ora e log tecnici (necessari per sicurezza, debug, prevenzione abusi e funzionamento del servizio).",
+      kd: "D) Pubblicità (AdMob)",
+      d1: "L’app è supportata da pubblicità e può includere annunci premiati (rewarded).",
+      d2: "Google AdMob può trattare identificativi pubblicitari e segnali del dispositivo per erogazione/limitazione/frequenza annunci e misurazioni.",
+      note: "<b>Link utili:</b><br/>Google Privacy Policy: <a href=\"https://policies.google.com/privacy\" target=\"_blank\" rel=\"noopener\">https://policies.google.com/privacy</a>",
+      h23: "3) Finalità del trattamento",
+      p1: "<b>Fornire il gioco</b> e le funzionalità (login, salvataggio progressi, impostazioni).",
+      p2: "<b>Sicurezza</b>, prevenzione abusi/frode, stabilità del servizio.",
+      p3: "<b>Pubblicità</b> per sostenere il progetto (AdMob) e, se presenti, ricompense in-game legate agli annunci.",
+      p4: "<b>Supporto</b> e risposte alle richieste dell’utente (via email).",
+      h24: "4) Condivisione con terze parti",
+      sIntro: "Possiamo condividere/consentire il trattamento di alcuni dati con:",
+      s1: "<b>Google AdMob</b> (pubblicità).",
+      s2: "<b>Fornitori tecnici</b> usati per hosting e delivery del sito/servizio (es. CDN/hosting) che possono vedere log tecnici come IP e richieste, in qualità di responsabili del trattamento.",
+      sOutro: "Non vendiamo i tuoi dati personali.",
+      h25: "5) Conservazione (retention) e cancellazione",
+      r1: "<b>Dati account/progresso</b>: conservati finché mantieni l’account attivo o finché necessari a fornire il servizio.",
+      r2: "<b>Log tecnici</b>: conservati per un tempo limitato, quanto necessario per sicurezza e diagnosi.",
+      delIntro: "<b>Eliminazione account e dati:</b><br/>Puoi richiedere la cancellazione:",
+      del1: "<b>Dentro l’app</b> tramite l’opzione “Elimina account”.",
+      del2: "<b>Fuori dall’app</b> scrivendo a <a href=\"mailto:mehdibenkaouz00@gmail.com\">mehdibenkaouz00@gmail.com</a> con oggetto: <code>Delete my Converge account</code>.",
+      h26: "6) Sicurezza",
+      sec1: "Adottiamo misure tecniche e organizzative ragionevoli per proteggere i dati (es. trasmissione cifrata HTTPS, controlli di accesso, minimizzazione dati).",
+      sec2: "Nessun sistema è perfetto: se scopri vulnerabilità, segnalale via email.",
+      h27: "7) Scelte dell’utente",
+      u1: "Puoi <b>non creare un account</b> (se disponibile) e giocare senza sincronizzazione.",
+      u2: "Puoi <b>resettare i progressi</b> o cancellare i dati locali (disinstallazione / pulizia storage del browser).",
+      u3: "Per la pubblicità, le opzioni dipendono dalle impostazioni del dispositivo e dai servizi Google.",
+      h28: "8) Minori",
+      child: "L’app non è progettata intenzionalmente per bambini sotto i 13 anni. Se sei un genitore/tutore e ritieni che un minore ci abbia fornito dati, contattaci per la rimozione.",
+      h29: "9) Modifiche a questa policy",
+      changes: "Potremmo aggiornare questa pagina. La data di “Ultimo aggiornamento” indica l’ultima revisione."
+    }
+  };
+
+  const ids = {
+    t_lang_label: "langLabel",
+    t_h1: "title",
+    t_pill_app: "pillApp",
+    t_pill_dev: "pillDev",
+    t_pill_date: "pillDate",
+    t_intro: "intro",
+    t_h2_1: "h21",
+    t_ctrl: "ctrl",
+    t_h2_2: "h22",
+    t_k_a: "ka",
+    t_a_1: "a1",
+    t_a_2: "a2",
+    t_k_b: "kb",
+    t_b_1: "b1",
+    t_b_2: "b2",
+    t_k_c: "kc",
+    t_c_1: "c1",
+    t_k_d: "kd",
+    t_d_1: "d1",
+    t_d_2: "d2",
+    t_note: "note",
+    t_h2_3: "h23",
+    t_p_1: "p1",
+    t_p_2: "p2",
+    t_p_3: "p3",
+    t_p_4: "p4",
+    t_h2_4: "h24",
+    t_s_intro: "sIntro",
+    t_s_1: "s1",
+    t_s_2: "s2",
+    t_s_outro: "sOutro",
+    t_h2_5: "h25",
+    t_r_1: "r1",
+    t_r_2: "r2",
+    t_del_intro: "delIntro",
+    t_del_1: "del1",
+    t_del_2: "del2",
+    t_h2_6: "h26",
+    t_sec_1: "sec1",
+    t_sec_2: "sec2",
+    t_h2_7: "h27",
+    t_u_1: "u1",
+    t_u_2: "u2",
+    t_u_3: "u3",
+    t_h2_8: "h28",
+    t_child: "child",
+    t_h2_9: "h29",
+    t_changes: "changes"
+  };
+
+  function applyLang(lang){
+    const pack = T[lang] || T.en;
+    document.documentElement.lang = lang;
+    // Nice title in browser tab
+    document.title = (lang === "it") ? "Converge — Norme sulla privacy" : "Converge — Privacy Policy";
+
+    for (const elId in ids){
+      const key = ids[elId];
+      const el = document.getElementById(elId);
+      if (!el) continue;
+      el.innerHTML = pack[key];
+    }
+
+    try { localStorage.setItem("cv_privacy_lang", lang); } catch(e){}
+  }
+
+  const sel = document.getElementById("langSel");
+  const saved = (() => { try { return localStorage.getItem("cv_privacy_lang"); } catch(e){ return null; } })();
+  const initial = saved || (navigator.language || "en").toLowerCase().startsWith("it") ? "it" : "en";
+
+  sel.value = (saved === "it" || saved === "en") ? saved : (navigator.language || "").toLowerCase().startsWith("it") ? "it" : "en";
+  applyLang(sel.value);
+
+  sel.addEventListener("change", () => applyLang(sel.value));
+})();
+</script>
 
 </body>
 </html>
