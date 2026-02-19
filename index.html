@@ -1776,6 +1776,10 @@ html.lowgfx .app::after{
       "Ads2":"Guarda un annuncio per ottenere 2 hint extra :)",
       "Congratulations!":"Complimenti! Hai completato il livello",
       "prepare":"Calcolo il prossimo livello...",
+      "Guarda":"Guarda l'annuncio",
+      "Annulla":"Annulla",
+
+
     },
     en: {
       "label.level":"Level",
@@ -1837,6 +1841,10 @@ html.lowgfx .app::after{
       "Ads2":"Watch an ad to get 2 extra hints :)",
       "Congratulations!": "Congratulations! You completed the level",
       "prepare":"Calculating next level...",
+      "Guarda":"Watch Ad",
+      "Annulla":"Cancel",
+
+
     },
     fr: {
       "label.level":"Niveau",
@@ -1897,6 +1905,11 @@ html.lowgfx .app::after{
       "Ads2":"Regardez une publicité pour obtenir 2 indices supplémentaires :)",
       "Congratulations!":"Félicitations ! Vous avez terminé le niveau.",
       "prepare":"Calcul en cours du prochain niveau...",
+      "Guarda":"Voir la pub",
+      "Annulla":"Annuler",
+
+
+
     },
     de: {
       "label.level":"Level",
@@ -1958,6 +1971,10 @@ html.lowgfx .app::after{
       "Ads2":"Schau dir eine Werbung an, um 2 zusätzliche Hinweise zu erhalten :)",
       "Congratulations!": "Herzlichen Glückwunsch, du hast das Level abgeschlossen.",
       "prepare": "Ich berechne das nächste Level.",
+      "Guarda":"Werbung ansehen",
+      "Annulla":"Abbrechen",
+
+
     },
     es: {
       "label.level":"Nivel",
@@ -2019,6 +2036,10 @@ html.lowgfx .app::after{
       "Ads2":"Mira un anuncio para obtener 2 pistas extra :)",
       "Congratulations!": "¡Felicidades! Completaste el nivel",
       "prepare": "Calculando el siguiente nivel...",
+      "Guarda":"Ver anuncio",
+      "Annulla":"Cancelar",
+
+
     },
     ru: {
       "label.level":"Уровень",
@@ -2081,6 +2102,10 @@ html.lowgfx .app::after{
 
       "Congratulations!": "Поздравляем! Вы прошли уровень",
       "prepare": "Рассчитываем следующий уровень...",
+      "Guarda":"Смотреть рекламу",
+
+      "Annulla":"Отмена",
+
     },
     ja: {
       "label.level":"レベル",
@@ -2143,6 +2168,9 @@ html.lowgfx .app::after{
 
       "Congratulations!": "おめでとうございます！レベルをクリアしました",
       "prepare": "次のレベルを計算中…",
+      "Guarda":"شاهد الإعلان",
+      "Annulla":"إلغاء",
+
     },
     ar: {
       "label.level":"المستوى",
@@ -2204,6 +2232,10 @@ html.lowgfx .app::after{
       "Ads2":"شاهد إعلانًا للحصول على 2 تلميحات إضافية :)",
       "Congratulations!": "تهانينا! لقد أكملت المستوى",
       "prepare": "...جارٍ حساب المستوى التالي",
+      "Guarda":"شاهد الإعلان",
+      "Annulla":"إلغاء",
+
+
     },
     zh: {
       "label.level":"关卡",
@@ -2265,7 +2297,11 @@ html.lowgfx .app::after{
       "Ads2":"观看广告以获得2个额外提示 :)",
 
       "Congratulations!": "恭喜！您已完成此關卡。",
-      "prepare": "正在計算下一關…"
+
+      "prepare": "正在計算下一關…",
+      "Guarda":"观看广告",
+      "Annulla":"取消",
+
   } };
 
   const LANG_KEY = "psb_lang_v1";
@@ -6953,8 +6989,8 @@ function markPreBreak(idsToRemove){
     <div class="reward-title" data-i18n="Ads1">Hai finito gli hint</div>
     <div class="reward-text" data-i18n="Ads2">Guarda una pubblicità (pochi secondi) e ottieni <b>+2 hint</b>.</div>
     <div class="reward-actions">
-      <button id="btnRewardWatch" class="btn">Guarda</button>
-      <button id="btnRewardCancel" class="btn secondary">Annulla</button>
+      <button id="btnRewardWatch" class="btn" data-i18n="Guarda">Guarda</button>
+      <button id="btnRewardCancel" class="btn secondary" data-i18n="Annulla">Annulla</button>
     </div>
     <div id="rewardStatus" class="small" style="margin-top:8px; opacity:.85;"></div>
   </div>
