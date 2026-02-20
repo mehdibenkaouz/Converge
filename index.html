@@ -3934,7 +3934,25 @@ async function refreshUserUI(){
     });
   }
   
+  function stabilizeViewport(callback, maxChecks = 10){
+    let lastH = window.innerHeight;
+    let checks = 0;
 
+    function check(){
+      const nowH = window.innerHeight;
+
+      if (Math.abs(nowH - lastH) < 1 || checks >= maxChecks){
+        callback();
+        return;
+      }
+
+      lastH = nowH;
+      checks++;
+      requestAnimationFrame(check);
+    }
+
+    requestAnimationFrame(check);
+  }
   // ==========
   // Boot
   // ==========
@@ -4064,10 +4082,13 @@ async function refreshUserUI(){
 
     // Se abbiamo caricato un save valido, render/salva qui. Se abbiamo appena fatto startLevel(1) è già ok.
     if (loadedOk){
-      renderAll(true);
+      stabilizeViewport(() => {
+        layoutFitBoard();
+        renderAll(true);
+        kickLayout();
+      });
       saveNow();
     }
-    kickLayout();
 
     refreshUserUI().catch(() => {});
     updateUserBadge();
