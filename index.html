@@ -4023,36 +4023,38 @@ async function refreshUserUI(){
     init();
   }
 
+  let __boardOverhead = 220; // fallback, verrà aggiornato
+
   function layoutFitBoard(){
     const root = document.documentElement;
     const app  = document.querySelector(".app");
-    const bodyCS = getComputedStyle(document.body);
+    const board = document.querySelector(".board");
 
+    const vv = window.visualViewport;
+    const vw = vv ? vv.width  : window.innerWidth;
+    const vh = vv ? vv.height : window.innerHeight;
+
+    const bodyCS = getComputedStyle(document.body);
     const padTop = parseFloat(bodyCS.paddingTop) || 0;
     const padBot = parseFloat(bodyCS.paddingBottom) || 0;
     const padL   = parseFloat(bodyCS.paddingLeft) || 0;
     const padR   = parseFloat(bodyCS.paddingRight) || 0;
 
-    const availW = window.innerWidth  - padL - padR;
-    const availH = window.innerHeight - padTop - padBot;
+    const availW = vw - padL - padR;
+    const availH = vh - padTop - padBot;
 
-    // 1) prima scegli in base alla larghezza
-    let size = Math.min(620, availW);
+    // overhead = tutto ciò che sta "oltre" la board (HUD, bottoni, margini ecc.)
+    if (app && board){
+      const appH = app.getBoundingClientRect().height;
+      const bH   = board.getBoundingClientRect().height;
+      const oh   = Math.max(0, appH - bH);
+      if (Number.isFinite(oh) && oh > 0) __boardOverhead = oh;
+    }
 
-    root.style.setProperty("--board-size", `${size}px`);
+    const sizeByH = Math.max(260, availH - __boardOverhead - 8);
+    const size = Math.min(620, availW, sizeByH);
 
-    // 2) poi correggi in base all'altezza reale dell'app (topbar + board + banner ecc.)
-    requestAnimationFrame(() => {
-      if (!app) return;
-      const h = app.getBoundingClientRect().height;
-
-      if (h > availH) {
-        const excess = h - availH;
-        size = Math.max(260, size - excess - 8); // 8px di margine
-        root.style.setProperty("--board-size", `${size}px`);
-      }
-
-    });
+    root.style.setProperty("--board-size", `${Math.floor(size)}px`);
   }
 
 
@@ -4110,6 +4112,26 @@ async function refreshUserUI(){
     loginOverlay.classList.remove("hidden");
   }
 
+  function finalizeGameBoot(){
+        stabilizeViewport(() => {
+      // 1) calcola size board
+      layoutFitBoard();
+
+      // 2) render coerente
+      renderAll(true);
+
+      // 3) kick extra per i casi “strani”
+      kickLayout();
+
+      // 4) mostra SOLO ora
+      document.querySelector(".app")?.classList.add("ready");
+
+      // 5) safety rerender (copre quel 1/5 dove cambia DOPO)
+      setTimeout(() => { layoutFitBoard(); renderAll(true); }, 180);
+      setTimeout(() => { layoutFitBoard(); renderAll(true); }, 520);
+    }, { maxMs: 900, frames: 3, eps: 0.75 });
+  }
+
 
     function startGame(){
       
@@ -4128,6 +4150,7 @@ async function refreshUserUI(){
       try { updateHintBadge(); } catch(e) {}
       try { saveNow(); } catch(e) {}
       toastMsg("Partita caricata");
+      finalizeGameBoot();
 
     } else {
       state = newGameState();
@@ -4135,7 +4158,12 @@ async function refreshUserUI(){
       try { updateHintBadge(); } catch(e) {}
       try { saveNow(); } catch(e) {}
 
-      void startLevel(1); // genera board + render + save
+      startLevel(1).then(() => {
+        finalizeGameBoot();
+      }).catch(() => {
+        // anche se fallisce, prova comunque a renderizzare qualcosa
+        finalizeGameBoot();
+      });
     }
 
     // input & UI (sempre)
@@ -4143,25 +4171,8 @@ async function refreshUserUI(){
 
     // Se abbiamo caricato un save valido, render/salva qui. Se abbiamo appena fatto startLevel(1) è già ok.
     if (loadedOk){
-    stabilizeViewport(() => {
-      // 1) calcola size board
-      layoutFitBoard();
-
-      // 2) render coerente
-      renderAll(true);
-
-      // 3) kick extra per i casi “strani”
-      kickLayout();
-
-      // 4) mostra SOLO ora
-      document.querySelector(".app")?.classList.add("ready");
-
-      // 5) safety rerender (copre quel 1/5 dove cambia DOPO)
-      setTimeout(() => { layoutFitBoard(); renderAll(true); }, 180);
-      setTimeout(() => { layoutFitBoard(); renderAll(true); }, 520);
-    }, { maxMs: 900, frames: 3, eps: 0.75 });
-
       saveNow();
+
     }
 
     refreshUserUI().catch(() => {});
@@ -4762,6 +4773,7 @@ btnPasskeyRegister.addEventListener("click", async () => {
   // Rendering
   // ==========
   function renderAll(forceGrid){
+    if (!state) return;           // ✅ evita crash/loop quando state non è pronto
     updateHUD();
     if (forceGrid) renderGridBase();
     renderTiles();
@@ -4794,28 +4806,15 @@ btnPasskeyRegister.addEventListener("click", async () => {
     }
   }
 
+  let __kickRAF = 0;
+
   function kickLayout(){
-    // 1) subito (se possibile)
-    try { renderAll(true); } catch(e) {}
-
-    // 2) due frame: dopo che CSS e layout sono realmente “settati”
-    requestAnimationFrame(() => {
+    if (__kickRAF) return;
+    __kickRAF = requestAnimationFrame(() => {
+      __kickRAF = 0;
+      try { layoutFitBoard(); } catch(e) {}
       try { renderAll(true); } catch(e) {}
-      requestAnimationFrame(() => {
-        try { renderAll(true); } catch(e) {}
-      });
     });
-
-    // 3) fallback: alcune TWA “sistemano” misure dopo pochi ms
-    setTimeout(() => { try { renderAll(true); } catch(e) {} }, 60);
-    setTimeout(() => { try { renderAll(true); } catch(e) {} }, 250);
-
-    // 4) quando i font finiscono di caricare (a volte cambia l’impaginazione)
-    if (document.fonts && document.fonts.ready){
-      document.fonts.ready.then(() => {
-        try { renderAll(true); } catch(e) {}
-      }).catch(()=>{});
-    }
   }
 
   function renderTiles(){
@@ -4938,6 +4937,8 @@ btnPasskeyRegister.addEventListener("click", async () => {
   // Input
   // ==========
   function attachInput(){
+    if (attachInput._done) return;
+      attachInput._done = true;
     let startX=0, startY=0;
     let active = false;
     // ===== SAFETY: evita swipe fantasma su TWA (active bloccato) =====
