@@ -624,7 +624,9 @@ html.lowgfx .app::after{
     touch-action:none;
     user-select:none;
     direction: ltr;
+    
   }
+
 
   /* Inner animated border + glow */
   .board::before{
@@ -642,6 +644,10 @@ html.lowgfx .app::after{
     0%{ transform: rotate(-6deg) scale(1.02); opacity:.30; }
     100%{ transform: rotate(6deg) scale(1.06); opacity:.42; }
   }
+
+  /* board hidden until first stable render */
+  .app:not(.ready) .board { opacity: 0; pointer-events: none; }
+  .app.ready .board { opacity: 1; transition: opacity 120ms ease-out; }
 
   .grid{
     position:absolute;
@@ -3934,24 +3940,78 @@ async function refreshUserUI(){
     });
   }
   
-  function stabilizeViewport(callback, maxChecks = 10){
-    let lastH = window.innerHeight;
-    let checks = 0;
+  function stabilizeViewport(callback, opts = {}){
+    const maxMs = opts.maxMs ?? 900;        // hard timeout
+    const needStableFrames = opts.frames ?? 3; // quanti frame consecutivi stabili
+    const eps = opts.eps ?? 0.75;           // tolleranza in px
 
-    function check(){
-      const nowH = window.innerHeight;
+    const t0 = performance.now();
 
-      if (Math.abs(nowH - lastH) < 1 || checks >= maxChecks){
+    let stableCount = 0;
+    let last = null;
+
+    const board = document.querySelector(".board");
+
+    function snap(){
+      const vv = window.visualViewport;
+      const w  = vv ? vv.width  : window.innerWidth;
+      const h  = vv ? vv.height : window.innerHeight;
+
+      let br = null;
+      if (board){
+        const r = board.getBoundingClientRect();
+        br = { w: r.width, h: r.height, x: r.x, y: r.y };
+      }
+      return { w, h, br };
+    }
+
+    function close(a, b){
+      return Math.abs(a - b) <= eps;
+    }
+
+    function isStable(a, b){
+      if (!a || !b) return false;
+      if (!close(a.w, b.w) || !close(a.h, b.h)) return false;
+
+      // se board esiste, richiedi stabilità anche del suo rect
+      if (a.br && b.br){
+        return (
+          close(a.br.w, b.br.w) &&
+          close(a.br.h, b.br.h) &&
+          close(a.br.x, b.br.x) &&
+          close(a.br.y, b.br.y)
+        );
+      }
+      return true;
+    }
+
+    function tick(){
+      const now = snap();
+
+      if (isStable(now, last)){
+        stableCount++;
+      } else {
+        stableCount = 0;
+      }
+
+      last = now;
+
+      // OK: abbastanza frame stabili
+      if (stableCount >= needStableFrames){
         callback();
         return;
       }
 
-      lastH = nowH;
-      checks++;
-      requestAnimationFrame(check);
+      // TIMEOUT: fai comunque callback (ma poi faremo un "safety rerender")
+      if (performance.now() - t0 > maxMs){
+        callback();
+        return;
+      }
+
+      requestAnimationFrame(tick);
     }
 
-    requestAnimationFrame(check);
+    requestAnimationFrame(tick);
   }
   // ==========
   // Boot
@@ -4055,6 +4115,7 @@ async function refreshUserUI(){
       
     // Hide login overlay
     loginOverlay.classList.add("hidden");
+    document.querySelector(".app")?.classList.remove("ready");
     startBgm();
 
     // Try load save (scoped per-account)
@@ -4082,11 +4143,24 @@ async function refreshUserUI(){
 
     // Se abbiamo caricato un save valido, render/salva qui. Se abbiamo appena fatto startLevel(1) è già ok.
     if (loadedOk){
-      stabilizeViewport(() => {
-        layoutFitBoard();
-        renderAll(true);
-        kickLayout();
-      });
+    stabilizeViewport(() => {
+      // 1) calcola size board
+      layoutFitBoard();
+
+      // 2) render coerente
+      renderAll(true);
+
+      // 3) kick extra per i casi “strani”
+      kickLayout();
+
+      // 4) mostra SOLO ora
+      document.querySelector(".app")?.classList.add("ready");
+
+      // 5) safety rerender (copre quel 1/5 dove cambia DOPO)
+      setTimeout(() => { layoutFitBoard(); renderAll(true); }, 180);
+      setTimeout(() => { layoutFitBoard(); renderAll(true); }, 520);
+    }, { maxMs: 900, frames: 3, eps: 0.75 });
+
       saveNow();
     }
 
