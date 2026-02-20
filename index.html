@@ -4823,12 +4823,28 @@ btnPasskeyRegister.addEventListener("click", async () => {
 
     // compute cell size and positions based on current board size
     const rect = elBoard.getBoundingClientRect();
-    const innerPad = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--board-pad')) || 14;
-    const gap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 10;
-    const innerW = rect.width - innerPad*2;
-    const innerH = rect.height - innerPad*2;
-    const cellW = (innerW - gap*(N-1)) / N;
-    const cellH = (innerH - gap*(N-1)) / N;
+
+    // ✅ prendi il padding reale misurando la griglia (inset già risolto dal browser)
+    const gridRect = elGrid.getBoundingClientRect();
+    const padX = gridRect.left - rect.left;
+    const padY = gridRect.top  - rect.top;
+
+    // ✅ prendi il gap reale risolto (non la stringa clamp)
+    const gcs = getComputedStyle(elGrid);
+    const gapX = parseFloat(gcs.columnGap) || parseFloat(gcs.gap) || 10;
+    const gapY = parseFloat(gcs.rowGap)    || gapX;
+
+    const innerW = rect.width  - padX * 2;
+    const innerH = rect.height - padY * 2;
+
+    // ✅ usa la stessa cella per X/Y (evita micro mismatch e overflow)
+    const cell = Math.min(
+      (innerW - gapX * (N - 1)) / N,
+      (innerH - gapY * (N - 1)) / N
+    );
+
+    const cellW = cell;
+    const cellH = cell;
     LAST_CELL_W = cellW;
     LAST_CELL_H = cellH;
 
@@ -4855,9 +4871,8 @@ btnPasskeyRegister.addEventListener("click", async () => {
 
         elTiles.appendChild(node);
       }
-
-      const xpx = t.x * (cellW + gap);
-      const ypx = t.y * (cellH + gap);
+      const xpx = t.x * (cellW + gapX);
+      const ypx = t.y * (cellH + gapY);
 
       node.style.setProperty("--x", `${xpx}px`);
       node.style.setProperty("--y", `${ypx}px`);
