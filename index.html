@@ -132,7 +132,7 @@
     display:flex;
     align-items:center;
     justify-content:center;
-    padding-top: max(clamp(12px, 2.2vw, 22px), env(safe-area-inset-top));
+    padding-top: clamp(12px, 2.2vw, 22px);
     @supports (padding-top: env(safe-area-inset-top)) {
       padding-top: calc(clamp(12px, 2.2vw, 22px) + env(safe-area-inset-top));
     }
