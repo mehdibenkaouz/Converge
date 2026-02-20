@@ -133,6 +133,9 @@
     align-items:center;
     justify-content:center;
     padding-top: max(clamp(12px, 2.2vw, 22px), env(safe-area-inset-top));
+    @supports (padding-top: env(safe-area-inset-top)) {
+      padding-top: calc(clamp(12px, 2.2vw, 22px) + env(safe-area-inset-top));
+    }
     padding-left: max(clamp(12px, 2.2vw, 22px), env(safe-area-inset-left));
     padding-right: max(clamp(12px, 2.2vw, 22px), env(safe-area-inset-right));
     padding-bottom: max(clamp(12px, 2.2vw, 22px), env(safe-area-inset-bottom));
