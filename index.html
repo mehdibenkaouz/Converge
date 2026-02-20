@@ -118,7 +118,6 @@
     --hue: 160deg;
     --anim-game: 1;
     --anim-fx: 1;
-    --ui-scale: 1; 
 
   }
 
@@ -133,11 +132,10 @@
     display:flex;
     align-items:center;
     justify-content:center;
-    padding-top: clamp(12px, 2.2vw, 22px);
-    padding-top:    calc(clamp(12px, 2.2vw, 22px) + env(safe-area-inset-top, 0px));
-    padding-left:   calc(clamp(12px, 2.2vw, 22px) + env(safe-area-inset-left, 0px));
-    padding-right:  calc(clamp(12px, 2.2vw, 22px) + env(safe-area-inset-right, 0px));
-    padding-bottom: calc(clamp(12px, 2.2vw, 22px) + env(safe-area-inset-bottom, 0px));
+    padding-top: max(clamp(12px, 2.2vw, 22px), env(safe-area-inset-top));
+    padding-left: max(clamp(12px, 2.2vw, 22px), env(safe-area-inset-left));
+    padding-right: max(clamp(12px, 2.2vw, 22px), env(safe-area-inset-right));
+    padding-bottom: max(clamp(12px, 2.2vw, 22px), env(safe-area-inset-bottom));
     overscroll-behavior:none;
     touch-action:none;
     -webkit-font-smoothing: antialiased;
@@ -222,73 +220,54 @@
     z-index:2;
     overflow: hidden;
   }
-  /* ===== Responsive UI scaling (prevents clipping on small phones) ===== */
-  .app{
-    transform: scale(var(--ui-scale));
-    transform-origin: top center;
-  }
 
-  /* Default */
-  :root{ --ui-scale: 1; }
-
-  /* Typical “short” phones: S8+ (360x720) and similar */
-  @media (max-width: 380px), (max-height: 740px){
-    :root{ --ui-scale: 0.92; }
-  }
-  @media (max-width: 360px), (max-height: 700px){
-    :root{ --ui-scale: 0.88; }
-  }
-  @media (max-height: 640px){
-    :root{ --ui-scale: 0.84; }
-  }
-
-  .app > *{
-    position: relative;
-    z-index: 1;
-  }
+.app > *{
+  position: relative;
+  z-index: 1;
+}
 
 
-  /* ===== Ultra thin radial lasers with glow ===== */
-  .app::after{
-    content:"";
-    position:fixed;
-    left:50%;
-    top:50%;
-    width:240vmax;
-    height:240vmax;
-    transform: translate(-50%, -50%) rotate(0deg);
-    transform-origin:center;
+/* ===== Ultra thin radial lasers with glow ===== */
+.app::after{
+  content:"";
+  position:fixed;
+  left:50%;
+  top:50%;
+  width:240vmax;
+  height:240vmax;
+  transform: translate(-50%, -50%) rotate(0deg);
+  transform-origin:center;
 
-    pointer-events:none;
-    z-index:0;
+  pointer-events:none;
+  z-index:0;
 
-    /* Layer 1: ultra thin sharp lines */
-    background:
-      repeating-conic-gradient(
-        from 0deg,
-        rgba(255, 255, 255, 0.185) 0deg 0.6deg,
-        transparent 0.6deg 14deg
-      );
+  /* Layer 1: ultra thin sharp lines */
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      rgba(255, 255, 255, 0.185) 0deg 0.6deg,
+      transparent 0.6deg 14deg
+    );
 
-    mix-blend-mode: screen;
-    opacity:.65;
+  mix-blend-mode: screen;
+  opacity:.65;
 
-    animation: laserSpin 370s linear infinite;
+  animation: laserSpin 370s linear infinite;
 
-    will-change: transform;
-    backface-visibility:hidden;
-  }
+  will-change: transform;
+  backface-visibility:hidden;
+}
 
-  @keyframes laserSpin{
-    0%   { transform: translate(-50%, -50%) rotate(0deg); }
-    100% { transform: translate(-50%, -50%) rotate(360deg); }
-  }
+@keyframes laserSpin{
+  0%   { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
 
 
-  html.lowgfx .app::after{
-    animation:none !important;
-    opacity:.25;
-  }
+html.lowgfx .app::after{
+  animation:none !important;
+  opacity:.25;
+}
 
 
   /* ===== Topbar (premium glass) ===== */
@@ -317,7 +296,7 @@
     font-family: "Baloo 2", "Sora", ui-sans-serif, system-ui;
     font-weight: 800;
     letter-spacing: .3px;
-    font-size: clamp(20px, 6vw, 37px);
+    font-size: clamp(37px, 1.2vw, 20px);
     line-height: 1;
     background: linear-gradient(90deg, rgba(124,245,197,.95), rgba(124,170,245,.95), rgba(245,124,215,.92));
     -webkit-background-clip:text;
