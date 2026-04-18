@@ -3531,13 +3531,23 @@ const accUsernameEl = document.getElementById("accUsername");
 const accUserIdEl = document.getElementById("accUserId");
 const btnLogout = document.getElementById("btnLogout");
 
-const debugLogOverlay = document.getElementById("debugLogOverlay");
-const btnCloseDebugLog = document.getElementById("btnCloseDebugLog");
-const btnRefreshDebugLog = document.getElementById("btnRefreshDebugLog");
-const btnCopyDebugLog = document.getElementById("btnCopyDebugLog");
-const btnClearDebugLog = document.getElementById("btnClearDebugLog");
-const debugLogBox = document.getElementById("debugLogBox");
-const debugLogBuild = document.getElementById("debugLogBuild");
+let debugLogOverlay = null;
+let btnCloseDebugLog = null;
+let btnRefreshDebugLog = null;
+let btnCopyDebugLog = null;
+let btnClearDebugLog = null;
+let debugLogBox = null;
+let debugLogBuild = null;
+function initDebugLogEls(){
+  if (debugLogOverlay) return;
+  debugLogOverlay = document.getElementById("debugLogOverlay");
+  btnCloseDebugLog = document.getElementById("btnCloseDebugLog");
+  btnRefreshDebugLog = document.getElementById("btnRefreshDebugLog");
+  btnCopyDebugLog = document.getElementById("btnCopyDebugLog");
+  btnClearDebugLog = document.getElementById("btnClearDebugLog");
+  debugLogBox = document.getElementById("debugLogBox");
+  debugLogBuild = document.getElementById("debugLogBuild");
+}
 
 
 function userStorageKey(baseKey){
@@ -3564,6 +3574,7 @@ function getDebugLogText(){
 }
 
 function renderDebugLogOverlay(){
+  initDebugLogEls();
   if (debugLogBuild) debugLogBuild.textContent = `Build: ${CV_BUILD}`;
 
   if (!debugLogBox) return;
@@ -3579,6 +3590,7 @@ function renderDebugLogOverlay(){
 }
 
 function openDebugLogOverlay(){
+  initDebugLogEls();
   if (!debugLogOverlay) {
     cvLog("debug.overlay.missing_dom");
     try { alert("debugLogOverlay NON trovato nel DOM"); } catch(_) {}
@@ -3601,6 +3613,7 @@ function closeDebugLogOverlay(){
 }
 
 function wireDebugLogOverlay(){
+  initDebugLogEls();
   if (debugLogOverlay){
     debugLogOverlay.addEventListener("click", (e) => {
       if (e.target === debugLogOverlay) closeDebugLogOverlay();
