@@ -4763,9 +4763,32 @@ btnPasskeyRegister.addEventListener("click", async () => {
     toastMsg(`Livello ${curLevel} ricominciato`);
   }
   
-  function regenCleanLevel(){
-    return restartCurrentLevelPreserveMeta();
-  }
+async function restartFromLevel1OneHint(){
+  stalloShown = false;
+  stopPulseUndoButton();
+
+  try { hideHint(); } catch(_) {}
+  try { if (typeof closeGameOver === "function") closeGameOver(); } catch(_) {}
+
+  state = newGameState();
+
+  // regola richiesta: riparti sempre dal livello 1 con 1 solo hint
+  state.hintCharges = 1;
+  state.hintCooldown = 0;
+  state.last_reward_level = 0;
+  state.impossible = false;
+
+  await startLevel(1);
+
+  try { updateHintBadge(); } catch(_) {}
+  try { updateButtons(); } catch(_) {}
+  try { saveNow(); } catch(_) {}
+  try { renderAll(true); } catch(_) {}
+}
+
+function regenCleanLevel(){
+  return restartCurrentLevelPreserveMeta();
+}
 
 
   async function startLevel(nextLevel){
@@ -5383,10 +5406,10 @@ btnPasskeyRegister.addEventListener("click", async () => {
     btnGameOverClose?.addEventListener("click", async () => {
       if (isAnimating) return;
       try {
-        closeGameOver();
-        await restartCurrentLevelPreserveMeta();
+        await restartFromLevel1OneHint();
+        try { toastMsg("Nuova partita"); } catch(_) {}
       } catch (e) {
-        console.warn("restartCurrentLevelPreserveMeta failed:", e);
+        console.warn("restartFromLevel1OneHint failed:", e);
       }
     });
 
@@ -5453,30 +5476,11 @@ btnPasskeyRegister.addEventListener("click", async () => {
           if (!(await uiConfirm(t("confirm.new_game") || "Start a new game?"))) return;
 
           try {
-            // reset totale e coerente
-            state = newGameState();
-                // Applica reward bufferizzato (se presente)
-              try {
-                const rb = localStorage.getItem("__cv_reward_buffer");
-                if (rb === "2") {
-                  localStorage.removeItem("__cv_reward_buffer");
-                  state.hintCharges = (state.hintCharges || 0) + 2;
-                }
-              } catch(e) {}
-              try { updateHintBadge(); } catch(e) {}
-              try { saveNow(); } catch(e) {}
-
-
-            // IMPORTANTISSIMO: usa la stessa logica dei livelli (gated + render + save)
-            void startLevel(1);
-
-            // opzionale: se vuoi anche il toast "Nuova partita"
-            // toastMsg(t("toast.new_game"));
+            await restartFromLevel1OneHint();
+            try { toastMsg(t("toast.new_game") || "Nuova partita"); } catch(_) {}
           } catch (e) {
             console.error("NEW GAME ERROR:", e);
             await uiAlert((t("error.new_game") || "Errore durante Nuova partita") + ": " + (e?.message || e));
-
-            // fallback: almeno forziamo un render completo
             try { renderAll(true); } catch (_) {}
           }
         });
