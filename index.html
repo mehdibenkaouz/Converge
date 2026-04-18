@@ -4451,10 +4451,53 @@ btnPasskeyRegister.addEventListener("click", async () => {
   }
 
 
+  async function restartCurrentLevelPreserveMeta(){
+    if (!state) return;
+  
+    stalloShown = false;
+    stopPulseUndoButton();
+  
+    const curLevel = Number(state.level) || 1;
+    const curScore = Number(state.score) || 0;
+    const curHints = Math.max(0, Number(state.hintCharges) || 0);
+    const curHintCooldown = Math.max(0, Number(state.hintCooldown) || 0);
+    const curLastRewardLevel = Number(state.last_reward_level) || 0;
+  
+    const restoredMoves = Number.isFinite(state.levelStartMoves)
+      ? Math.max(0, Number(state.levelStartMoves))
+      : Math.max(RELAX_MODE ? 5 : 3, Number(state.moves) || 0);
+  
+    state.level = curLevel;
+    state.score = curScore;
+    state.moves = restoredMoves;
+    state.levelStartMoves = restoredMoves;
+  
+    // IMPORTANTISSIMO: preserva hint e cooldown attuali
+    state.hintCharges = curHints;
+    state.hintCooldown = curHintCooldown;
+    state.last_reward_level = curLastRewardLevel;
+  
+    state.N = pickGridSizeForLevelConsideringMoves(curLevel, state.moves);
+    state.sizeIndex = Math.max(0, SIZES.indexOf(state.N));
+  
+    state.undoAvailable = true;
+    state.undoSnapshot = null;
+    state.impossible = false;
+  
+    await generateLevelBoardGated();
+  
+    if (!state.levelPlan) state.levelPlan = {};
+    state.levelPlan.bestFirstDir =
+      computeHintDirectionForCurrentState({ maxDepth: 6, timeBudgetMs: 25 });
+  
+    saveNow();
+    try { updateHintBadge(); } catch(_) {}
+    renderAll(true);
+    toastMsg(`Livello ${curLevel} ricominciato`);
+  }
+  
   function regenCleanLevel(){
-    // “pulito” = stesso livello ma board rigenerata
-    // Se la tua startLevel già rigenera la board, basta richiamarla.
-    startLevel(state.level);
+    return restartCurrentLevelPreserveMeta();
   }
 
 
@@ -5070,28 +5113,14 @@ btnPasskeyRegister.addEventListener("click", async () => {
       }
     });
 
-    btnGameOverClose?.addEventListener("click", () => {
-      closeGameOver();
-
-      // ricomincia partita
-      state = newGameState();
-          // Applica reward bufferizzato (se presente)
+    btnGameOverClose?.addEventListener("click", async () => {
+      if (isAnimating) return;
       try {
-        const rb = localStorage.getItem("__cv_reward_buffer");
-        if (rb === "2") {
-          localStorage.removeItem("__cv_reward_buffer");
-          state.hintCharges = (state.hintCharges || 0) + 2;
-        }
-      } catch(e) {}
-      try { updateHintBadge(); } catch(e) {}
-      try { saveNow(); } catch(e) {}
-
-      generateLevelBoard();
-      state.levelPlan.bestFirstDir =
-        computeHintDirectionForCurrentState({ maxDepth: 6, timeBudgetMs: 25 });
-
-      saveNow();
-      renderAll(true);
+        closeGameOver();
+        await restartCurrentLevelPreserveMeta();
+      } catch (e) {
+        console.warn("restartCurrentLevelPreserveMeta failed:", e);
+      }
     });
 
     // =========================
