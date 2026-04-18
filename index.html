@@ -3579,7 +3579,12 @@ function renderDebugLogOverlay(){
 }
 
 function openDebugLogOverlay(){
-  if (!debugLogOverlay) return;
+  if (!debugLogOverlay) {
+    cvLog("debug.overlay.missing_dom");
+    try { alert("debugLogOverlay NON trovato nel DOM"); } catch(_) {}
+    return;
+  }
+
   renderDebugLogOverlay();
   debugLogOverlay.classList.remove("hidden");
   debugLogOverlay.classList.add("show");
@@ -7575,5 +7580,6 @@ function markPreBreak(idsToRemove){
     </div>
   </div>
 </div>
+
 </body>
 </html>
