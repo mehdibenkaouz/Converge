@@ -1339,7 +1339,7 @@ html.lowgfx .app::after{
 
 
   .gameover-bar{
-    width: min(500px, 300vw);
+    width: min(500px, 90vw);
     background: transparent;
     padding: 18px;
     text-align: center;
@@ -1348,7 +1348,7 @@ html.lowgfx .app::after{
   .gameover.hidden{ display: none; }
 
   .gameover-card{
-    width: min(500px, 300vw);
+    width: min(500px, 90vw);
     background: transparent;
     padding: 18px;
     text-align: center;
@@ -4796,12 +4796,7 @@ function regenCleanLevel(){
     stopPulseUndoButton();
 
     state.level = nextLevel;
-    // Reward: +10 hint at levels 10,20,40,80...
     const reward = checkLevelReward(state.level);
-    if (reward > 0 && state.last_reward_level < state.level) {
-      state.hintCharges += reward;
-      state.last_reward_level = state.level;
-    }
 
     // ===== Level reward: +10 hint at levels 10,20,40,80,160...
     if (!Number.isFinite(state.last_reward_level)) state.last_reward_level = 0;
@@ -5722,8 +5717,10 @@ function regenCleanLevel(){
     }
 
     if (state.moves <= 0) {
-      state.moves = 0;          // clamp
-      gameOver(t("mosse.finite"));    
+      state.moves = 0;
+      if (!gameOverOverlay?.classList.contains("show") && gameOverOverlay?.classList.contains("hidden")) {
+        gameOver(t("mosse.finite"));
+      }
       updateButtons?.();        // se esiste (altrimenti rimuovi questa riga)
       return;                   // FONDAMENTALE: stop totale
     }
@@ -5839,12 +5836,8 @@ function regenCleanLevel(){
     renderAll(false);
 
     // End of move
-    if (!instant){
-      isAnimating = false;
-      updateButtons();
-    } else {
-      updateButtons();
-    }
+   isAnimating = false;
+    updateButtons();
 
     // Win/lose checks
     if (Object.keys(state.tilesById).length === 0){
@@ -6642,6 +6635,8 @@ function markPreBreak(idsToRemove){
       board: state.board.map(row => row.slice()),
       tilesById: JSON.parse(JSON.stringify(state.tilesById)),
       levelPlan: JSON.parse(JSON.stringify(state.levelPlan)),
+      last_reward_level: state.last_reward_level || 0,
+      levelStartMoves: state.levelStartMoves || 0,
       // undoSnapshot not included to avoid recursion
       undoSnapshot: null,
     };
