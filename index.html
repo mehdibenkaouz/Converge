@@ -3608,12 +3608,13 @@ async function refreshUserUI(){
   // === IMPORTANT: set user key for per-account local saves ===
   // Preferisci un identificatore stabile (id/username/nickname dal server).
   // Se /me non esiste o torna vuoto, NON sovrascrivere una chiave già salvata (es. pk:<credentialId>).
-  const existingKey = (localStorage.getItem("psb_userkey_v1") || "").trim();
+  const existingKey = (window.currentUserKey || localStorage.getItem("psb_userkey_v1") || "").trim();
   const userKey =
-    (id && ("id:" + id)) ||
-    (username && ("u:" + username)) ||
-    (nickname && ("n:" + nickname)) ||
-    (existingKey ? existingKey : "auth");
+      (existingKey ? existingKey : "") ||
+      (id && ("id:" + id)) ||
+      (username && ("u:" + username)) ||
+      (nickname && ("n:" + nickname)) ||
+      "auth";
 
   window.currentUserKey = userKey;
   try { localStorage.setItem("psb_userkey_v1", userKey); } catch {}
@@ -3659,6 +3660,7 @@ async function refreshUserUI(){
     state.impossible = false;
 
     try { saveNow(); } catch(_) {}
+    try { updateHintBadge(); } catch(_) {}
     try { updateButtons(); } catch(_) {}
     try { toastMsg(`+${n} hint!`); } catch(_) {}
 
@@ -6379,30 +6381,35 @@ function markPreBreak(idsToRemove){
       const sb = localStorage.getItem("__cv_skip_buffer");
       if (sb) {
         if (!state) return;
-        localStorage.removeItem("__cv_skip_buffer");
         if (typeof window.skipLevelFromAd === "function") {
           window.skipLevelFromAd();
         }
+        localStorage.removeItem("__cv_skip_buffer");
       }
-
+  
       const rb = localStorage.getItem("__cv_reward_buffer");
       if (!rb) return;
-
+  
       // aspetta che lo state sia pronto
       if (!state) return;
-      localStorage.removeItem("__cv_reward_buffer");
-
+  
       if (rb === "2") {
+        let applied = false;
+  
         if (typeof window.addHints === "function") {
-          window.addHints(2);
+          applied = !!window.addHints(2);
         } else {
-          // fallback minimale
           state.hintCharges = (state.hintCharges || 0) + 2;
           if (state.hintCharges > 0) state.hintCooldown = 0;
           state.impossible = false;
           try { saveNow(); } catch(_) {}
           try { updateHintBadge(); } catch(_) {}
           try { if (typeof updateButtons === "function") updateButtons(); } catch(_) {}
+          applied = true;
+        }
+  
+        if (applied) {
+          try { localStorage.removeItem("__cv_reward_buffer"); } catch(_) {}
         }
       }
     } catch(e) {}
