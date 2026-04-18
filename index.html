@@ -1732,10 +1732,107 @@ html.lowgfx .app::after{
 
   
 
+  .debug-log-wrap{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    height:100%;
+    min-height:0;
+  }
+
+  .debug-log-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .debug-log-build{
+    font-weight:800;
+    color: rgba(255,255,255,.92);
+  }
+
+  .debug-log-actions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .debug-log-box{
+    flex:1;
+    min-height:280px;
+    max-height:min(68vh, 760px);
+    overflow:auto;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(0,0,0,.28);
+    padding:12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:12px;
+    line-height:1.4;
+    white-space:pre-wrap;
+    word-break:break-word;
+    color: rgba(255,255,255,.92);
+  }
+
+  .debug-log-empty{
+    opacity:.7;
+  }
+
+  .debug-log-hint{
+    font-size:12px;
+    color: rgba(255,255,255,.65);
+  }
+
 </style>
 </head>
 
 <script>
+  const CV_BUILD = "version 1.1.1 Ufficial";
+  window.__cv_logs = Array.isArray(window.__cv_logs) ? window.__cv_logs : [];
+
+  function cvSafe(value){
+    try { return JSON.stringify(value); }
+    catch(_) { return String(value); }
+  }
+
+  function cvLog(tag, data){
+    const row = {
+      t: new Date().toISOString(),
+      tag: String(tag || "log"),
+      data: data ?? null
+    };
+    try {
+      window.__cv_logs.push(row);
+      if (window.__cv_logs.length > 400) window.__cv_logs.shift();
+    } catch(_) {}
+    try { console.log("[CV]", row); } catch(_) {}
+    try {
+      if (typeof renderDebugLogOverlay === "function") renderDebugLogOverlay();
+    } catch(_) {}
+    return row;
+  }
+
+  window.addEventListener("error", (e) => {
+    cvLog("window.error", {
+      message: e?.message || null,
+      source: e?.filename || null,
+      line: e?.lineno || null,
+      col: e?.colno || null
+    });
+  });
+
+  window.addEventListener("unhandledrejection", (e) => {
+    cvLog("promise.reject", {
+      reason: e?.reason?.message || String(e?.reason || "")
+    });
+  });
+
+  cvLog("boot", {
+    build: CV_BUILD,
+    href: location.href
+  });
     
   // === i18n (IT/EN/FR/DE/ES/RU/JLA/AR/ZH) ===
   const I18N = {
@@ -3434,15 +3531,161 @@ const accUsernameEl = document.getElementById("accUsername");
 const accUserIdEl = document.getElementById("accUserId");
 const btnLogout = document.getElementById("btnLogout");
 
+const debugLogOverlay = document.getElementById("debugLogOverlay");
+const btnCloseDebugLog = document.getElementById("btnCloseDebugLog");
+const btnRefreshDebugLog = document.getElementById("btnRefreshDebugLog");
+const btnCopyDebugLog = document.getElementById("btnCopyDebugLog");
+const btnClearDebugLog = document.getElementById("btnClearDebugLog");
+const debugLogBox = document.getElementById("debugLogBox");
+const debugLogBuild = document.getElementById("debugLogBuild");
+
 
 function userStorageKey(baseKey){
   const uk = window.currentUserKey || localStorage.getItem("psb_userkey_v1") || "anon";
   return baseKey + ":" + uk;
 }
 
+function getDebugLogText(){
+  const lines = [];
+  lines.push(`BUILD: ${CV_BUILD}`);
+  lines.push(`HREF: ${location.href}`);
+  lines.push(`TIME: ${new Date().toISOString()}`);
+  lines.push("");
+
+  const items = Array.isArray(window.__cv_logs) ? window.__cv_logs : [];
+  for (const row of items){
+    const tag = row?.tag || "log";
+    const t = row?.t || "";
+    const data = row?.data == null ? "" : cvSafe(row.data);
+    lines.push(`[${t}] ${tag}${data ? " -> " + data : ""}`);
+  }
+
+  return lines.join("\n");
+}
+
+function renderDebugLogOverlay(){
+  if (debugLogBuild) debugLogBuild.textContent = `Build: ${CV_BUILD}`;
+
+  if (!debugLogBox) return;
+  const txt = getDebugLogText();
+
+  if (!txt.trim()){
+    debugLogBox.innerHTML = `<div class="debug-log-empty">Nessun log disponibile.</div>`;
+    return;
+  }
+
+  debugLogBox.textContent = txt;
+  debugLogBox.scrollTop = debugLogBox.scrollHeight;
+}
+
+function openDebugLogOverlay(){
+  if (!debugLogOverlay) return;
+  renderDebugLogOverlay();
+  debugLogOverlay.classList.remove("hidden");
+  debugLogOverlay.classList.add("show");
+  debugLogOverlay.setAttribute("aria-hidden", "false");
+  cvLog("debug.overlay.open");
+}
+
+function closeDebugLogOverlay(){
+  if (!debugLogOverlay) return;
+  debugLogOverlay.classList.remove("show");
+  debugLogOverlay.classList.add("hidden");
+  debugLogOverlay.setAttribute("aria-hidden", "true");
+  cvLog("debug.overlay.close");
+}
+
+function wireDebugLogOverlay(){
+  if (debugLogOverlay){
+    debugLogOverlay.addEventListener("click", (e) => {
+      if (e.target === debugLogOverlay) closeDebugLogOverlay();
+    });
+  }
+
+  btnCloseDebugLog?.addEventListener("click", closeDebugLogOverlay);
+  btnRefreshDebugLog?.addEventListener("click", () => {
+    cvLog("debug.overlay.refresh");
+    renderDebugLogOverlay();
+  });
+
+  btnClearDebugLog?.addEventListener("click", () => {
+    window.__cv_logs = [];
+    cvLog("debug.logs.cleared");
+    renderDebugLogOverlay();
+  });
+
+  btnCopyDebugLog?.addEventListener("click", async () => {
+    const txt = getDebugLogText();
+    try {
+      await navigator.clipboard.writeText(txt);
+      cvLog("debug.logs.copied");
+      try { toastMsg("Log copiato"); } catch(_) {}
+    } catch (e) {
+      cvLog("debug.logs.copy_failed", { message: e?.message || String(e) });
+      try { uiAlert("Impossibile copiare il log su questo dispositivo."); } catch(_) {}
+    }
+  });
+}
+
+function wireAccountLongPressDebug(){
+  if (!btnAccount) return;
+
+  const HOLD_MS = 20000;
+  let holdTimer = null;
+  let longPressTriggered = false;
+  let suppressNextClick = false;
+
+  const clearHold = () => {
+    if (holdTimer) {
+      clearTimeout(holdTimer);
+      holdTimer = null;
+    }
+  };
+
+  const startHold = () => {
+    clearHold();
+    longPressTriggered = false;
+
+    cvLog("account.hold.start", { holdMs: HOLD_MS });
+
+    holdTimer = setTimeout(() => {
+      longPressTriggered = true;
+      suppressNextClick = true;
+      cvLog("account.hold.success", { holdMs: HOLD_MS });
+      openDebugLogOverlay();
+      try { navigator.vibrate?.(120); } catch(_) {}
+    }, HOLD_MS);
+  };
+
+  const stopHold = () => {
+    if (!longPressTriggered) {
+      cvLog("account.hold.cancel");
+    }
+    clearHold();
+  };
+
+  btnAccount.addEventListener("pointerdown", startHold, { passive: true });
+  btnAccount.addEventListener("pointerup", stopHold, { passive: true });
+  btnAccount.addEventListener("pointercancel", stopHold, { passive: true });
+  btnAccount.addEventListener("pointerleave", stopHold, { passive: true });
+
+  btnAccount.addEventListener("click", (e) => {
+    if (suppressNextClick) {
+      e.preventDefault();
+      e.stopPropagation();
+      suppressNextClick = false;
+      cvLog("account.click.suppressed_after_longpress");
+      return;
+    }
+
+    cvLog("account.click.open_account");
+    openAccount();
+  });
+}
+
 
 function attachAccountButtons(){
-  if (btnAccount) btnAccount.addEventListener("click", openAccount);
+  wireAccountLongPressDebug();
   if (btnCloseAccount) btnCloseAccount.addEventListener("click", closeAccount);
   if (btnAccountLogout) btnAccountLogout.addEventListener("click", () => { logout(); closeAccount(); });
 
@@ -3553,11 +3796,13 @@ function attachAccountButtons(){
     if (e.key !== "Escape") return;
     hideHint();
     closeAccount();
+    closeDebugLogOverlay();
   });
 }
 
 function openAccount(){
   if (!accountOverlay) return;
+  cvLog("account.open");
   refreshUserUI().catch(() => {});
   accountOverlay.classList.add("show");
   syncHapticsButton();
@@ -3566,6 +3811,7 @@ function openAccount(){
 
 function closeAccount(){
   if (!accountOverlay) return;
+  cvLog("account.close");
   accountOverlay.classList.remove("show");
   syncHapticsButton();
   accountOverlay.setAttribute("aria-hidden","true");
@@ -4062,6 +4308,9 @@ async function refreshUserUI(){
 
 
   function init(){
+    wireDebugLogOverlay();
+    renderDebugLogOverlay();
+    cvLog("init");
     layoutFitBoard();
     // se banner / testi cambiano altezza dopo (ads, i18n, font), ricalcola 2 volte
     setTimeout(layoutFitBoard, 300);
@@ -7298,6 +7547,33 @@ function markPreBreak(idsToRemove){
     </div>
   </div>
 </div>
+<div id="debugLogOverlay" class="modal-overlay hidden" aria-hidden="true">
+  <div class="modal" style="width:min(980px, 96vw); height:min(84vh, 900px); display:flex; flex-direction:column;">
+    <header>
+      <h2>Debug Log</h2>
+      <button id="btnCloseDebugLog" type="button" aria-label="Close" title="Close">✕</button>
+    </header>
 
+    <div class="content" style="display:flex; flex-direction:column; gap:10px; min-height:0; flex:1;">
+      <div class="debug-log-wrap">
+        <div class="debug-log-top">
+          <div class="debug-log-build" id="debugLogBuild">Build</div>
+
+          <div class="debug-log-actions">
+            <button id="btnRefreshDebugLog" type="button">Refresh</button>
+            <button id="btnCopyDebugLog" type="button">Copy</button>
+            <button id="btnClearDebugLog" type="button">Clear</button>
+          </div>
+        </div>
+
+        <div class="debug-log-hint">Tieni premuto il tasto impostazioni per 20 secondi per aprire questo pannello.</div>
+
+        <div id="debugLogBox" class="debug-log-box">
+          <div class="debug-log-empty">Nessun log disponibile.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
