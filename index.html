@@ -5587,6 +5587,7 @@ btnPasskeyRegister.addEventListener("click", async () => {
         }
 
         if (solv.status === "exhausted") {
+          state.impossible = true;
           showStalloMessage();
           pulseUndoButton();
         }else {
@@ -6362,6 +6363,8 @@ function markPreBreak(idsToRemove){
     state.board = snap.board.map(r=>r.slice());
     state.tilesById = JSON.parse(JSON.stringify(snap.tilesById));
     state.levelPlan = JSON.parse(JSON.stringify(snap.levelPlan));
+    state.last_reward_level = snap.last_reward_level ?? 0;
+    state.levelStartMoves = snap.levelStartMoves ?? 0;
   }
 
   function saveNow(){
