@@ -4520,6 +4520,9 @@ btnPasskeyRegister.addEventListener("click", async () => {
     toastMsg(`Livello ${state.level}`);
   }
 
+  // DEBUG TEMPORANEO — rimuovere dopo i test
+  window._dbg = { get state(){ return state; }, set state(v){ state = v; }, saveNow, renderAll, updateButtons, startLevel };
+
   function levelToSizeIndex(level){
     if (level <= 3) return 0; // 3
     if (level <= 7) return 1; // 5
