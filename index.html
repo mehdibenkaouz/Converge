@@ -4462,12 +4462,7 @@ btnPasskeyRegister.addEventListener("click", async () => {
     stopPulseUndoButton();
 
     state.level = nextLevel;
-    // Reward: +10 hint at levels 10,20,40,80...
     const reward = checkLevelReward(state.level);
-    if (reward > 0 && state.last_reward_level < state.level) {
-      state.hintCharges += reward;
-      state.last_reward_level = state.level;
-    }
 
     // ===== Level reward: +10 hint at levels 10,20,40,80,160...
     if (!Number.isFinite(state.last_reward_level)) state.last_reward_level = 0;
