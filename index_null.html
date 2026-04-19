@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <meta name="theme-color" content="#050611">
+  <meta name="theme-color" content="#0c0d12">
 
 <title>Converge</title>
 <!-- <script>
@@ -1731,6 +1731,344 @@ html.lowgfx .app::after{
   }
 
   
+
+
+/* ═══════════════════════════════════════════════════════════
+   CONVERGE — LAYOUT + VISUAL REDESIGN v3
+   Maximum board space · Compact HUD · Title entrance
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── PALETTE ── */
+:root{--bg-0:#0c0d12;--bg-1:#111318;--bg-2:#181a22;--bg-3:#d4a853;--accent-gold:#d4a853;--accent-gold-bright:#f0d690;--card:rgba(255,255,255,.045);--text:rgba(255,255,255,.88);--muted:rgba(255,255,255,.48);--shadow:0 8px 32px rgba(0,0,0,.40);--shadow-soft:0 4px 16px rgba(0,0,0,.25);--board-shadow-in:inset 0 1px 0 rgba(255,255,255,.06);--board-border:rgba(255,255,255,.08);--tile-shadow:0 4px 12px rgba(0,0,0,.22);--ring:0 0 0 2px rgba(212,168,83,.25);--accent-1:#e8b4a0;--accent-2:#c9b896;--accent-3:#9dcba0;--accent-4:#95bdd6;--accent-5:#b8a5d4;--accent-6:#d4a0bf;--accent-7:#b5cf8e;--glass:rgba(255,255,255,.04);--glass-border:rgba(255,255,255,.06);--radius-xl:18px;--radius-lg:14px;--radius-md:10px;--page-pad:clamp(8px,1.5vw,14px)}
+
+/* ── BODY ── */
+body{
+  background:linear-gradient(180deg,#0c0d12 0%,#101218 50%,#0a0b0f 100%)!important;
+  padding-top:max(var(--page-pad),var(--sat))!important;
+  padding-bottom:max(var(--page-pad),var(--sab))!important;
+  padding-left:max(var(--page-pad),var(--sal))!important;
+  padding-right:max(var(--page-pad),var(--sar))!important;
+}
+body::before{display:none!important}
+body::after{display:none!important}
+.app::before{opacity:.02!important}
+.app::after{display:none!important}
+
+/* ═══ LAYOUT: COMPACT TOPBAR ═══ */
+.app{
+  gap:8px!important;
+  animation:appFadeIn 500ms cubic-bezier(.2,.8,.3,1) both!important;
+}
+@keyframes appFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.topbar{
+  background:transparent!important;
+  border:none!important;
+  padding:6px 0 2px 0!important;
+  gap:6px!important;
+}
+
+/* ── TITLE: entrance animation + compact ── */
+.title{min-width:0!important;gap:0!important}
+.title h1{
+  font-size:clamp(24px,5vw,30px)!important;
+  line-height:1.1!important;
+  background:linear-gradient(90deg,#d4a853 0%,#f0d690 40%,#fff 60%,#f0d690 80%,#d4a853 100%)!important;
+  background-size:200% 100%!important;
+  -webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;
+  text-shadow:none!important;font-weight:700!important;letter-spacing:1px!important;
+  animation:titleEntrance 1s cubic-bezier(.22,1,.36,1) both, titleShimmer 5s ease-in-out 1.2s infinite!important;
+}
+@keyframes titleEntrance{
+  0%{opacity:0;transform:scale(1.8) translateY(40px);filter:blur(4px);letter-spacing:6px}
+  60%{opacity:1;filter:blur(0)}
+  100%{transform:scale(1) translateY(0);letter-spacing:1px}
+}
+@keyframes titleShimmer{0%{background-position:100% 50%}50%{background-position:0% 50%}100%{background-position:100% 50%}}
+
+.sub{display:none!important}
+.userbadge{display:none!important}
+
+/* ── TOP BAR HEAD: single compact line ── */
+.topbar-head{gap:8px!important;align-items:center!important}
+.topbar-icons{gap:6px!important}
+
+/* ── SETTINGS ICON: slow spin ── */
+#btnAccount{background:transparent!important;box-shadow:none!important;animation:settingsSpin 25s linear infinite!important}
+@keyframes settingsSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* ═══ HUD: ULTRA COMPACT SINGLE ROW ═══ */
+.hud{
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  gap:6px!important;
+  align-items:stretch!important;
+  grid-template-columns:none!important;
+  grid-template-areas:none!important;
+}
+
+.hud-card{
+  flex:1!important;
+  min-width:0!important;
+  background:rgba(255,255,255,.03)!important;
+  border:1px solid rgba(255,255,255,.04)!important;
+  box-shadow:none!important;
+  border-radius:12px!important;
+  padding:6px 8px!important;
+  min-height:auto!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  gap:2px!important;
+  animation:hudSlideIn 400ms cubic-bezier(.2,.8,.3,1) both!important;
+}
+.hud-score{animation-delay:50ms!important}
+.hud-best{animation-delay:100ms!important;flex:.8!important}
+.hud-moves{animation-delay:150ms!important}
+.hud-size{animation-delay:200ms!important;flex:.6!important}
+@keyframes hudSlideIn{from{opacity:0;transform:translateY(8px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+.hud-label{
+  color:rgba(255,255,255,.28)!important;
+  font-size:8px!important;
+  letter-spacing:1px!important;
+  text-transform:uppercase!important;
+  font-weight:600!important;
+  line-height:1!important;
+}
+.hud-value{
+  color:rgba(255,255,255,.85)!important;
+  font-weight:700!important;
+  font-size:16px!important;
+  line-height:1.1!important;
+  transition:transform 200ms cubic-bezier(.2,.8,.3,1)!important;
+}
+.hud-value.pop{animation:valuePop 350ms cubic-bezier(.2,.8,.3,1)!important}
+@keyframes valuePop{0%{transform:scale(1)}40%{transform:scale(1.18);color:#f0d690}100%{transform:scale(1)}}
+
+/* ── HUD RIGHT: horizontal compact ── */
+.hud-right{
+  display:flex!important;
+  flex-direction:row!important;
+  gap:4px!important;
+  align-items:center!important;
+  flex:0 0 auto!important;
+  width:auto!important;
+  grid-area:unset!important;
+}
+
+.reward-status{display:none!important}
+.reward-cooldown{display:none!important}
+
+/* ── ICON BUTTONS: compact ── */
+.iconbtn{
+  background:rgba(255,255,255,.03)!important;
+  border:1px solid rgba(255,255,255,.04)!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  color:rgba(255,255,255,.55)!important;
+  transition:all 200ms cubic-bezier(.2,.8,.3,1)!important;
+  border-radius:12px!important;
+  width:40px!important;height:40px!important;
+}
+.iconbtn:hover{background:rgba(212,168,83,.08)!important;color:rgba(255,255,255,.85)!important;transform:translateY(-1px)!important}
+.iconbtn:active{transform:scale(.93)!important}
+.iconbtn.icononly{background:transparent!important;border:none!important}
+
+/* ═══ BUTTONS ═══ */
+button{border-radius:12px!important;box-shadow:none!important;transition:all 200ms cubic-bezier(.2,.8,.3,1)!important;font-weight:700!important}
+button:hover{filter:brightness(1.1)!important;transform:translateY(-1px)!important}
+button:active{transform:scale(.96)!important}
+#btnUndo{background:rgba(212,168,83,.06)!important;border:1px solid rgba(212,168,83,.08)!important}
+#btnHint{background:transparent!important}
+#btnNew{background:rgba(255,255,255,.03)!important;border:1px solid rgba(255,255,255,.04)!important}
+
+/* ═══ BOARD: MAXIMUM SPACE, NO DECORATIONS ═══ */
+.board-wrap{
+  gap:6px!important;
+  padding:0!important;
+  flex:1!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  animation:boardWrapIn 500ms cubic-bezier(.2,.8,.3,1) 150ms both!important;
+}
+@keyframes boardWrapIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+
+.board{
+  background:rgba(255,255,255,.015)!important;
+  border:1px solid rgba(255,255,255,.04)!important;
+  box-shadow:0 8px 32px rgba(0,0,0,.25)!important;
+  backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important;
+  border-radius:18px!important;
+  transition:transform 350ms cubic-bezier(.2,.8,.3,1)!important;
+}
+
+/* REMOVE all board decorative pseudo-elements */
+.board::before{display:none!important}
+.board::after{display:none!important}
+.board.zoom-pulse{animation:boardZoom 500ms cubic-bezier(.2,.8,.3,1)!important}
+@keyframes boardZoom{0%{transform:scale(1)}30%{transform:scale(1.02)}100%{transform:scale(1)}}
+
+/* ── GRID CELLS ── */
+.cell{background:rgba(255,255,255,.02)!important;border:1px solid rgba(255,255,255,.025)!important;box-shadow:none!important}
+
+/* ═══ TILES ═══ */
+.tile{border:none!important;box-shadow:0 2px 8px rgba(0,0,0,.16)!important;transition:transform var(--anim-move) cubic-bezier(.22,.68,.36,1),opacity var(--anim-fade) ease,box-shadow 200ms ease,filter 200ms ease!important}
+.tile::before{background:linear-gradient(170deg,rgba(255,255,255,.20) 0%,transparent 45%)!important;opacity:.45!important;mix-blend-mode:normal!important}
+.tile::after{box-shadow:inset 0 1px 0 rgba(255,255,255,.12)!important;opacity:.5!important}
+.glyph{filter:drop-shadow(0 1px 3px rgba(0,0,0,.10))!important}
+
+.tile.prebreak{animation:prebreakUltra var(--anim-prebreak) cubic-bezier(.2,.8,.3,1)!important;filter:brightness(1.1) saturate(1.08)!important;box-shadow:0 4px 18px rgba(212,168,83,.12),0 2px 8px rgba(0,0,0,.16)!important}
+@keyframes prebreakUltra{0%{transform:translate(var(--x),var(--y)) scale(1)}20%{transform:translate(var(--x),var(--y)) scale(1.07) rotate(.8deg)}50%{transform:translate(var(--x),var(--y)) scale(.97) rotate(-.4deg)}75%{transform:translate(var(--x),var(--y)) scale(1.02)}100%{transform:translate(var(--x),var(--y)) scale(1)}}
+.tile.prebreakLite{animation:prebreakUltra var(--anim-prebreak) cubic-bezier(.2,.8,.3,1)!important}
+.tile.fadeout{opacity:0!important;transform:translate(var(--x),var(--y)) scale(.85)!important;filter:brightness(1.25)!important}
+
+/* ═══ PARTICLES ═══ */
+.star{width:5px!important;height:5px!important;border-radius:50%!important;background:rgba(212,168,83,.85)!important;box-shadow:0 0 6px rgba(212,168,83,.35),0 0 2px rgba(255,255,255,.50)!important}
+.star:nth-child(odd){background:rgba(255,255,255,.80)!important;box-shadow:0 0 5px rgba(255,255,255,.30)!important;width:3px!important;height:3px!important}
+.star:nth-child(3n){width:6px!important;height:6px!important;background:rgba(240,214,144,.75)!important;box-shadow:0 0 8px rgba(212,168,83,.40)!important;border-radius:1px!important}
+@keyframes star-pop{0%{opacity:1;transform:translate3d(0,0,0) scale(1.2)}30%{opacity:1}100%{opacity:0;transform:translate3d(var(--dx),var(--dy),0) scale(var(--sc))}}
+
+/* ═══ TOAST ═══ */
+.toast{background:rgba(14,15,22,.88)!important;border:1px solid rgba(212,168,83,.08)!important;backdrop-filter:blur(20px)!important;-webkit-backdrop-filter:blur(20px)!important;box-shadow:0 6px 20px rgba(0,0,0,.30)!important;border-radius:10px!important;font-weight:600!important;letter-spacing:.3px!important;color:rgba(255,255,255,.82)!important}
+.toast.show{animation:toastSpring 350ms cubic-bezier(.34,1.56,.64,1) both!important}
+@keyframes toastSpring{from{opacity:0;transform:translateX(-50%) translateY(12px) scale(.93)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}}
+.toast.big{border-radius:14px!important;background:rgba(14,15,22,.92)!important;border:1px solid rgba(212,168,83,.12)!important}
+.toast.big.show{animation:bigToastSpring 400ms cubic-bezier(.34,1.56,.64,1) both!important}
+@keyframes bigToastSpring{from{opacity:0;transform:translateX(-50%) translateY(-50%) scale(.82)}to{opacity:1;transform:translateX(-50%) translateY(-50%) scale(1)}}
+
+/* ═══ STALLO ═══ */
+.stallo-msg{background:rgba(0,0,0,.50)!important;font-size:32px!important;letter-spacing:4px!important;color:rgba(212,168,83,.90)!important;text-shadow:0 0 20px rgba(212,168,83,.20)!important}
+.stallo-msg::before{background:none!important}
+@keyframes stalloFade{0%{opacity:0;transform:scale(.92);letter-spacing:10px}15%{opacity:1;transform:scale(1.01)}85%{opacity:1;letter-spacing:4px}100%{opacity:0;transform:scale(.97)}}
+
+/* ═══ MODALS ═══ */
+.modal-overlay{background:rgba(0,0,0,.50)!important;backdrop-filter:blur(16px)!important;-webkit-backdrop-filter:blur(16px)!important}
+.modal,.login-modal{background:rgba(14,15,24,.95)!important;border:1px solid rgba(255,255,255,.05)!important;box-shadow:0 24px 60px rgba(0,0,0,.40)!important;border-radius:18px!important;backdrop-filter:blur(30px)!important;-webkit-backdrop-filter:blur(30px)!important;animation:modalEntrance 300ms cubic-bezier(.2,.8,.3,1) both!important}
+@keyframes modalEntrance{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.modal header{border-bottom:1px solid rgba(255,255,255,.04)!important;background:rgba(212,168,83,.02)!important;padding:14px 16px!important}
+.modal header h2{background:linear-gradient(135deg,#d4a853,#f0d690)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;font-weight:700!important}
+.modal header button{background:rgba(255,255,255,.03)!important;border:1px solid rgba(255,255,255,.05)!important;box-shadow:none!important;border-radius:10px!important}
+.account-card{background:rgba(255,255,255,.02)!important;border:1px solid rgba(255,255,255,.03)!important;box-shadow:none!important;border-radius:12px!important}
+.row{border-bottom-color:rgba(255,255,255,.03)!important}
+.k{color:rgba(255,255,255,.32)!important;font-weight:500!important;font-size:12px!important}
+.v{color:rgba(255,255,255,.80)!important;font-weight:600!important}
+.pill{background:rgba(255,255,255,.02)!important;border:1px solid rgba(255,255,255,.03)!important;box-shadow:none!important;color:rgba(255,255,255,.45)!important;font-weight:500!important}
+.pill strong{color:rgba(255,255,255,.80)!important;font-weight:700!important}
+input[type="text"]{background:rgba(255,255,255,.02)!important;border:1px solid rgba(255,255,255,.04)!important;box-shadow:none!important;border-radius:10px!important}
+input[type="text"]:focus{border-color:rgba(212,168,83,.20)!important;box-shadow:0 0 0 2px rgba(212,168,83,.05)!important}
+.slider{background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.05)!important;box-shadow:none!important}
+.slider::before{background:rgba(255,255,255,.60)!important;box-shadow:0 1px 4px rgba(0,0,0,.15)!important}
+.switch input:checked+.slider{background:rgba(212,168,83,.12)!important;border-color:rgba(212,168,83,.18)!important}
+
+/* ═══ GAME OVER ═══ */
+.gameover{background:rgba(0,0,0,.60)!important;backdrop-filter:blur(16px)!important;-webkit-backdrop-filter:blur(16px)!important}
+.gameover.show{animation:goOverlayIn 400ms cubic-bezier(.2,.8,.3,1) both!important}
+@keyframes goOverlayIn{from{opacity:0}to{opacity:1}}
+.gameover-card{animation:none!important}
+.gameover-title{font-size:40px!important;font-weight:700!important;letter-spacing:2px!important;filter:none!important;background:linear-gradient(90deg,#d4a853,#f0d690,#fff,#f0d690,#d4a853)!important;background-size:200% 100%!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;text-shadow:0 0 30px rgba(212,168,83,.18)!important;animation:goTitleShimmer 3s ease-in-out infinite!important}
+@keyframes goTitleShimmer{0%{background-position:100% 50%}50%{background-position:0% 50%}100%{background-position:100% 50%}}
+.gameover-text{color:rgba(255,255,255,.45)!important;font-size:15px!important;font-weight:500!important}
+#btnGameOverUndo,#btnGameOverSkipAd,#btnGameOverClose{padding:14px 28px!important;border-radius:12px!important;font-size:13px!important;text-shadow:none!important;margin:6px!important;transition:all 200ms cubic-bezier(.2,.8,.3,1)!important}
+#btnGameOverUndo{background:rgba(212,168,83,.10)!important;border:1px solid rgba(212,168,83,.15)!important;color:rgba(255,255,255,.85)!important}
+#btnGameOverClose{background:rgba(255,255,255,.03)!important;border:1px solid rgba(255,255,255,.05)!important;color:rgba(255,255,255,.60)!important}
+#btnGameOverSkipAd{background:rgba(180,60,60,.10)!important;border:1px solid rgba(180,60,60,.15)!important;color:rgba(255,255,255,.65)!important}
+
+/* ═══ LEVEL BAR ═══ */
+.levelbar{background:rgba(12,13,18,.85)!important;border-top:1px solid rgba(212,168,83,.05)!important;backdrop-filter:blur(20px)!important;-webkit-backdrop-filter:blur(20px)!important;padding:12px 14px calc(12px + env(safe-area-inset-bottom))!important}
+.levelbar span{color:rgba(255,255,255,.35)!important;font-size:18px!important}
+.levelbar strong{color:rgba(212,168,83,.80)!important;font-size:22px!important}
+
+/* ═══ LEVEL LOADING ═══ */
+.level-loading{background:rgba(12,13,18,.65)!important;backdrop-filter:blur(10px)!important;-webkit-backdrop-filter:blur(10px)!important}
+.level-loading-card{background:transparent!important;border:none!important}
+.level-loading-title{background:linear-gradient(135deg,#d4a853,#f0d690)!important;-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;font-size:20px!important;font-weight:700!important;animation:celebPulse 1.5s ease-in-out infinite!important}
+@keyframes celebPulse{0%{opacity:.7;transform:scale(1)}50%{opacity:1;transform:scale(1.03)}100%{opacity:.7;transform:scale(1)}}
+
+/* ═══ MISC ═══ */
+.reward-card,.offline-card{background:rgba(14,15,24,.95)!important;color:rgba(255,255,255,.85)!important;border:1px solid rgba(255,255,255,.05)!important;border-radius:16px!important;box-shadow:0 20px 50px rgba(0,0,0,.40)!important}
+.reward-title{color:rgba(255,255,255,.82)!important}.reward-text{color:rgba(255,255,255,.45)!important}
+.spinner{border-color:rgba(255,255,255,.04)!important;border-top-color:rgba(212,168,83,.50)!important}
+.hint-badge{background:rgba(212,168,83,.82)!important;color:#0c0d12!important;border:2px solid rgba(12,13,18,.90)!important;box-shadow:0 1px 6px rgba(212,168,83,.20)!important}
+@keyframes undoPulse{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(212,168,83,.18)}50%{transform:scale(1.08);box-shadow:0 0 0 6px rgba(212,168,83,0)}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(212,168,83,0)}}
+.warn{background:rgba(212,168,83,.06)!important;border:1px solid rgba(212,168,83,.10)!important}
+.danger{background:rgba(200,80,80,.06)!important;border:1px solid rgba(200,80,80,.10)!important}
+.small{color:rgba(255,255,255,.30)!important}.settings-note{color:rgba(255,255,255,.25)!important}
+.hint-board{background:rgba(255,255,255,.01)!important;border:1px solid rgba(255,255,255,.03)!important;box-shadow:none!important;border-radius:12px!important}
+#btnAuto.active{filter:drop-shadow(0 0 5px rgba(212,168,83,.40))!important}
+#privacyOverlay .modal{border-radius:18px!important}
+.app.ready .board{transition:opacity 300ms cubic-bezier(.2,.8,.3,1)!important}
+.confetti-piece{position:fixed;width:8px;height:8px;border-radius:1px;pointer-events:none;z-index:99998;animation:confettiFall var(--fall-dur,2.5s) cubic-bezier(.2,.8,.5,1) forwards}
+@keyframes confettiFall{0%{opacity:1;transform:translate(0,0) rotate(0deg) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(var(--cx),var(--cy)) rotate(var(--cr)) scale(.4)}}
+
+/* ═══ MOBILE LAYOUT ═══ */
+@media(max-width:520px){
+  .topbar-head{flex-wrap:nowrap!important}
+  .title{padding-right:0!important;padding-left:0!important;align-items:flex-start!important;text-align:left!important}
+  .title h1{font-size:clamp(22px,5.5vw,28px)!important}
+
+  .hud{flex-wrap:nowrap!important}
+  .hud-card{padding:5px 6px!important;border-radius:10px!important;min-height:auto!important}
+  .hud-label{font-size:7px!important;letter-spacing:.8px!important}
+  .hud-value{font-size:14px!important}
+  .hud-score .hud-value{font-size:18px!important}
+
+  .hud-right{flex-direction:row!important;gap:3px!important}
+  .hud-right .iconbtn{width:36px!important;height:36px!important}
+
+  .iconbtn{width:36px!important;height:36px!important}
+
+  .board-wrap{gap:4px!important}
+
+  .app{gap:6px!important;padding-bottom:72px!important}
+
+  /* Level bar compact */
+  .levelbar{padding:10px 14px calc(10px + env(safe-area-inset-bottom))!important}
+  .levelbar span{font-size:16px!important}
+  .levelbar strong{font-size:20px!important}
+}
+
+/* Extra small phones */
+@media(max-width:380px){
+  .hud-best{display:none!important}
+  .hud-size{display:none!important}
+  .hud-value{font-size:16px!important}
+  .hud-score .hud-value{font-size:20px!important}
+}
+
+/* ═══ BOARD TILT (from FX engine) ═══ */
+.board-tilt-left{transform:perspective(800px) rotateY(1deg)!important}
+.board-tilt-right{transform:perspective(800px) rotateY(-1deg)!important}
+.board-tilt-up{transform:perspective(800px) rotateX(-1deg)!important}
+.board-tilt-down{transform:perspective(800px) rotateX(1deg)!important}
+
+/* ═══ FLYING MOVES INDICATOR ═══ */
+.flying-moves{
+  position:fixed;z-index:99999;pointer-events:none;
+  font-family:"Baloo 2","Sora",system-ui,sans-serif;
+  font-weight:800;font-size:20px;
+  color:#f0d690;
+  text-shadow:0 0 10px rgba(212,168,83,.45),0 1px 3px rgba(0,0,0,.35);
+  white-space:nowrap;will-change:transform,opacity;
+  animation:flyToTarget var(--fly-dur,.65s) cubic-bezier(.22,1,.36,1) forwards;
+  letter-spacing:.5px;
+}
+@keyframes flyToTarget{
+  0%{transform:translate(0,0) scale(1.3);opacity:1}
+  12%{transform:translate(0,-8px) scale(1.4);opacity:1}
+  85%{opacity:.8}
+  100%{transform:translate(var(--fly-dx),var(--fly-dy)) scale(.5);opacity:0}
+}
+.hud-moves.fly-arrive{animation:hudArriveBurst 350ms cubic-bezier(.2,.8,.3,1)!important}
+@keyframes hudArriveBurst{
+  0%{transform:scale(1);box-shadow:0 0 0 0 rgba(212,168,83,.20)}
+  40%{transform:scale(1.06);box-shadow:0 0 0 6px rgba(212,168,83,.10)}
+  100%{transform:scale(1);box-shadow:none}
+}
 
 </style>
 </head>
@@ -5527,7 +5865,9 @@ btnPasskeyRegister.addEventListener("click", async () => {
         if (token !== MOVE_TOKEN){ isAnimating = false; updateButtons(); return; }
       }
 
-      toastMsg(`Rotti ${brokeCount} • +${gained} mosse`);
+      if(window.__spawnFlyingMoves){
+            window.__spawnFlyingMoves(gained, idsToRemove);
+          }
     }
 
     // Render after changes
@@ -7263,5 +7603,367 @@ function markPreBreak(idsToRemove){
   </div>
 </div>
 
+<script>
+/* ═══ CONVERGE ULTRA FX ENGINE v2 ═══ */
+(function(){
+  "use strict";
+  if(document.readyState==="loading"){
+    document.addEventListener("DOMContentLoaded",initUltraFX);
+  } else { initUltraFX(); }
+
+  function initUltraFX(){
+    const boardEl = document.getElementById("board");
+    const scoreEl = document.getElementById("score");
+    const movesEl = document.getElementById("moves");
+    const bestEl  = document.getElementById("bestScore");
+
+    /* ── INJECT EXTRA KEYFRAMES ── */
+    const fxStyle = document.createElement("style");
+    fxStyle.textContent = `
+      @keyframes ambSparkle {
+        0%   { opacity:0; transform:scale(0) translateY(0); }
+        25%  { opacity:1; transform:scale(1.2); }
+        60%  { opacity:.5; transform:scale(.8) translateY(-15px); }
+        100% { opacity:0; transform:scale(.3) translateY(-40px); }
+      }
+      @keyframes ambSparkleBig {
+        0%   { opacity:0; transform:scale(0); }
+        20%  { opacity:.8; transform:scale(1); }
+        50%  { opacity:.4; transform:scale(1.5); }
+        100% { opacity:0; transform:scale(.2) translateY(-50px); }
+      }
+      @keyframes shockwave {
+        0%   { transform:translate(-50%,-50%) scale(0); opacity:.7; border-width:3px; }
+        60%  { opacity:.3; }
+        100% { transform:translate(-50%,-50%) scale(1); opacity:0; border-width:0.5px; }
+      }
+      @keyframes boardFlash {
+        0%   { opacity:0; }
+        15%  { opacity:1; }
+        100% { opacity:0; }
+      }
+      @keyframes tileSpawn {
+        0%   { opacity:0; transform:translate(var(--x),var(--y)) scale(.3); }
+        60%  { opacity:1; transform:translate(var(--x),var(--y)) scale(1.06); }
+        100% { opacity:1; transform:translate(var(--x),var(--y)) scale(1); }
+      }
+      .tile-spawn {
+        animation: tileSpawn 350ms cubic-bezier(.2,.8,.3,1) both !important;
+      }
+      .board-tilt-left  { transform: perspective(800px) rotateY(1.2deg) !important; }
+      .board-tilt-right { transform: perspective(800px) rotateY(-1.2deg) !important; }
+      .board-tilt-up    { transform: perspective(800px) rotateX(-1.2deg) !important; }
+      .board-tilt-down  { transform: perspective(800px) rotateX(1.2deg) !important; }
+    `;
+    document.head.appendChild(fxStyle);
+
+    /* ── 1. BOARD ZOOM PULSE + CONFETTI on level clear ── */
+    const origShow = window.showLevelLoading;
+    if(origShow){
+      window.showLevelLoading = function(msg){
+        if(boardEl){
+          boardEl.classList.add("zoom-pulse");
+          setTimeout(()=> boardEl.classList.remove("zoom-pulse"), 650);
+          // White flash overlay
+          boardFlash();
+        }
+        spawnConfetti();
+        return origShow.call(this, msg);
+      };
+    }
+
+    /* ── 2. SCORE / MOVES / BEST POP on value change ── */
+    [scoreEl, movesEl, bestEl].forEach(el => {
+      if(el) observeValuePop(el);
+    });
+
+    function observeValuePop(el){
+      let lastVal = el.textContent;
+      const obs = new MutationObserver(()=>{
+        const cur = el.textContent;
+        if(cur !== lastVal){
+          lastVal = cur;
+          el.classList.remove("pop");
+          void el.offsetWidth;
+          el.classList.add("pop");
+          setTimeout(()=> el.classList.remove("pop"), 400);
+        }
+      });
+      obs.observe(el, {childList:true, characterData:true, subtree:true});
+    }
+
+    /* ── 3. CONFETTI BURST ── */
+    function spawnConfetti(){
+      const colors = [
+        "rgba(212,168,83,.85)", "rgba(240,214,144,.80)",
+        "rgba(255,255,255,.70)", "rgba(212,168,83,.60)",
+        "rgba(180,140,60,.75)", "rgba(255,235,180,.65)",
+        "rgba(232,180,160,.60)", "rgba(157,203,160,.55)"
+      ];
+      const count = 50;
+      const frag = document.createDocumentFragment();
+      for(let i=0; i<count; i++){
+        const p = document.createElement("div");
+        p.className = "confetti-piece";
+        const cx = (Math.random()-.5)*window.innerWidth*.9;
+        const cy = (Math.random()*.4+.4)*window.innerHeight;
+        const cr = (Math.random()-.5)*900;
+        const dur = 1.5 + Math.random()*2;
+        const size = 3+Math.random()*7;
+        p.style.cssText = `
+          left:${50+(Math.random()-.5)*40}%;
+          top:${15+Math.random()*25}%;
+          width:${size}px; height:${size*(Math.random()>.5?.6:1)}px;
+          background:${colors[Math.floor(Math.random()*colors.length)]};
+          border-radius:${Math.random()>.6?'50%':Math.random()>.5?'1px':'0'};
+          --cx:${cx}px; --cy:${cy}px; --cr:${cr}deg; --fall-dur:${dur}s;
+          animation-delay:${Math.random()*200}ms;
+        `;
+        frag.appendChild(p);
+      }
+      document.body.appendChild(frag);
+      setTimeout(()=> document.querySelectorAll(".confetti-piece").forEach(e=>e.remove()), 4500);
+    }
+
+    /* ── 4. BOARD FLASH (white pulse on break) ── */
+    function boardFlash(){
+      if(!boardEl) return;
+      const fl = document.createElement("div");
+      fl.style.cssText = `
+        position:absolute; inset:0; border-radius:22px;
+        background:radial-gradient(ellipse at center,rgba(212,168,83,.12),rgba(255,255,255,.06),transparent 70%);
+        pointer-events:none; z-index:10;
+        animation:boardFlash 400ms ease-out forwards;
+      `;
+      boardEl.appendChild(fl);
+      setTimeout(()=> fl.remove(), 450);
+    }
+
+    /* ── 5. SHOCKWAVE RING on tile break ── */
+    function spawnShockwave(cx, cy){
+      if(!boardEl) return;
+      const ring = document.createElement("div");
+      ring.style.cssText = `
+        position:absolute; left:${cx}px; top:${cy}px;
+        width:80px; height:80px;
+        border:2px solid rgba(212,168,83,.40);
+        border-radius:50%;
+        pointer-events:none; z-index:8;
+        animation:shockwave 450ms cubic-bezier(.2,.8,.3,1) forwards;
+      `;
+      boardEl.appendChild(ring);
+      setTimeout(()=> ring.remove(), 500);
+    }
+
+    /* ── 6. BOARD MICRO-TILT on swipe direction ── */
+    if(boardEl){
+      // Listen for swipe direction by watching tile transform changes
+      let tiltTimer = null;
+      document.addEventListener("keydown", (e)=>{
+        const map = {ArrowLeft:"left",ArrowRight:"right",ArrowUp:"up",ArrowDown:"down"};
+        const dir = map[e.key];
+        if(dir) applyTilt(dir);
+      });
+
+      // Also hook into touch/pointer for mobile tilt
+      let touchStart = null;
+      boardEl.addEventListener("pointerdown", (e)=>{
+        touchStart = {x: e.clientX, y: e.clientY};
+      }, {passive:true});
+      boardEl.addEventListener("pointerup", (e)=>{
+        if(!touchStart) return;
+        const dx = e.clientX - touchStart.x;
+        const dy = e.clientY - touchStart.y;
+        const absDx = Math.abs(dx), absDy = Math.abs(dy);
+        if(Math.max(absDx, absDy) < 15) return;
+        let dir;
+        if(absDx > absDy) dir = dx>0?"right":"left";
+        else dir = dy>0?"down":"up";
+        applyTilt(dir);
+        touchStart = null;
+      }, {passive:true});
+
+      function applyTilt(dir){
+        if(tiltTimer) clearTimeout(tiltTimer);
+        boardEl.classList.remove("board-tilt-left","board-tilt-right","board-tilt-up","board-tilt-down");
+        void boardEl.offsetWidth;
+        boardEl.classList.add(`board-tilt-${dir}`);
+        tiltTimer = setTimeout(()=>{
+          boardEl.classList.remove("board-tilt-left","board-tilt-right","board-tilt-up","board-tilt-down");
+        }, 180);
+      }
+    }
+
+    /* ── 7. AMBIENT SPARKLES ── */
+    function spawnAmbientSparkle(){
+      const isBig = Math.random() > .75;
+      const s = document.createElement("div");
+      const size = isBig ? (3+Math.random()*3) : (1.5+Math.random()*1.5);
+      const dur = isBig ? (3+Math.random()*3) : (2+Math.random()*2.5);
+      const alpha = isBig ? (.35+Math.random()*.25) : (.2+Math.random()*.2);
+      s.style.cssText = `
+        position:fixed;
+        width:${size}px; height:${size}px;
+        border-radius:50%;
+        background:rgba(212,168,83,${alpha});
+        box-shadow:0 0 ${size*2}px rgba(212,168,83,${alpha*.5});
+        pointer-events:none; z-index:1;
+        left:${Math.random()*100}%;
+        top:${Math.random()*100}%;
+        animation:${isBig?'ambSparkleBig':'ambSparkle'} ${dur}s ease-in-out forwards;
+      `;
+      document.body.appendChild(s);
+      setTimeout(()=>s.remove(), (dur+.5)*1000);
+    }
+    setInterval(spawnAmbientSparkle, 2000);
+    // Initial burst of sparkles
+    for(let i=0;i<5;i++) setTimeout(spawnAmbientSparkle, i*300);
+
+    /* ── 8. ENHANCED PARTICLES + SHOCKWAVE on break ── */
+    if(boardEl){
+      const starObs = new MutationObserver((muts)=>{
+        for(const m of muts){
+          for(const n of m.addedNodes){
+            if(n.classList && n.classList.contains("stars")){
+              const cx = parseFloat(n.style.left)||0;
+              const cy = parseFloat(n.style.top)||0;
+
+              // Shockwave ring at break point
+              spawnShockwave(cx, cy);
+
+              // Add extra sparkle particles (gold + white mix)
+              for(let i=0; i<5; i++){
+                const extra = document.createElement("div");
+                extra.className = "star";
+                const a = Math.random()*Math.PI*2;
+                const r = 25+Math.random()*60;
+                const dx = Math.cos(a)*r;
+                const dy = Math.sin(a)*r - 12 - Math.random()*22;
+                extra.style.setProperty("--dx",`${dx}px`);
+                extra.style.setProperty("--dy",`${dy}px`);
+                extra.style.setProperty("--rot",`${(Math.random()-.5)*400}deg`);
+                extra.style.setProperty("--sc",`${.4+Math.random()*.9}`);
+                extra.style.animationDelay = `${Math.random()*100}ms`;
+                n.appendChild(extra);
+              }
+            }
+          }
+        }
+      });
+      starObs.observe(boardEl, {childList:true});
+    }
+
+    /* ── 9. NEW TILE SPAWN ANIMATION ── */
+    if(boardEl){
+      const tileObs = new MutationObserver((muts)=>{
+        for(const m of muts){
+          for(const n of m.addedNodes){
+            if(n.classList && n.classList.contains("tile") && !n.classList.contains("fadeout")){
+              n.classList.add("tile-spawn");
+              setTimeout(()=> n.classList.remove("tile-spawn"), 400);
+            }
+          }
+        }
+      });
+      const tilesLayer = boardEl.querySelector(".tiles-layer") || boardEl;
+      tileObs.observe(tilesLayer, {childList:true});
+    }
+
+    /* ── 10. FLYING MOVES INDICATOR ── */
+    window.__spawnFlyingMoves = function(gained, idsToRemove){
+      if(!gained || gained <= 0) return;
+      if(!boardEl) return;
+
+      const tilesLayer = boardEl.querySelector(".tiles-layer");
+      if(!tilesLayer) return;
+
+      // Calculate average center of broken tiles
+      const nodes = Array.from(tilesLayer.children);
+      const idSet = new Set(Array.from(idsToRemove).map(Number));
+      let sumX = 0, sumY = 0, count = 0;
+
+      for(const n of nodes){
+        const id = Number(n.dataset.id);
+        if(!idSet.has(id)) continue;
+        const x = parseFloat(n.style.getPropertyValue("--x")) || 0;
+        const y = parseFloat(n.style.getPropertyValue("--y")) || 0;
+        const w = parseFloat(n.style.getPropertyValue("--w")) || 60;
+        const h = parseFloat(n.style.getPropertyValue("--h")) || 60;
+        sumX += x + w/2;
+        sumY += y + h/2;
+        count++;
+      }
+
+      if(count === 0) return;
+
+      // Average position relative to board
+      const avgX = sumX / count;
+      const avgY = sumY / count;
+
+      // Convert to page coordinates
+      const boardRect = boardEl.getBoundingClientRect();
+      const pad = parseFloat(getComputedStyle(boardEl).paddingLeft) || 16;
+      const startX = boardRect.left + pad + avgX;
+      const startY = boardRect.top + pad + avgY;
+
+      // Target: the moves HUD card
+      const movesCard = document.querySelector(".hud-moves");
+      if(!movesCard) return;
+      const targetRect = movesCard.getBoundingClientRect();
+      const endX = targetRect.left + targetRect.width/2;
+      const endY = targetRect.top + targetRect.height/2;
+
+      // Delta
+      const dx = endX - startX;
+      const dy = endY - startY;
+
+      // Create flying element
+      const el = document.createElement("div");
+      el.className = "flying-moves";
+      el.textContent = `+${gained}`;
+      el.style.left = `${startX}px`;
+      el.style.top = `${startY}px`;
+      el.style.setProperty("--fly-dx", `${dx}px`);
+      el.style.setProperty("--fly-dy", `${dy}px`);
+      el.style.setProperty("--fly-dur", "0.65s");
+      el.style.transform = "translate(-50%,-50%)";
+
+      document.body.appendChild(el);
+
+      // On arrival: burst effect on moves card + pop the value
+      setTimeout(()=>{
+        movesCard.classList.remove("fly-arrive");
+        void movesCard.offsetWidth;
+        movesCard.classList.add("fly-arrive");
+        setTimeout(()=> movesCard.classList.remove("fly-arrive"), 450);
+
+        // Also trigger sparkle at arrival
+        for(let i=0; i<6; i++){
+          const spark = document.createElement("div");
+          const a = Math.random()*Math.PI*2;
+          const r = 15+Math.random()*25;
+          const sx = endX + Math.cos(a)*r;
+          const sy = endY + Math.sin(a)*r;
+          spark.style.cssText = `
+            position:fixed; left:${sx}px; top:${sy}px;
+            width:4px; height:4px; border-radius:50%;
+            background:rgba(212,168,83,.8);
+            box-shadow:0 0 6px rgba(212,168,83,.4);
+            pointer-events:none; z-index:99999;
+            animation:ambSparkle .5s ease-out forwards;
+          `;
+          document.body.appendChild(spark);
+          setTimeout(()=> spark.remove(), 600);
+        }
+      }, 580);
+
+      // Cleanup
+      setTimeout(()=> el.remove(), 750);
+    };
+
+    console.log("✦ Converge Ultra FX v2 loaded");
+  }
+})();
+</script>
 </body>
 </html>
