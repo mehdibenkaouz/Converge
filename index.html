@@ -1339,7 +1339,7 @@ html.lowgfx .app::after{
 
 
   .gameover-bar{
-    width: min(500px, 90vw);
+    width: min(500px, 300vw);
     background: transparent;
     padding: 18px;
     text-align: center;
@@ -1348,7 +1348,7 @@ html.lowgfx .app::after{
   .gameover.hidden{ display: none; }
 
   .gameover-card{
-    width: min(500px, 90vw);
+    width: min(500px, 300vw);
     background: transparent;
     padding: 18px;
     text-align: center;
@@ -1732,107 +1732,10 @@ html.lowgfx .app::after{
 
   
 
-  .debug-log-wrap{
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-    height:100%;
-    min-height:0;
-  }
-
-  .debug-log-top{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    flex-wrap:wrap;
-  }
-
-  .debug-log-build{
-    font-weight:800;
-    color: rgba(255,255,255,.92);
-  }
-
-  .debug-log-actions{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-  }
-
-  .debug-log-box{
-    flex:1;
-    min-height:280px;
-    max-height:min(68vh, 760px);
-    overflow:auto;
-    border-radius:16px;
-    border:1px solid rgba(255,255,255,.12);
-    background: rgba(0,0,0,.28);
-    padding:12px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size:12px;
-    line-height:1.4;
-    white-space:pre-wrap;
-    word-break:break-word;
-    color: rgba(255,255,255,.92);
-  }
-
-  .debug-log-empty{
-    opacity:.7;
-  }
-
-  .debug-log-hint{
-    font-size:12px;
-    color: rgba(255,255,255,.65);
-  }
-
 </style>
 </head>
 
 <script>
-  const CV_BUILD = "version 1.1.1 Ufficial";
-  window.__cv_logs = Array.isArray(window.__cv_logs) ? window.__cv_logs : [];
-
-  function cvSafe(value){
-    try { return JSON.stringify(value); }
-    catch(_) { return String(value); }
-  }
-
-  function cvLog(tag, data){
-    const row = {
-      t: new Date().toISOString(),
-      tag: String(tag || "log"),
-      data: data ?? null
-    };
-    try {
-      window.__cv_logs.push(row);
-      if (window.__cv_logs.length > 400) window.__cv_logs.shift();
-    } catch(_) {}
-    try { console.log("[CV]", row); } catch(_) {}
-    try {
-      if (typeof renderDebugLogOverlay === "function") renderDebugLogOverlay();
-    } catch(_) {}
-    return row;
-  }
-
-  window.addEventListener("error", (e) => {
-    cvLog("window.error", {
-      message: e?.message || null,
-      source: e?.filename || null,
-      line: e?.lineno || null,
-      col: e?.colno || null
-    });
-  });
-
-  window.addEventListener("unhandledrejection", (e) => {
-    cvLog("promise.reject", {
-      reason: e?.reason?.message || String(e?.reason || "")
-    });
-  });
-
-  cvLog("boot", {
-    build: CV_BUILD,
-    href: location.href
-  });
     
   // === i18n (IT/EN/FR/DE/ES/RU/JLA/AR/ZH) ===
   const I18N = {
@@ -3009,7 +2912,7 @@ document.addEventListener("visibilitychange", () => {
           </div>
 
                   <div class="row">
-            <div class="k" >Version 1.1.1 Ufficial</div>
+            <div class="k" >Version 1.1.0 pre-release</div>
             <div class="v" id="accUserId">—</div>
           </div>
         </div>
@@ -3531,179 +3434,15 @@ const accUsernameEl = document.getElementById("accUsername");
 const accUserIdEl = document.getElementById("accUserId");
 const btnLogout = document.getElementById("btnLogout");
 
-let debugLogOverlay = null;
-let btnCloseDebugLog = null;
-let btnRefreshDebugLog = null;
-let btnCopyDebugLog = null;
-let btnClearDebugLog = null;
-let debugLogBox = null;
-let debugLogBuild = null;
-function initDebugLogEls(){
-  if (debugLogOverlay) return;
-  debugLogOverlay = document.getElementById("debugLogOverlay");
-  btnCloseDebugLog = document.getElementById("btnCloseDebugLog");
-  btnRefreshDebugLog = document.getElementById("btnRefreshDebugLog");
-  btnCopyDebugLog = document.getElementById("btnCopyDebugLog");
-  btnClearDebugLog = document.getElementById("btnClearDebugLog");
-  debugLogBox = document.getElementById("debugLogBox");
-  debugLogBuild = document.getElementById("debugLogBuild");
-}
-
 
 function userStorageKey(baseKey){
   const uk = window.currentUserKey || localStorage.getItem("psb_userkey_v1") || "anon";
   return baseKey + ":" + uk;
 }
 
-function getDebugLogText(){
-  const lines = [];
-  lines.push(`BUILD: ${CV_BUILD}`);
-  lines.push(`HREF: ${location.href}`);
-  lines.push(`TIME: ${new Date().toISOString()}`);
-  lines.push("");
-
-  const items = Array.isArray(window.__cv_logs) ? window.__cv_logs : [];
-  for (const row of items){
-    const tag = row?.tag || "log";
-    const t = row?.t || "";
-    const data = row?.data == null ? "" : cvSafe(row.data);
-    lines.push(`[${t}] ${tag}${data ? " -> " + data : ""}`);
-  }
-
-  return lines.join("\n");
-}
-
-function renderDebugLogOverlay(){
-  initDebugLogEls();
-  if (debugLogBuild) debugLogBuild.textContent = `Build: ${CV_BUILD}`;
-
-  if (!debugLogBox) return;
-  const txt = getDebugLogText();
-
-  if (!txt.trim()){
-    debugLogBox.innerHTML = `<div class="debug-log-empty">Nessun log disponibile.</div>`;
-    return;
-  }
-
-  debugLogBox.textContent = txt;
-  debugLogBox.scrollTop = debugLogBox.scrollHeight;
-}
-
-function openDebugLogOverlay(){
-  initDebugLogEls();
-  if (!debugLogOverlay) {
-    cvLog("debug.overlay.missing_dom");
-    try { alert("debugLogOverlay NON trovato nel DOM"); } catch(_) {}
-    return;
-  }
-
-  renderDebugLogOverlay();
-  debugLogOverlay.classList.remove("hidden");
-  debugLogOverlay.classList.add("show");
-  debugLogOverlay.setAttribute("aria-hidden", "false");
-  cvLog("debug.overlay.open");
-}
-
-function closeDebugLogOverlay(){
-  if (!debugLogOverlay) return;
-  debugLogOverlay.classList.remove("show");
-  debugLogOverlay.classList.add("hidden");
-  debugLogOverlay.setAttribute("aria-hidden", "true");
-  cvLog("debug.overlay.close");
-}
-
-function wireDebugLogOverlay(){
-  initDebugLogEls();
-  if (debugLogOverlay){
-    debugLogOverlay.addEventListener("click", (e) => {
-      if (e.target === debugLogOverlay) closeDebugLogOverlay();
-    });
-  }
-
-  btnCloseDebugLog?.addEventListener("click", closeDebugLogOverlay);
-  btnRefreshDebugLog?.addEventListener("click", () => {
-    cvLog("debug.overlay.refresh");
-    renderDebugLogOverlay();
-  });
-
-  btnClearDebugLog?.addEventListener("click", () => {
-    window.__cv_logs = [];
-    cvLog("debug.logs.cleared");
-    renderDebugLogOverlay();
-  });
-
-  btnCopyDebugLog?.addEventListener("click", async () => {
-    const txt = getDebugLogText();
-    try {
-      await navigator.clipboard.writeText(txt);
-      cvLog("debug.logs.copied");
-      try { toastMsg("Log copiato"); } catch(_) {}
-    } catch (e) {
-      cvLog("debug.logs.copy_failed", { message: e?.message || String(e) });
-      try { uiAlert("Impossibile copiare il log su questo dispositivo."); } catch(_) {}
-    }
-  });
-}
-
-function wireAccountLongPressDebug(){
-  if (!btnAccount) return;
-
-  const HOLD_MS = 20000;
-  let holdTimer = null;
-  let longPressTriggered = false;
-  let suppressNextClick = false;
-
-  const clearHold = () => {
-    if (holdTimer) {
-      clearTimeout(holdTimer);
-      holdTimer = null;
-    }
-  };
-
-  const startHold = () => {
-    clearHold();
-    longPressTriggered = false;
-
-    cvLog("account.hold.start", { holdMs: HOLD_MS });
-
-    holdTimer = setTimeout(() => {
-      longPressTriggered = true;
-      suppressNextClick = true;
-      cvLog("account.hold.success", { holdMs: HOLD_MS });
-      openDebugLogOverlay();
-      try { navigator.vibrate?.(120); } catch(_) {}
-    }, HOLD_MS);
-  };
-
-  const stopHold = () => {
-    if (!longPressTriggered) {
-      cvLog("account.hold.cancel");
-    }
-    clearHold();
-  };
-
-  btnAccount.addEventListener("pointerdown", startHold, { passive: true });
-  btnAccount.addEventListener("pointerup", stopHold, { passive: true });
-  btnAccount.addEventListener("pointercancel", stopHold, { passive: true });
-  btnAccount.addEventListener("pointerleave", stopHold, { passive: true });
-
-  btnAccount.addEventListener("click", (e) => {
-    if (suppressNextClick) {
-      e.preventDefault();
-      e.stopPropagation();
-      suppressNextClick = false;
-      cvLog("account.click.suppressed_after_longpress");
-      return;
-    }
-
-    cvLog("account.click.open_account");
-    openAccount();
-  });
-}
-
 
 function attachAccountButtons(){
-  wireAccountLongPressDebug();
+  if (btnAccount) btnAccount.addEventListener("click", openAccount);
   if (btnCloseAccount) btnCloseAccount.addEventListener("click", closeAccount);
   if (btnAccountLogout) btnAccountLogout.addEventListener("click", () => { logout(); closeAccount(); });
 
@@ -3814,13 +3553,11 @@ function attachAccountButtons(){
     if (e.key !== "Escape") return;
     hideHint();
     closeAccount();
-    closeDebugLogOverlay();
   });
 }
 
 function openAccount(){
   if (!accountOverlay) return;
-  cvLog("account.open");
   refreshUserUI().catch(() => {});
   accountOverlay.classList.add("show");
   syncHapticsButton();
@@ -3829,7 +3566,6 @@ function openAccount(){
 
 function closeAccount(){
   if (!accountOverlay) return;
-  cvLog("account.close");
   accountOverlay.classList.remove("show");
   syncHapticsButton();
   accountOverlay.setAttribute("aria-hidden","true");
@@ -3872,13 +3608,12 @@ async function refreshUserUI(){
   // === IMPORTANT: set user key for per-account local saves ===
   // Preferisci un identificatore stabile (id/username/nickname dal server).
   // Se /me non esiste o torna vuoto, NON sovrascrivere una chiave già salvata (es. pk:<credentialId>).
-  const existingKey = (window.currentUserKey || localStorage.getItem("psb_userkey_v1") || "").trim();
+  const existingKey = (localStorage.getItem("psb_userkey_v1") || "").trim();
   const userKey =
-      (existingKey ? existingKey : "") ||
-      (id && ("id:" + id)) ||
-      (username && ("u:" + username)) ||
-      (nickname && ("n:" + nickname)) ||
-      "auth";
+    (id && ("id:" + id)) ||
+    (username && ("u:" + username)) ||
+    (nickname && ("n:" + nickname)) ||
+    (existingKey ? existingKey : "auth");
 
   window.currentUserKey = userKey;
   try { localStorage.setItem("psb_userkey_v1", userKey); } catch {}
@@ -3924,7 +3659,6 @@ async function refreshUserUI(){
     state.impossible = false;
 
     try { saveNow(); } catch(_) {}
-    try { updateHintBadge(); } catch(_) {}
     try { updateButtons(); } catch(_) {}
     try { toastMsg(`+${n} hint!`); } catch(_) {}
 
@@ -4326,9 +4060,6 @@ async function refreshUserUI(){
 
 
   function init(){
-    wireDebugLogOverlay();
-    renderDebugLogOverlay();
-    cvLog("init");
     layoutFitBoard();
     // se banner / testi cambiano altezza dopo (ads, i18n, font), ricalcola 2 volte
     setTimeout(layoutFitBoard, 300);
@@ -4692,7 +4423,8 @@ btnPasskeyRegister.addEventListener("click", async () => {
   function pickGridSizeForLevel(level){
 
     if (RELAX_MODE) {
-      // In relax mode, mantieni 3x3 o 5x5 per sempre
+      // In relax mode: livelli 1-3 sempre 3x3, dal 4 in poi alterna 3x3/5x5
+      if (level <= 3) return 3;
       return (Math.random() < 0.35) ? 3 : 5;
     }
     if (level < 5) {
@@ -4718,77 +4450,11 @@ btnPasskeyRegister.addEventListener("click", async () => {
   }
 
 
-  async function restartCurrentLevelPreserveMeta(){
-    if (!state) return;
-  
-    stalloShown = false;
-    stopPulseUndoButton();
-  
-    const curLevel = Number(state.level) || 1;
-    const curScore = Number(state.score) || 0;
-    const curHints = Math.max(0, Number(state.hintCharges) || 0);
-    const curHintCooldown = Math.max(0, Number(state.hintCooldown) || 0);
-    const curLastRewardLevel = Number(state.last_reward_level) || 0;
-  
-    const restoredMoves = Number.isFinite(state.levelStartMoves)
-      ? Math.max(0, Number(state.levelStartMoves))
-      : Math.max(RELAX_MODE ? 5 : 3, Number(state.moves) || 0);
-  
-    state.level = curLevel;
-    state.score = curScore;
-    state.moves = restoredMoves;
-    state.levelStartMoves = restoredMoves;
-  
-    // IMPORTANTISSIMO: preserva hint e cooldown attuali
-    state.hintCharges = curHints;
-    state.hintCooldown = curHintCooldown;
-    state.last_reward_level = curLastRewardLevel;
-  
-    state.N = pickGridSizeForLevelConsideringMoves(curLevel, state.moves);
-    state.sizeIndex = Math.max(0, SIZES.indexOf(state.N));
-  
-    state.undoAvailable = true;
-    state.undoSnapshot = null;
-    state.impossible = false;
-  
-    await generateLevelBoardGated();
-  
-    if (!state.levelPlan) state.levelPlan = {};
-    state.levelPlan.bestFirstDir =
-      computeHintDirectionForCurrentState({ maxDepth: 6, timeBudgetMs: 25 });
-  
-    saveNow();
-    try { updateHintBadge(); } catch(_) {}
-    renderAll(true);
-    toastMsg(`Livello ${curLevel} ricominciato`);
+  function regenCleanLevel(){
+    // “pulito” = stesso livello ma board rigenerata
+    // Se la tua startLevel già rigenera la board, basta richiamarla.
+    startLevel(state.level);
   }
-  
-async function restartFromLevel1OneHint(){
-  stalloShown = false;
-  stopPulseUndoButton();
-
-  try { hideHint(); } catch(_) {}
-  try { if (typeof closeGameOver === "function") closeGameOver(); } catch(_) {}
-
-  state = newGameState();
-
-  // regola richiesta: riparti sempre dal livello 1 con 1 solo hint
-  state.hintCharges = 1;
-  state.hintCooldown = 0;
-  state.last_reward_level = 0;
-  state.impossible = false;
-
-  await startLevel(1);
-
-  try { updateHintBadge(); } catch(_) {}
-  try { updateButtons(); } catch(_) {}
-  try { saveNow(); } catch(_) {}
-  try { renderAll(true); } catch(_) {}
-}
-
-function regenCleanLevel(){
-  return restartCurrentLevelPreserveMeta();
-}
 
 
   async function startLevel(nextLevel){
@@ -4796,7 +4462,12 @@ function regenCleanLevel(){
     stopPulseUndoButton();
 
     state.level = nextLevel;
+    // Reward: +10 hint at levels 10,20,40,80...
     const reward = checkLevelReward(state.level);
+    if (reward > 0 && state.last_reward_level < state.level) {
+      state.hintCharges += reward;
+      state.last_reward_level = state.level;
+    }
 
     // ===== Level reward: +10 hint at levels 10,20,40,80,160...
     if (!Number.isFinite(state.last_reward_level)) state.last_reward_level = 0;
@@ -5398,14 +5069,28 @@ function regenCleanLevel(){
       }
     });
 
-    btnGameOverClose?.addEventListener("click", async () => {
-      if (isAnimating) return;
+    btnGameOverClose?.addEventListener("click", () => {
+      closeGameOver();
+
+      // ricomincia partita
+      state = newGameState();
+          // Applica reward bufferizzato (se presente)
       try {
-        await restartFromLevel1OneHint();
-        try { toastMsg("Nuova partita"); } catch(_) {}
-      } catch (e) {
-        console.warn("restartFromLevel1OneHint failed:", e);
-      }
+        const rb = localStorage.getItem("__cv_reward_buffer");
+        if (rb === "2") {
+          localStorage.removeItem("__cv_reward_buffer");
+          state.hintCharges = (state.hintCharges || 0) + 2;
+        }
+      } catch(e) {}
+      try { updateHintBadge(); } catch(e) {}
+      try { saveNow(); } catch(e) {}
+
+      generateLevelBoard();
+      state.levelPlan.bestFirstDir =
+        computeHintDirectionForCurrentState({ maxDepth: 6, timeBudgetMs: 25 });
+
+      saveNow();
+      renderAll(true);
     });
 
     // =========================
@@ -5471,11 +5156,30 @@ function regenCleanLevel(){
           if (!(await uiConfirm(t("confirm.new_game") || "Start a new game?"))) return;
 
           try {
-            await restartFromLevel1OneHint();
-            try { toastMsg(t("toast.new_game") || "Nuova partita"); } catch(_) {}
+            // reset totale e coerente
+            state = newGameState();
+                // Applica reward bufferizzato (se presente)
+              try {
+                const rb = localStorage.getItem("__cv_reward_buffer");
+                if (rb === "2") {
+                  localStorage.removeItem("__cv_reward_buffer");
+                  state.hintCharges = (state.hintCharges || 0) + 2;
+                }
+              } catch(e) {}
+              try { updateHintBadge(); } catch(e) {}
+              try { saveNow(); } catch(e) {}
+
+
+            // IMPORTANTISSIMO: usa la stessa logica dei livelli (gated + render + save)
+            void startLevel(1);
+
+            // opzionale: se vuoi anche il toast "Nuova partita"
+            // toastMsg(t("toast.new_game"));
           } catch (e) {
             console.error("NEW GAME ERROR:", e);
             await uiAlert((t("error.new_game") || "Errore durante Nuova partita") + ": " + (e?.message || e));
+
+            // fallback: almeno forziamo un render completo
             try { renderAll(true); } catch (_) {}
           }
         });
@@ -5717,10 +5421,8 @@ function regenCleanLevel(){
     }
 
     if (state.moves <= 0) {
-      state.moves = 0;
-      if (!gameOverOverlay?.classList.contains("show") && gameOverOverlay?.classList.contains("hidden")) {
-        gameOver(t("mosse.finite"));
-      }
+      state.moves = 0;          // clamp
+      gameOver(t("mosse.finite"));    
       updateButtons?.();        // se esiste (altrimenti rimuovi questa riga)
       return;                   // FONDAMENTALE: stop totale
     }
@@ -5836,8 +5538,12 @@ function regenCleanLevel(){
     renderAll(false);
 
     // End of move
-   isAnimating = false;
-    updateButtons();
+    if (!instant){
+      isAnimating = false;
+      updateButtons();
+    } else {
+      updateButtons();
+    }
 
     // Win/lose checks
     if (Object.keys(state.tilesById).length === 0){
@@ -6635,8 +6341,6 @@ function markPreBreak(idsToRemove){
       board: state.board.map(row => row.slice()),
       tilesById: JSON.parse(JSON.stringify(state.tilesById)),
       levelPlan: JSON.parse(JSON.stringify(state.levelPlan)),
-      last_reward_level: state.last_reward_level || 0,
-      levelStartMoves: state.levelStartMoves || 0,
       // undoSnapshot not included to avoid recursion
       undoSnapshot: null,
     };
@@ -6676,35 +6380,30 @@ function markPreBreak(idsToRemove){
       const sb = localStorage.getItem("__cv_skip_buffer");
       if (sb) {
         if (!state) return;
+        localStorage.removeItem("__cv_skip_buffer");
         if (typeof window.skipLevelFromAd === "function") {
           window.skipLevelFromAd();
         }
-        localStorage.removeItem("__cv_skip_buffer");
       }
-  
+
       const rb = localStorage.getItem("__cv_reward_buffer");
       if (!rb) return;
-  
+
       // aspetta che lo state sia pronto
       if (!state) return;
-  
+      localStorage.removeItem("__cv_reward_buffer");
+
       if (rb === "2") {
-        let applied = false;
-  
         if (typeof window.addHints === "function") {
-          applied = !!window.addHints(2);
+          window.addHints(2);
         } else {
+          // fallback minimale
           state.hintCharges = (state.hintCharges || 0) + 2;
           if (state.hintCharges > 0) state.hintCooldown = 0;
           state.impossible = false;
           try { saveNow(); } catch(_) {}
           try { updateHintBadge(); } catch(_) {}
           try { if (typeof updateButtons === "function") updateButtons(); } catch(_) {}
-          applied = true;
-        }
-  
-        if (applied) {
-          try { localStorage.removeItem("__cv_reward_buffer"); } catch(_) {}
         }
       }
     } catch(e) {}
@@ -7561,34 +7260,6 @@ function markPreBreak(idsToRemove){
         style="border:0; width:100%; height:100%; border-radius: 0 0 26px 26px;"
         title="Privacy Policy"
       ></iframe>
-    </div>
-  </div>
-</div>
-<div id="debugLogOverlay" class="modal-overlay hidden" aria-hidden="true">
-  <div class="modal" style="width:min(980px, 96vw); height:min(84vh, 900px); display:flex; flex-direction:column;">
-    <header>
-      <h2>Debug Log</h2>
-      <button id="btnCloseDebugLog" type="button" aria-label="Close" title="Close">✕</button>
-    </header>
-
-    <div class="content" style="display:flex; flex-direction:column; gap:10px; min-height:0; flex:1;">
-      <div class="debug-log-wrap">
-        <div class="debug-log-top">
-          <div class="debug-log-build" id="debugLogBuild">Build</div>
-
-          <div class="debug-log-actions">
-            <button id="btnRefreshDebugLog" type="button">Refresh</button>
-            <button id="btnCopyDebugLog" type="button">Copy</button>
-            <button id="btnClearDebugLog" type="button">Clear</button>
-          </div>
-        </div>
-
-        <div class="debug-log-hint">Tieni premuto il tasto impostazioni per 20 secondi per aprire questo pannello.</div>
-
-        <div id="debugLogBox" class="debug-log-box">
-          <div class="debug-log-empty">Nessun log disponibile.</div>
-        </div>
-      </div>
     </div>
   </div>
 </div>
